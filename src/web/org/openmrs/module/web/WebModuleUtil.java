@@ -1,3 +1,16 @@
+/**
+ * The contents of this file are subject to the OpenMRS Public License
+ * Version 1.0 (the "License"); you may not use this file except in
+ * compliance with the License. You may obtain a copy of the License at
+ * http://license.openmrs.org
+ *
+ * Software distributed under the License is distributed on an "AS IS"
+ * basis, WITHOUT WARRANTY OF ANY KIND, either express or implied. See the
+ * License for the specific language governing rights and limitations
+ * under the License.
+ *
+ * Copyright (C) OpenMRS, LLC.  All Rights Reserved.
+ */
 package org.openmrs.module.web;
 
 import java.io.File;
@@ -243,6 +256,18 @@ public class WebModuleUtil {
 			File outFile = new File(folderPath.replace("/", File.separator));
 			outFile.deleteOnExit();
 			
+			// additional checks on module needing a context refresh
+			if (moduleNeedsContextRefresh == false) {
+				
+				// AOP advice points are only loaded during the context refresh now.
+				// if the context hasn't been marked to be refreshed yet, mark it
+				// now if this module defines some advice
+				if (mod.getAdvicePoints() != null && mod.getAdvicePoints().size() > 0) {
+					moduleNeedsContextRefresh = true;
+				}
+					
+			}
+			
 			// refresh the spring web context to get the just-created xml 
 			// files into it (if we copied an xml file)
 			if (moduleNeedsContextRefresh && delayContextRefresh == false) {
@@ -307,10 +332,13 @@ public class WebModuleUtil {
 			String name = "", className = "";
 			for (int j=0; j < childNodes.getLength(); j++) {
 				Node childNode = childNodes.item(j);
-				if ("servlet-name".equals(childNode.getNodeName()))
-					name = childNode.getTextContent();
-				else if("servlet-class".equals(childNode.getNodeName()))
-					className = childNode.getTextContent();
+				if ("servlet-name".equals(childNode.getNodeName())) {
+					if (childNode.getTextContent() != null)
+						name = childNode.getTextContent().trim();
+				} else if("servlet-class".equals(childNode.getNodeName())) {
+					if (childNode.getTextContent() != null)
+						className = childNode.getTextContent().trim();
+				}
 			}
 			if (name.length() == 0 || className.length() == 0) {
 				log.warn("both 'servlet-name' and 'servlet-class' are required for the 'servlet' tag. Given '" + name + "' and '" + className + "' for module " + mod.getName());

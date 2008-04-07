@@ -19,6 +19,7 @@ import java.io.InputStream;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -47,7 +48,7 @@ import org.springframework.util.StringUtils;
  */
 public class ModuleFactory {
 
-	private static Log log = LogFactory.getLog("org.openmrs.module.ModuleFactory");
+	private static Log log = LogFactory.getLog(ModuleFactory.class);
 
 	private static Map<String, Module> loadedModules = new WeakHashMap<String, Module>();
 	private static Map<String, Module> startedModules = new WeakHashMap<String, Module>();
@@ -132,26 +133,29 @@ public class ModuleFactory {
 			log.debug("Loading modules from: " + modulesFolder.getAbsolutePath());
 
 		if (modulesFolder.isDirectory()) {
-			// loop over the modules and load the modules that we can
-			for (File f : modulesFolder.listFiles()) {
-				if (!f.getName().startsWith(".")) { // ignore .svn folder and
-													// the like
-					Module mod = loadModule(f);
-					log.debug("Loaded module: " + mod + " successfully");
-				}
-			}
+			loadModules(Arrays.asList(modulesFolder.listFiles()));
 		} else
 			log.error("modules folder: '" + modulesFolder.getAbsolutePath()
 			        + "' is not a valid directory");
 	}
 	
 	/**
-	 * Load all OpenMRS modules from <code>directory</code>
+	 * Attempt to load the given files as OpenMRS modules
+	 * @param modulesToLoad the list of files to try and load
 	 */
 	public static void loadModules(List<File> modulesToLoad) {
+		// loop over the modules and load the modules that we can
 		for (File f : modulesToLoad) {
-			Module mod = loadModule(f);
-			log.debug("Loaded module: " + mod + " successfully");
+			// ignore .svn folder and the like
+			if (!f.getName().startsWith(".")) {
+				try {
+					Module mod = loadModule(f);
+					log.debug("Loaded module: " + mod + " successfully");
+				}
+				catch (Throwable t) {
+					log.debug("Unable to load file in module directory: " + f + ". Skipping file.", t);
+				}
+			}
 		}
 	}
 	
@@ -169,12 +173,16 @@ public class ModuleFactory {
 			List<Module> leftoverModules = new Vector<Module>();
 			for (Module mod : getLoadedModules()) {
 				String key = mod.getModuleId() + ".started";
-				String prop = as.getGlobalProperty(key, "false");
-				if (prop.equals("true")) {
+				String prop = as.getGlobalProperty(key, null);
+				
+				// if a 'moduleid.started' property doesn't exist, start the module anyway
+				// as this is probably the first time they are loading it
+				if (prop == null || prop.equals("true")) {
 					if (requiredModulesStarted(mod))
 						try {
-							log.debug("starting module: " + mod.getModuleId());
-
+							if (log.isDebugEnabled())
+								log.debug("starting module: " + mod.getModuleId());
+							
 							startModule(mod);
 						} catch (Exception e) {
 							log.error("Error while starting module: "
@@ -182,8 +190,10 @@ public class ModuleFactory {
 							mod.setStartupErrorMessage("Error while starting module: " + e.getMessage());
 						}
 					else {
-						log.debug("cannot start because required modules are not started: " + mod.getModuleId());
+						// if not all the modules required by this mod are loaded, save it for later
 						leftoverModules.add(mod);
+						if (log.isDebugEnabled())
+							log.debug("cannot start because required modules are not started: " + mod.getModuleId());
 					}
 				}
 			}
@@ -193,31 +203,44 @@ public class ModuleFactory {
 			// anymore or we've loaded them all
 			boolean atLeastOneModuleLoaded = true;
 			while (leftoverModules.size() > 0 && atLeastOneModuleLoaded) {
-				log.debug("Trying to start leftover modules: " + leftoverModules);
+				if (log.isDebugEnabled())
+					log.debug("Trying to start leftover modules: " + leftoverModules);
+				
 				atLeastOneModuleLoaded = false;
-				List<Module> modulesJustLoaded = new Vector<Module>();
+				List<Module> modulesStartedInThisLoop = new Vector<Module>();
+				
 				for (Module leftoverModule : leftoverModules) {
 					if (requiredModulesStarted(leftoverModule)) {
-						log.debug("starting leftover module: " + leftoverModule.getModuleId());
+						if (log.isDebugEnabled())
+							log.debug("starting leftover module: " + leftoverModule.getModuleId());
+						
 						try {
 							// don't need to check globalproperty here because
-							// it would only
-							// be on the leftovermodules list if it were set to
-							// true
+							// it would only be on the leftover modules list if 
+							// it were set to true already
 							startModule(leftoverModule);
+							
+							// set this boolean flag to true so we keep looping over the modules
 							atLeastOneModuleLoaded = true;
-							modulesJustLoaded.add(leftoverModule);
+							
+							// save the module we just started
+							modulesStartedInThisLoop.add(leftoverModule);
 						} catch (Exception e) {
 							log.error("Error while starting leftover module: "
 							        + leftoverModule.getName(), e);
 						}
 					} else {
-						log.debug("cannot start leftover module because required modules are not started: " + leftoverModule.getModuleId());
+						if (log.isDebugEnabled())
+							log.debug("cannot start leftover module because required modules are not started: " + leftoverModule.getModuleId());
 					}
 				}
-				leftoverModules.removeAll(modulesJustLoaded);
+				
+				// remove the modules we started in this loop from the overall
+				// leftover modules list
+				leftoverModules.removeAll(modulesStartedInThisLoop);
 			}
-
+			
+			// if we failed to start all the modules, error out
 			if (leftoverModules.size() > 0)
 				for (Module leftoverModule : leftoverModules) {
 					String message = "Unable to start module '"
@@ -381,8 +404,14 @@ public class ModuleFactory {
 				        module, ModuleFactory.class.getClassLoader());
 				getModuleClassLoaderMap().put(module, moduleClassLoader);
 
-				// load the advice objects into the Context
-				loadAdvice(module);
+				// don't load the advice objects into the Context
+				// At startup, the spring context isn't refreshed until all modules
+				// have been loaded.  This causes errors if called here during a 
+				// module's startup if one of these advice points is on another 
+				// module because that other module's service won't have been loaded
+				// into spring yet.  All advice for all modules must be reloaded 
+				// a spring context refresh anyway, so skip the advice loading here
+				// loadAdvice(module);
 
 				// add all of this module's extensions to the extension map
 				for (Extension ext : module.getExtensions()) {
@@ -629,8 +658,7 @@ public class ModuleFactory {
 			}
 
 			if (getModuleClassLoaderMap().containsKey(mod)) {
-				log
-				        .debug("Mod was in classloader map.  Removing advice and extensions.");
+				log.debug("Mod was in classloader map.  Removing advice and extensions.");
 				// remove all advice by this module
 				try {
 					for (AdvicePoint advice : mod.getAdvicePoints()) {
@@ -652,9 +680,9 @@ public class ModuleFactory {
 							        + advice.getPoint(), e);
 						}
 					}
-				} catch (Exception e) {
+				} catch (Throwable t) {
 					log.warn("Error while getting advicePoints from module: "
-					        + moduleId, e);
+					        + moduleId, t);
 				}
 
 				// remove all extensions by this module
@@ -673,9 +701,9 @@ public class ModuleFactory {
 							        exterror);
 						}
 					}
-				} catch (Exception e) {
+				} catch (Throwable t) {
 					log.warn("Error while getting extensions from module: "
-					        + moduleId, e);
+					        + moduleId, t);
 				}
 			}
 
@@ -687,9 +715,9 @@ public class ModuleFactory {
 				        .debug(
 				                "Exception encountered while calling module's activator.shutdown()",
 				                me);
-			} catch (Exception e) {
+			} catch (Throwable t) {
 				log.warn("Unable to call module's Activator.shutdown() method",
-				        e);
+				        t);
 			}
 
 			ModuleClassLoader cl = removeClassLoader(mod);

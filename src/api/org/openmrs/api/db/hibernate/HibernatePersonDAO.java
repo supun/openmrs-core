@@ -1,3 +1,16 @@
+/**
+ * The contents of this file are subject to the OpenMRS Public License
+ * Version 1.0 (the "License"); you may not use this file except in
+ * compliance with the License. You may obtain a copy of the License at
+ * http://license.openmrs.org
+ *
+ * Software distributed under the License is distributed on an "AS IS"
+ * basis, WITHOUT WARRANTY OF ANY KIND, either express or implied. See the
+ * License for the specific language governing rights and limitations
+ * under the License.
+ *
+ * Copyright (C) OpenMRS, LLC.  All Rights Reserved.
+ */
 package org.openmrs.api.db.hibernate;
 
 import java.util.Date;
@@ -8,9 +21,13 @@ import java.util.Vector;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.hibernate.Criteria;
 import org.hibernate.Query;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
+import org.hibernate.criterion.Expression;
+import org.hibernate.criterion.MatchMode;
+import org.hibernate.criterion.Order;
 import org.openmrs.Person;
 import org.openmrs.PersonAddress;
 import org.openmrs.PersonAttribute;
@@ -160,6 +177,43 @@ public class HibernatePersonDAO implements PersonDAO {
 		return people;
 	}
 	
+	@SuppressWarnings("unchecked")
+	public List<Person> findPeople(String name, boolean includeVoided) {
+		name = name.replace(", ", " ");
+		String[] names = name.split(" ");
+		
+		log.debug("name: " + name);
+		
+		Criteria criteria = sessionFactory.getCurrentSession().createCriteria(Person.class);
+		criteria.createAlias("names", "name");
+		for (String n : names) {
+			if (n != null && n.length() > 0) {
+				criteria.add(Expression.or(
+						Expression.like("name.givenName", n, MatchMode.START),
+						Expression.or(
+							Expression.like("name.familyName", n, MatchMode.START),
+								Expression.or(
+										Expression.like("name.middleName", n, MatchMode.START),
+										Expression.like("systemId", n, MatchMode.START)
+										)
+							)
+						)
+					);
+			}
+		}
+				
+		if (includeVoided == false)
+			criteria.add(Expression.eq("voided", false));
+		
+		criteria.addOrder(Order.asc("personId"));
+		
+		List returnList = new Vector();
+		returnList = criteria.list();
+		
+		return returnList;
+	}
+		
+		
 	/**
 	 * @see org.openmrs.api.db.PersonService#getPerson(java.lang.Long)
 	 */
@@ -242,24 +296,15 @@ public class HibernatePersonDAO implements PersonDAO {
 	 */
 	@SuppressWarnings("unchecked")
 	public List<Relationship> getRelationships(Person person, boolean showVoided) throws DAOException {
-		Query query = null;
-		List<Relationship> relationships = new Vector<Relationship>();
+
+		Criteria criteria = sessionFactory.getCurrentSession().createCriteria(Relationship.class, "r")
+		.add(Expression.or(Expression.eq("personA", person), Expression.eq("personB", person)));
 		
-		if (person == null)
-			return relationships;
+		if (!showVoided) {
+			criteria.add(Expression.eq("voided", showVoided));
+		}
 		
-		String voided = showVoided ? "" : " and voided = 0 ";
-		
-		query = sessionFactory.getCurrentSession().createQuery(
-			"from Relationship r where r.personA = :p1 or r.personB = :p2 " + voided + " order by r.relationshipId asc "
-		)
-		.setParameter("p1", person)
-		.setParameter("p2", person);
-		
-		if (query != null)
-			relationships = query.list(); 
-			
-		return relationships;
+		return criteria.list();
 	}
 
 	/**
@@ -320,9 +365,17 @@ public class HibernatePersonDAO implements PersonDAO {
 	
 	/**
 	 * @see org.openmrs.api.db.PersonDAO#createPerson(org.openmrs.Person)
-	 */
+	 *
 	public void createPerson(Person person) throws DAOException {
 		sessionFactory.getCurrentSession().save(person);
+	}
+	 */
+	
+	/**
+	 * @see org.openmrs.api.db.PersonDAO#createPerson(org.openmrs.Person)
+	 */
+	public Person createPerson(Person person) throws DAOException {
+		return (Person)sessionFactory.getCurrentSession().merge(person);
 	}
 
 	/**

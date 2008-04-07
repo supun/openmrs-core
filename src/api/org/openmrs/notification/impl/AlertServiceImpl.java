@@ -1,3 +1,16 @@
+/**
+ * The contents of this file are subject to the OpenMRS Public License
+ * Version 1.0 (the "License"); you may not use this file except in
+ * compliance with the License. You may obtain a copy of the License at
+ * http://license.openmrs.org
+ *
+ * Software distributed under the License is distributed on an "AS IS"
+ * basis, WITHOUT WARRANTY OF ANY KIND, either express or implied. See the
+ * License for the specific language governing rights and limitations
+ * under the License.
+ *
+ * Copyright (C) OpenMRS, LLC.  All Rights Reserved.
+ */
 package org.openmrs.notification.impl;
 
 import java.io.Serializable;
@@ -48,13 +61,14 @@ public class AlertServiceImpl implements Serializable, AlertService {
 	public void createAlert(Alert alert) throws Exception {
 		log.debug("Create a alert " + alert);
 		
-		if (alert.getCreator() == null)
+		if (alert.getCreator() == null) {
 			alert.setCreator(Context.getAuthenticatedUser());
-		if (alert.getDateCreated() == null)
 			alert.setDateCreated(new Date());
-		
-		alert.setChangedBy(Context.getAuthenticatedUser());
-		alert.setDateChanged(new Date());
+		}
+		else {
+			alert.setChangedBy(Context.getAuthenticatedUser());
+			alert.setDateChanged(new Date());
+		}
 		
 		getAlertDAO().createAlert(alert);
 	}
@@ -116,13 +130,14 @@ public class AlertServiceImpl implements Serializable, AlertService {
 	public void updateAlert(Alert alert) throws Exception {
 		log.debug("Update alert " + alert);
 		
-		if (alert.getCreator() == null)
+		if (alert.getCreator() == null) {
 			alert.setCreator(Context.getAuthenticatedUser());
-		if (alert.getDateCreated() == null)
 			alert.setDateCreated(new Date());
-		
-		alert.setChangedBy(Context.getAuthenticatedUser());
-		alert.setDateChanged(new Date());
+		}
+		else {
+			alert.setChangedBy(Context.getAuthenticatedUser());
+			alert.setDateChanged(new Date());
+		}
 		
 		// Make sure all recipients are assigned to this alert
 		if (alert.getRecipients() != null) {

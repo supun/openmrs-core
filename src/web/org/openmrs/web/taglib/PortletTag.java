@@ -1,3 +1,16 @@
+/**
+ * The contents of this file are subject to the OpenMRS Public License
+ * Version 1.0 (the "License"); you may not use this file except in
+ * compliance with the License. You may obtain a copy of the License at
+ * http://license.openmrs.org
+ *
+ * Software distributed under the License is distributed on an "AS IS"
+ * basis, WITHOUT WARRANTY OF ANY KIND, either express or implied. See the
+ * License for the specific language governing rights and limitations
+ * under the License.
+ *
+ * Copyright (C) OpenMRS, LLC.  All Rights Reserved.
+ */
 package org.openmrs.web.taglib;
 
 import java.io.IOException;
@@ -25,6 +38,7 @@ public class PortletTag extends ImportSupport {
 	private String parameters = "";
 	private Map<String, Object> parameterMap = null;
 	private Integer patientId = null;
+	private Integer personId = null;
 	private Integer encounterId = null;
 	private Integer userId = null;
 	private String patientIds = "";
@@ -68,6 +82,7 @@ public class PortletTag extends ImportSupport {
 				pageContext.getRequest().setAttribute("org.openmrs.portlet.size", size);
 				pageContext.getRequest().setAttribute("org.openmrs.portlet.parameters", OpenmrsUtil.parseParameterList(parameters));
 				pageContext.getRequest().setAttribute("org.openmrs.portlet.patientId", patientId);
+				pageContext.getRequest().setAttribute("org.openmrs.portlet.personId", personId);
 				pageContext.getRequest().setAttribute("org.openmrs.portlet.encounterId", encounterId);
 				pageContext.getRequest().setAttribute("org.openmrs.portlet.userId", userId);
 				pageContext.getRequest().setAttribute("org.openmrs.portlet.patientIds", patientIds);
@@ -100,7 +115,7 @@ public class PortletTag extends ImportSupport {
 	
 	private void resetValues() {
 		id = parameters = patientIds = moduleId = "";
-		patientId = encounterId = userId = null;
+		personId = patientId = encounterId = userId = null;
 		parameterMap = null;
 	}
 
@@ -147,6 +162,14 @@ public class PortletTag extends ImportSupport {
 	public void setPatientId(Integer patientId) {
 		this.patientId = patientId;
 	}
+
+	public Integer getPersonId() {
+    	return personId;
+    }
+
+	public void setPersonId(Integer personId) {
+    	this.personId = personId;
+    }
 
 	public String getPatientIds() {
 		return patientIds;

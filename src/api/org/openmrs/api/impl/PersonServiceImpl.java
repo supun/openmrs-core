@@ -1,3 +1,16 @@
+/**
+ * The contents of this file are subject to the OpenMRS Public License
+ * Version 1.0 (the "License"); you may not use this file except in
+ * compliance with the License. You may obtain a copy of the License at
+ * http://license.openmrs.org
+ *
+ * Software distributed under the License is distributed on an "AS IS"
+ * basis, WITHOUT WARRANTY OF ANY KIND, either express or implied. See the
+ * License for the specific language governing rights and limitations
+ * under the License.
+ *
+ * Copyright (C) OpenMRS, LLC.  All Rights Reserved.
+ */
 package org.openmrs.api.impl;
 
 import java.util.ArrayList;
@@ -75,15 +88,22 @@ public class PersonServiceImpl implements PersonService {
 		return this.findPeople(searchPhrase, includeVoided, roleList);
 	}
 
+	/**
+	 * @see org.openmrs.api.PersonService#findPeople(java.lang.String, boolean, java.util.List)
+	 */
 	public Set<Person> findPeople(String searchPhrase, boolean includeVoided, List<String> roles) {
 		log.debug("starting method, roles are " + roles);
 		Set<Person> people = new HashSet<Person>();
 		
+		// If no rules *are not* defined then find all matching persons (users and patients).
 		if ( roles == null ) {
-			people.addAll(Context.getPatientService().findPatients(searchPhrase, includeVoided));
+			people.addAll(getPersonDAO().findPeople(searchPhrase, includeVoided));
 		}
-		people.addAll(Context.getUserService().findUsers(searchPhrase, roles, includeVoided));
-		
+		// If roles *are* defined then find matching users who have the given roles.
+		else {
+			people.addAll(Context.getUserService().findUsers(searchPhrase, roles, includeVoided));
+		}
+			
 		return people;
 	}
 
@@ -97,10 +117,15 @@ public class PersonServiceImpl implements PersonService {
 	public void createPersonAttributeType(PersonAttributeType type) {
 		log.info("Creating person attribute type: " + type);
 		User user = Context.getAuthenticatedUser();
-		type.setChangedBy(user);
-		type.setDateChanged(new Date());
-		type.setCreator(user);
-		type.setDateCreated(new Date());
+		if (type.getCreator() == null) {
+			type.setCreator(user);
+			type.setDateCreated(new Date());
+		}
+		else {
+			type.setChangedBy(user);
+			type.setDateChanged(new Date());
+		}
+		
 		getPersonDAO().createPersonAttributeType(type);
 	}
 
@@ -252,9 +277,10 @@ public class PersonServiceImpl implements PersonService {
 	 * Create a new Person
 	 * @param Person to create
 	 * @throws APIException
+	 * @return Person created
 	 */
-	public void createPerson(Person person) throws APIException {
-		getPersonDAO().createPerson(person);
+	public Person createPerson(Person person) throws APIException {
+		return getPersonDAO().createPerson(person);
 	}
 	
 	/**
@@ -529,8 +555,10 @@ public class PersonServiceImpl implements PersonService {
 			person.setCreator(Context.getAuthenticatedUser());
 			person.setDateCreated(new Date());
 		}
-		person.setChangedBy(Context.getAuthenticatedUser());
-		person.setDateChanged(new Date());
+		else {
+			person.setChangedBy(Context.getAuthenticatedUser());
+			person.setDateChanged(new Date());
+		}
 		
 		// address collection
 		if (person.getAddresses() != null && person.getAddresses().size() > 0)

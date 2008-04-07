@@ -1,3 +1,16 @@
+/**
+ * The contents of this file are subject to the OpenMRS Public License
+ * Version 1.0 (the "License"); you may not use this file except in
+ * compliance with the License. You may obtain a copy of the License at
+ * http://license.openmrs.org
+ *
+ * Software distributed under the License is distributed on an "AS IS"
+ * basis, WITHOUT WARRANTY OF ANY KIND, either express or implied. See the
+ * License for the specific language governing rights and limitations
+ * under the License.
+ *
+ * Copyright (C) OpenMRS, LLC.  All Rights Reserved.
+ */
 package org.openmrs.api.db.hibernate;
 
 import java.math.BigInteger;
@@ -211,6 +224,11 @@ public class HibernateConceptDAO implements
 		}	
 	}
 	
+	/**
+	 * TODO This should be moved to the service layer
+	 * 
+	 * @param c
+	 */
 	protected void modifyCollections(Concept c) {
 		
 		User authUser = Context.getAuthenticatedUser();
@@ -218,24 +236,28 @@ public class HibernateConceptDAO implements
 		
 		if (c.getCreator() == null) {
 			c.setCreator(authUser);
-			c.setDateCreated(timestamp);
+			if (c.getDateCreated() == null)
+				c.setDateCreated(timestamp);
 		}
-		
-		c.setChangedBy(authUser);
-		c.setDateChanged(timestamp);
+		else {
+			c.setChangedBy(authUser);
+			c.setDateChanged(timestamp);
+		}
 		
 		if (c.getNames() != null) {
 			for (ConceptName cn : c.getNames()) {
 				if (cn.getCreator() == null ) {
 					cn.setCreator(authUser);
-					cn.setDateCreated(timestamp);
+					if (cn.getDateCreated() == null)
+						cn.setDateCreated(timestamp);
 				}
 			}
 		}
 		for (ConceptSynonym syn : c.getSynonyms()) {
 			if (syn.getCreator() == null ) {
 				syn.setCreator(authUser);
-				syn.setDateCreated(timestamp);
+				if (syn.getDateCreated() == null)
+					syn.setDateCreated(timestamp);
 			}
 			syn.setConcept(c);
 		}
@@ -243,7 +265,8 @@ public class HibernateConceptDAO implements
 			for (ConceptSet set : c.getConceptSets()) {
 				if (set.getCreator() == null ) {
 					set.setCreator(authUser);
-					set.setDateCreated(timestamp);
+					if (set.getDateCreated() == null)
+						set.setDateCreated(timestamp);
 				}
 				set.setConceptSet(c);
 			}
@@ -252,7 +275,8 @@ public class HibernateConceptDAO implements
 			for (ConceptAnswer ca : c.getAnswers(true)) {
 				if (ca.getCreator() == null ) {
 					ca.setCreator(authUser);
-					ca.setDateCreated(timestamp);
+					if (ca.getDateCreated() == null)
+						ca.setDateCreated(timestamp);
 				}
 				ca.setConcept(c);
 			}

@@ -19,7 +19,7 @@
 	<bean id="multipartResolver"
 		class="org.springframework.web.multipart.commons.CommonsMultipartResolver">
 		<!-- one of the properties available; the maximum file size in bytes -->
-		<property name="maxUploadSize"><value>20000000</value></property>
+		<property name="maxUploadSize"><value>75000000</value></property>
 	</bean>
 
 	<bean id="urlMapping" class="org.springframework.web.servlet.handler.SimpleUrlHandlerMapping">
@@ -29,6 +29,7 @@
 				<!-- <ref bean="openSessionInViewInterceptor"/> -->
 			</list>
 		</property>
+		<property name="order"><value>99</value></property>
 		<property name="mappings">
 			<props>
 				<prop key="/admin/orders/order.list">orderList</prop>
@@ -110,6 +111,7 @@
 				<prop key="options.form">optionsForm</prop>
 				<prop key="patientSummaries.form">multiplePatientSummariesList</prop>
 				<prop key="patientDashboard.form">patientDashboardForm</prop>
+				<prop key="personDashboard.form">personDashboardForm</prop>
 				<prop key="patientSet.form">patientSetFormController</prop>
 				<prop key="cohortSummary.list">cohortSummaryController</prop>
 
@@ -141,11 +143,14 @@
 				<prop key="admin/maintenance/dataEntryStats.list">dataEntryStatsController</prop>
 				<prop key="admin/modules/module.list">moduleListController</prop>
 				<prop key="admin/modules/moduleProperties.form">modulePropertiesFormController</prop>
+				
+				<prop key="forgotPassword.form">forgotPasswordForm</prop>
 
+				<prop key="**/globalProperties.portlet">globalPropertyPortletController</prop>
 				<prop key="**/addressLayout.portlet">addressLayoutPortletController</prop>
 				<prop key="**/nameLayout.portlet">nameLayoutPortletController</prop>
 				<prop key="**/patientPrograms.portlet">patientProgramsPortletController</prop>
-				<prop key="**/patientRelationships.portlet">patientRelationshipsPortletController</prop>
+				<prop key="**/personRelationships.portlet">personRelationshipsPortletController</prop>
 				<prop key="**/patientSet.portlet">patientSetPortletController</prop>
 				<prop key="**/patientRegimens.portlet">patientRegimenPortletController</prop>
 				<prop key="**/patientRegimenCurrent.portlet">patientRegimenPortletController</prop>
@@ -165,8 +170,9 @@
 
 	<bean id="fieldGenController" class="org.openmrs.web.controller.FieldGenController" />
 	<bean id="portletController" class="org.openmrs.web.controller.PortletController" />
+	<bean id="globalPropertyPortletController" class="org.openmrs.web.controller.GlobalPropertyPortletController" />
 	<bean id="patientProgramsPortletController" class="org.openmrs.web.controller.PatientProgramsPortletController" />
-	<bean id="patientRelationshipsPortletController" class="org.openmrs.web.controller.PatientRelationshipsPortletController" />
+	<bean id="personRelationshipsPortletController" class="org.openmrs.web.controller.PersonRelationshipsPortletController" />
 	<bean id="patientSetPortletController" class="org.openmrs.web.controller.PatientSetPortletController" />
 	<bean id="patientRegimenPortletController" class="org.openmrs.web.controller.RegimenPortletController" />
 	<bean id="patientSummaryPortletController" class="org.openmrs.web.controller.PatientSummaryPortletController" />
@@ -205,10 +211,14 @@
 
 	<!-- ** Mime Type ** -->
 
+	<bean id="obsValidator" class="org.openmrs.validator.ObsValidator" />
 	<bean id="obsForm" class="org.openmrs.web.controller.observation.ObsFormController">
 		<property name="commandName"><value>obs</value></property>
 		<property name="formView"><value>/admin/observations/obsForm</value></property>
 		<property name="successView"><value>../encounters/encounter.form</value></property>
+		<property name="validator">
+			<ref bean="obsValidator" />
+		</property>
 	</bean>
 
 	<!--this is the optional method of declaring values in the constructor -->
@@ -540,14 +550,12 @@
 
 	<!-- ** Alert  ** -->
 	<bean id="alertList" class="org.openmrs.notification.web.controller.AlertListController">
-		<property name="sessionForm"><value>true</value></property>
 		<property name="commandName"><value>alertList</value></property>
 		<property name="formView"><value>/admin/users/alertList</value></property>
 		<property name="successView"><value>alert.list</value></property>
 	</bean>
 
 	<bean id="alertForm" class="org.openmrs.notification.web.controller.AlertFormController">
-		<property name="sessionForm"><value>true</value></property>
 		<property name="commandName"><value>alert</value></property>
 		<property name="formView"><value>/admin/users/alertForm</value></property>
 		<property name="successView"><value>alert.list</value></property>
@@ -561,7 +569,6 @@
 	<!-- ============================ -->
 	<!-- ** Encounter      ** -->
 	<bean id="encounterForm" class="org.openmrs.web.controller.encounter.EncounterFormController">
-		<property name="sessionForm"><value>true</value></property>
 		<property name="commandName"><value>encounter</value></property>
 		<property name="formView"><value>/admin/encounters/encounterForm</value></property>
 		<property name="successView"><value>encounter.form</value></property>
@@ -571,7 +578,6 @@
 	<!-- ** Encounter Type ** -->
 	<bean id="encounterTypeList"
 		class="org.openmrs.web.controller.encounter.EncounterTypeListController">
-		<property name="sessionForm"><value>true</value></property>
 		<property name="commandName"><value>encounterTypeList</value></property>
 		<property name="formView"><value>/admin/encounters/encounterTypeList</value></property>
 		<property name="successView"><value>encounterType.list</value></property>
@@ -582,7 +588,6 @@
 		class="org.openmrs.web.controller.encounter.EncounterTypeValidator" />
 	<bean id="encounterTypeForm"
 		class="org.openmrs.web.controller.encounter.EncounterTypeFormController">
-		<property name="sessionForm"><value>true</value></property>
 		<property name="commandName"><value>encounterType</value></property>
 		<property name="validator">
 			<ref bean="encounterTypeValidator" />
@@ -593,7 +598,6 @@
 	<!-- ** /Encounter Type ** -->
 	<!-- ** Location ** -->
 	<bean id="locationList" class="org.openmrs.web.controller.encounter.LocationListController">
-		<property name="sessionForm"><value>true</value></property>
 		<property name="commandName"><value>locationList</value></property>
 		<property name="formView"><value>/admin/encounters/locationList</value></property>
 		<property name="successView"><value>location.list</value></property>
@@ -602,7 +606,6 @@
 	<!--  Validator and Form Controller for the add/edit encounter types page -->
 	<bean id="locationValidator" class="org.openmrs.web.controller.encounter.LocationValidator" />
 	<bean id="locationForm" class="org.openmrs.web.controller.encounter.LocationFormController">
-		<property name="sessionForm"><value>true</value></property>
 		<property name="commandName"><value>location</value></property>
 		<property name="validator">
 			<ref bean="locationValidator" />
@@ -622,7 +625,6 @@
 	<!-- ** Concept ** -->
 	<bean id="conceptValidator" class="org.openmrs.web.controller.ConceptFormValidator" />
 	<bean id="conceptForm" class="org.openmrs.web.controller.ConceptFormController">
-		<property name="sessionForm"><value>true</value></property>
 		<property name="commandName"><value>concept</value></property>
 		<property name="validator">
 			<ref bean="conceptValidator" />
@@ -1101,6 +1103,13 @@
 		<property name="formView"><value>/patientDashboardForm</value></property>
 		<property name="successView"><value>patientDashboard.form</value></property>
 	</bean>
+	<bean id="personDashboardForm"
+		class="org.openmrs.web.controller.person.PersonDashboardController">
+		<property name="sessionForm"><value>true</value></property>
+		<property name="commandName"><value>person</value></property>
+		<property name="formView"><value>/personDashboardForm</value></property>
+		<property name="successView"><value>personDashboard.form</value></property>
+	</bean>
 	<bean id="globalPropertyController"
 		class="org.openmrs.web.controller.maintenance.GlobalPropertyController">
 		<property name="commandName"><value>globalProps</value></property>
@@ -1126,7 +1135,13 @@
 		<property name="formView"><value>/admin/modules/modulePropertiesForm</value></property>
 		<property name="successView"><value>moduleProperties.form</value></property>
 	</bean>
-
+	
+	<bean id="forgotPasswordForm"
+		class="org.openmrs.web.controller.ForgotPasswordFormController">
+		<property name="commandName"><value>forgotPassword</value></property>
+		<property name="formView"><value>/forgotPasswordForm</value></property>
+		<property name="successView"><value>forgotPassword.form</value></property>
+	</bean>
 	<!-- ======================================== -->
 
 

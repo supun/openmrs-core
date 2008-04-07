@@ -1,3 +1,16 @@
+/**
+ * The contents of this file are subject to the OpenMRS Public License
+ * Version 1.0 (the "License"); you may not use this file except in
+ * compliance with the License. You may obtain a copy of the License at
+ * http://license.openmrs.org
+ *
+ * Software distributed under the License is distributed on an "AS IS"
+ * basis, WITHOUT WARRANTY OF ANY KIND, either express or implied. See the
+ * License for the specific language governing rights and limitations
+ * under the License.
+ *
+ * Copyright (C) OpenMRS, LLC.  All Rights Reserved.
+ */
 package org.openmrs.api.impl;
 
 import java.util.ArrayList;
@@ -17,6 +30,7 @@ import org.openmrs.PatientState;
 import org.openmrs.Program;
 import org.openmrs.ProgramWorkflow;
 import org.openmrs.ProgramWorkflowState;
+import org.openmrs.User;
 import org.openmrs.api.APIAuthenticationException;
 import org.openmrs.api.APIException;
 import org.openmrs.api.ProgramWorkflowService;
@@ -329,7 +343,7 @@ public class ProgramWorkflowServiceImpl implements ProgramWorkflowService {
 	/* (non-Javadoc)
 	 * @see org.openmrs.api.impl.ProgramWorkflowService#enrollPatientInProgram(org.openmrs.Patient, org.openmrs.Program, java.util.Date, java.util.Date)
 	 */
-	public void enrollPatientInProgram(Patient patient, Program program, Date enrollmentDate, Date completionDate) {
+	public void enrollPatientInProgram(Patient patient, Program program, Date enrollmentDate, Date completionDate, User creator) {
 		if (!Context.getUserContext().hasPrivilege(OpenmrsConstants.PRIV_EDIT_PATIENT_PROGRAMS))
 			throw new APIAuthenticationException("Privilege required: " + OpenmrsConstants.PRIV_EDIT_PATIENT_PROGRAMS);
 		// Should we add a boolean to the program title that says patients can be enrolled there twice simultaneously? 
@@ -340,6 +354,9 @@ public class ProgramWorkflowServiceImpl implements ProgramWorkflowService {
 		p.setPatient(patient);
 		p.setProgram(program);
 		p.setDateEnrolled(enrollmentDate);
+		if (null != creator) {
+			p.setCreator(creator);
+		}
 		createPatientProgram(p);
 	}
 	

@@ -1,3 +1,16 @@
+/**
+ * The contents of this file are subject to the OpenMRS Public License
+ * Version 1.0 (the "License"); you may not use this file except in
+ * compliance with the License. You may obtain a copy of the License at
+ * http://license.openmrs.org
+ *
+ * Software distributed under the License is distributed on an "AS IS"
+ * basis, WITHOUT WARRANTY OF ANY KIND, either express or implied. See the
+ * License for the specific language governing rights and limitations
+ * under the License.
+ *
+ * Copyright (C) OpenMRS, LLC.  All Rights Reserved.
+ */
 package org.openmrs.api.db.hibernate;
 
 import java.sql.Connection;
@@ -24,6 +37,8 @@ import org.hibernate.NonUniqueObjectException;
 import org.hibernate.Query;
 import org.hibernate.SessionFactory;
 import org.hibernate.criterion.Expression;
+import org.hibernate.dialect.Dialect;
+import org.hibernate.dialect.HSQLDialect;
 import org.openmrs.Concept;
 import org.openmrs.ConceptClass;
 import org.openmrs.ConceptDatatype;
@@ -839,6 +854,9 @@ public class HibernateAdministrationDAO implements
 		return ret;
 	}
 	
+	/**
+	 * @see org.openmrs.api.db.AdministrationDAO#executeSQL(java.lang.String, boolean)
+	 */
 	public List<List<Object>> executeSQL(String sql, boolean selectOnly) throws DAOException {
 		sql = sql.trim();
 		boolean dataManipulation = false;
@@ -852,6 +870,13 @@ public class HibernateAdministrationDAO implements
 
 		if (selectOnly && dataManipulation)
 			throw new DAOException("Illegal command(s) found in query string");
+		
+		// (solution for junit tests that usually use hsql
+		// hsql does not like the backtick.  Replace the backtick with the hsql
+		// escape character: the double quote (or nothing).
+		Dialect dialect = HibernateUtil.getDialect(sessionFactory);
+		if (HSQLDialect.class.getName().equals(dialect.getClass().getName()))
+			sql = sql.replace("`", "");
 		
 		Connection conn = sessionFactory.getCurrentSession().connection();
 		PreparedStatement ps = null;

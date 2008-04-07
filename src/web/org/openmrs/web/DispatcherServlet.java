@@ -1,3 +1,16 @@
+/**
+ * The contents of this file are subject to the OpenMRS Public License
+ * Version 1.0 (the "License"); you may not use this file except in
+ * compliance with the License. You may obtain a copy of the License at
+ * http://license.openmrs.org
+ *
+ * Software distributed under the License is distributed on an "AS IS"
+ * basis, WITHOUT WARRANTY OF ANY KIND, either express or implied. See the
+ * License for the specific language governing rights and limitations
+ * under the License.
+ *
+ * Copyright (C) OpenMRS, LLC.  All Rights Reserved.
+ */
 package org.openmrs.web;
 
 import javax.servlet.ServletException;
@@ -12,12 +25,11 @@ import org.springframework.beans.BeansException;
 
 /**
  * This class is only used to get access to the DispatcherServlet. After
- * creation, this obj is saved to WebUtil for later use.
+ * creation, this objext is saved to WebUtil for later use.
  *  
- * When Spring's webApplicationContext is refreshed, the dispatcherservlet 
+ * When Spring's webApplicationContext is refreshed, the DispatcherServlet 
  * needs to be refreshed too.
  * 
- * @author bwolfe
  */
 public class DispatcherServlet extends
 		org.springframework.web.servlet.DispatcherServlet {
@@ -31,7 +43,7 @@ public class DispatcherServlet extends
 		// refresh the application context to look for module xml config files as well
 		
 		//XmlWebApplicationContext wac = ((XmlWebApplicationContext)getWebApplicationContext());
-		//Thread.currentThread().setContextClassLoader(OpenmrsClassLoader.getInstance());
+		Thread.currentThread().setContextClassLoader(OpenmrsClassLoader.getInstance());
 		//wac.refresh();
 		
 		log.debug("Framework being initialized");
@@ -48,6 +60,7 @@ public class DispatcherServlet extends
 	}
 	
 	public void reInitFrameworkServlet() throws ServletException {
+		log.debug("Framework being REinitialized");
 		Thread.currentThread().setContextClassLoader(OpenmrsClassLoader.getInstance());
 
 		// reset bean info and framework servlet

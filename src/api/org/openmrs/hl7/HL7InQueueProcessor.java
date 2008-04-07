@@ -1,3 +1,16 @@
+/**
+ * The contents of this file are subject to the OpenMRS Public License
+ * Version 1.0 (the "License"); you may not use this file except in
+ * compliance with the License. You may obtain a copy of the License at
+ * http://license.openmrs.org
+ *
+ * Software distributed under the License is distributed on an "AS IS"
+ * basis, WITHOUT WARRANTY OF ANY KIND, either express or implied. See the
+ * License for the specific language governing rights and limitations
+ * under the License.
+ *
+ * Copyright (C) OpenMRS, LLC.  All Rights Reserved.
+ */
 package org.openmrs.hl7;
 
 import org.apache.commons.logging.Log;
@@ -67,13 +80,10 @@ public class HL7InQueueProcessor /* implements Runnable */{
 			Context.getHL7Service().deleteHL7InQueue(hl7InQueue);
 		} catch (HL7Exception e) {
 			boolean skipError = false;
-			log.error(e.getCause().getMessage());
-			log.error(e.getCause().getMessage().equals("Could not resolve patient"));
-			log.error(hl7InQueue.getHL7Source().getName());
-			log.error(!hl7InQueue.getHL7Source().getName().equals("local"));
-			log.error(Context.getAdministrationService().getGlobalProperty("hl7_processor.ignore_missing_patient_non_local", "false"));
-			log.error(Context.getAdministrationService().getGlobalProperty("hl7_processor.ignore_missing_patient_non_local", "false").equals("true"));
-			if ( e.getCause().getMessage().equals("Could not resolve patient")
+			log.error("Unable to process hl7inqueue: " + hl7InQueue.getHL7InQueueId(), e);
+			log.error("Hl7inqueue source: " + hl7InQueue.getHL7Source());
+			log.error("hl7_processor.ignore_missing_patient_non_local? " + Context.getAdministrationService().getGlobalProperty("hl7_processor.ignore_missing_patient_non_local", "false"));
+			if (e.getCause() != null && e.getCause().getMessage().equals("Could not resolve patient")
 					&& !hl7InQueue.getHL7Source().getName().equals("local")
 					&& Context.getAdministrationService().getGlobalProperty("hl7_processor.ignore_missing_patient_non_local", "false").equals("true") ) {
 				skipError = true;

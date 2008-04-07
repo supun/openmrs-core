@@ -1,3 +1,16 @@
+/**
+ * The contents of this file are subject to the OpenMRS Public License
+ * Version 1.0 (the "License"); you may not use this file except in
+ * compliance with the License. You may obtain a copy of the License at
+ * http://license.openmrs.org
+ *
+ * Software distributed under the License is distributed on an "AS IS"
+ * basis, WITHOUT WARRANTY OF ANY KIND, either express or implied. See the
+ * License for the specific language governing rights and limitations
+ * under the License.
+ *
+ * Copyright (C) OpenMRS, LLC.  All Rights Reserved.
+ */
 package org.openmrs.api.impl;
 
 import java.util.Collection;
@@ -98,24 +111,30 @@ public class UserServiceImpl implements UserService {
 	}
 	
 	/**
-	 * Save changes to user
-	 * @param user
+	 * Save changes to given <code>user</code> to the database.
+	 * 
+	 * If the user.systemId is blank or null, it will be filled in automatically
+	 * by the current systemId algorithm 
+	 * 
+	 * @param user the OpenMRS User to save to the database
 	 * @throws APIException
 	 */
 	public void updateUser(User user) throws APIException {
 		checkPrivileges(user);
 		setCollectionProperties(user);
 		
-		if (user.getSystemId() == null)
+		if (user.getSystemId() == null || user.getSystemId().equals(""))
 			user.setSystemId(generateSystemId());
 		
 		getUserDAO().updateUser(user);
 	}
 	
 	/**
-	 * Grant roles for user
-	 * @param user
-	 * @param role
+	 * Give a <code>role</code> to the given <code>user</code>.  If the 
+	 * <code>user</code> already has this role, the user is saved anyway.
+	 * 
+	 * @param user The OpenMRS user to add the <code>role</code> to 
+	 * @param role Role to give to the <code>user</code>
 	 * @throws APIException
 	 */
 	public void grantUserRole(User user, Role role) throws APIException {
@@ -124,9 +143,13 @@ public class UserServiceImpl implements UserService {
 	}
 	
 	/**
-	 * Revoke roles from user
-	 * @param user
-	 * @param role
+	 * Remove the given <code>role</code> from the given <code>user</code>
+	 * If the <code>user</code> does not have this <code>role</code>, no
+	 * errors will be thrown and the user will be saved anyway
+	 * 
+	 * @param user the OpenMRS user from which to remove the <code>role</code> 
+	 * @param role Role to remove from <code>user</code>
+	 * 
 	 * @throws APIException
 	 */
 	public void revokeUserRole(User user, Role role) throws APIException {
@@ -414,7 +437,9 @@ public class UserServiceImpl implements UserService {
 			user.setCreator(Context.getAuthenticatedUser());
 			user.setDateCreated(new Date());
 		}
-		user.setChangedBy(Context.getAuthenticatedUser());
-		user.setDateChanged(new Date());
+		else {
+			user.setChangedBy(Context.getAuthenticatedUser());
+			user.setDateChanged(new Date());
+		}
 	}
 }

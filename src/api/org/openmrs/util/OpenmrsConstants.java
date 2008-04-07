@@ -1,3 +1,16 @@
+/**
+ * The contents of this file are subject to the OpenMRS Public License
+ * Version 1.0 (the "License"); you may not use this file except in
+ * compliance with the License. You may obtain a copy of the License at
+ * http://license.openmrs.org
+ *
+ * Software distributed under the License is distributed on an "AS IS"
+ * basis, WITHOUT WARRANTY OF ANY KIND, either express or implied. See the
+ * License for the specific language governing rights and limitations
+ * under the License.
+ *
+ * Copyright (C) OpenMRS, LLC.  All Rights Reserved.
+ */
 package org.openmrs.util;
 
 import java.util.Collection;
@@ -15,13 +28,14 @@ import org.openmrs.module.ModuleFactory;
 import org.openmrs.scheduler.SchedulerConstants;
 
 /**
- * Constants used in openmrs. Contents built from build properties (version, 
+ * Constants used in OpenMRS. Contents built from build properties (version, 
  * version_short, and expected_database).  Some are set at runtime (database,
  * database version).
  * 
  *  This file should contain all privilege names and global property names.
  *  
- *  Those strings added to the static CORE_* methods will  
+ *  Those strings added to the static CORE_* methods will be written to the 
+ *  database at startup if they don't exist yet.
  */
 public final class OpenmrsConstants {
 	//private static Log log = LogFactory.getLog(OpenmrsConstants.class);
@@ -29,8 +43,12 @@ public final class OpenmrsConstants {
 	public static final int ORDERTYPE_DRUG = 2;
 	public static final int CONCEPT_CLASS_DRUG = 3;
 	
-	// the jar manifest file is loaded with these values at build time
-	// and loaded here by the constructor
+	/**
+	 * hack alert:
+	 * During an ant build, the openmrs api jar manifest file is loaded with 
+	 * these values.  When constructing the OpenmrsConstants class file, the
+	 * api jar is read and the values are copied in as constants
+	 */ 
 	private static final Package THIS_PACKAGE = OpenmrsConstants.class.getPackage();
 	public static final String OPENMRS_VERSION = THIS_PACKAGE.getSpecificationVendor();
 	public static final String OPENMRS_VERSION_SHORT = THIS_PACKAGE.getSpecificationVersion();
@@ -38,7 +56,7 @@ public final class OpenmrsConstants {
 	public static String DATABASE_NAME = "openmrs";
 	public static String DATABASE_BUSINESS_NAME = "openmrs";
 	// loaded from (Hibernate)Util.checkDatabaseVersion
-	public static String DATABASE_VERSION = "";	
+	public static String DATABASE_VERSION = null;	
 	
 	// Set true from runtime configuration to obscure patients for system demonstrations 
 	public static boolean OBSCURE_PATIENTS = false;
@@ -49,6 +67,33 @@ public final class OpenmrsConstants {
 	public static final String REGEX_LARGE = "[!\"#\\$%&'\\(\\)\\*,+-\\./:;<=>\\?@\\[\\\\\\\\\\]^_`{\\|}~]";
 	public static final String REGEX_SMALL = "[!\"#\\$%&'\\(\\)\\*,\\./:;<=>\\?@\\[\\\\\\\\\\]^_`{\\|}~]";
 	public static final Integer CIVIL_STATUS_CONCEPT_ID = 1054;
+	
+	/**
+	 * The directory that will store filesystem data about openmrs like
+	 * module omods, generated data exports, etc.  This shouldn't be 
+	 * accessed directory, the OpenmrsUtil.getApplicationDataDirectory()
+	 * should be used.
+	 * 
+	 * This should be null here. This constant will hold the value of the 
+	 * user's runtime property for the application_data_directory and is
+	 * set programmatically at startup.  This value is set in the openmrs
+	 * startup method
+	 * 
+	 * If this is null, the getApplicationDataDirectory() uses some
+	 * OS heuristics to determine where to put an app data dir. 
+	 * 
+	 * @see #APPLICATION_DATA_DIRECTORY_RUNTIME_PROPERTY
+	 * @see OpenmrsUtil.getApplicationDataDirectory()
+	 * @see OpenmrsUtil.startup(java.util.Properties);
+	 */
+	public static String APPLICATION_DATA_DIRECTORY = null;
+	
+	/**
+	 * The name of the runtime property that a user can set that will
+	 * specify where openmrs's application directory is
+	 * @see #APPLICATION_DATA_DIRECTORY
+	 */
+	public static String APPLICATION_DATA_DIRECTORY_RUNTIME_PROPERTY = "application_data_directory";
 	
 	public static final Collection<String> STOP_WORDS() {
 		List<String> stopWords = new Vector<String>();
@@ -269,7 +314,7 @@ public final class OpenmrsConstants {
 			CORE_PRIVILEGES.put(PRIV_DELETE_PERSONS, "Able to delete objects");
 		}
 		
-		// always add the module core privileges back on
+		// always add the module core privileges back on	
 		for (Privilege privilege : ModuleFactory.getPrivileges()) {
 			CORE_PRIVILEGES.put(privilege.getPrivilege(), privilege.getDescription());
 		}
@@ -315,6 +360,7 @@ public final class OpenmrsConstants {
 	public static final String GLOBAL_PROPERTY_PATIENT_IDENTIFIER_SUFFIX   = "patient.identifierSuffix";
 	public static final String GLOBAL_PROPERTY_PATIENT_SEARCH_MAX_RESULTS  = "patient.searchMaxResults";
 	public static final String GLOBAL_PROPERTY_GZIP_ENABLED                = "gzip.enabled";
+	public static final String GLOBAL_PROPERTY_MEDICAL_RECORD_OBSERVATIONS = "concept.medicalRecordObservations";
 	
 	// These properties (and default values) are set if not found in the database on startup
 	public static final List<GlobalProperty> CORE_GLOBAL_PROPERTIES() {
@@ -377,7 +423,9 @@ public final class OpenmrsConstants {
 		props.add(new GlobalProperty(GLOBAL_PROPERTY_PATIENT_SEARCH_MAX_RESULTS, "1000", "The maximum number of results returned by patient searches"));
 		
         props.add(new GlobalProperty(GLOBAL_PROPERTY_GZIP_ENABLED, "false", "Set to 'true' to turn on OpenMRS's gzip filter, and have the webapp compress data before sending it to any client that supports it. Generally use this if you are running Tomcat standalone. If you are running Tomcat behind Apache, then you'd want to use Apache to do gzip compression."));
-		
+        
+        props.add(new GlobalProperty(GLOBAL_PROPERTY_MEDICAL_RECORD_OBSERVATIONS, "1238", "The concept id of the MEDICAL_RECORD_OBSERVATIONS concept.  This concept_id is presumed to be the generic grouping (obr) concept in hl7 messages.  An obs_group row is not created for this concept."));
+        
 		for (GlobalProperty gp : ModuleFactory.getGlobalProperties()) {
 			props.add(gp);
 		}
@@ -495,7 +543,19 @@ public final class OpenmrsConstants {
 	public static String OPERATING_SYSTEM_KEY = "os.name";
 	public static String OPERATING_SYSTEM = System.getProperty(OPERATING_SYSTEM_KEY);
 	public static String OPERATING_SYSTEM_WINDOWS_XP = "Windows XP";
+	public static String OPERATING_SYSTEM_WINDOWS_VISTA = "Windows Vista";
 	public static String OPERATING_SYSTEM_LINUX = "Linux";
 	public static String OPERATING_SYSTEM_FREEBSD = "FreeBSD";
 	public static String OPERATING_SYSTEM_OSX = "Mac OS X";
+	
+    // Shortcut booleans used to make some OS specific checks
+    // more generic; note the un*x flavored check is missing
+    // some less obvious choices
+	public static boolean UNIX_BASED_OPERATING_SYSTEM = 
+        (OPERATING_SYSTEM.indexOf(OPERATING_SYSTEM_LINUX) > -1 ||
+         OPERATING_SYSTEM.indexOf(OPERATING_SYSTEM_FREEBSD) > -1 ||
+         OPERATING_SYSTEM.indexOf(OPERATING_SYSTEM_OSX) > -1);
+    public static boolean WINDOWS_BASED_OPERATING_SYSTEM = OPERATING_SYSTEM.indexOf("Windows") > -1;
+    public static boolean WINDOWS_VISTA_OPERATING_SYSTEM = 
+		OPERATING_SYSTEM.equals(OPERATING_SYSTEM_WINDOWS_VISTA);
 }

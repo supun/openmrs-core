@@ -1,3 +1,16 @@
+/**
+ * The contents of this file are subject to the OpenMRS Public License
+ * Version 1.0 (the "License"); you may not use this file except in
+ * compliance with the License. You may obtain a copy of the License at
+ * http://license.openmrs.org
+ *
+ * Software distributed under the License is distributed on an "AS IS"
+ * basis, WITHOUT WARRANTY OF ANY KIND, either express or implied. See the
+ * License for the specific language governing rights and limitations
+ * under the License.
+ *
+ * Copyright (C) OpenMRS, LLC.  All Rights Reserved.
+ */
 package org.openmrs.api;
 
 import java.util.Collection;
@@ -214,6 +227,8 @@ public interface PatientSetService {
 	@Transactional(readOnly=true)
 	public Map<Integer, Encounter> getEncountersByType(PatientSet patients, List<EncounterType> encType);
 
+	
+
 	/**
 	 * 
 	 * @param patients
@@ -388,6 +403,19 @@ public interface PatientSetService {
 	@Transactional(readOnly=true)
 	public PatientAnalysis getMyPatientAnalysis();
 
+	/**
+	 * Gets a list of encounters associated with the given form, filtered by the given patient set.
+	 * 
+	 * @param	patients	the patients to filter by (null will return all encounters for all patients)
+	 * @param 	forms		the forms to filter by
+	 */
+	@Transactional(readOnly=true)
+	public List<Encounter> getEncountersByForm(PatientSet patients, List<Form> form);
+		
+	
+	
+	
+	
 	public enum Modifier {
 		LESS_THAN ("<"),
 		LESS_EQUAL ("<="),
