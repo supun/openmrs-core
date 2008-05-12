@@ -45,6 +45,14 @@
 					}
 				}
 		}
+		
+		/*
+		 Use the default location if one has been set and no location is defined
+		*/
+		if (!location && ("${defaultLocation}" != "")) {
+			location = "${defaultLocation}";
+		}
+		
 		if (location) {
 			for (var i in selects)
 				if (selects[i] && selects[i].name == "location") {
@@ -232,6 +240,7 @@
 			<table id="identifiers" cellspacing="2">
 				<tr>
 					<td><spring:message code="PatientIdentifier.identifier"/></td>
+					<openmrs:extensionPoint pointId="newPatientForm.identifierHeader" />
 					<td><spring:message code="PatientIdentifier.identifierType"/></td>
 					<td><spring:message code="PatientIdentifier.location.identifier"/></td>
 					<td><spring:message code="general.preferred"/></td>
@@ -242,6 +251,7 @@
 						<td valign="top">
 							<input type="text" size="30" name="identifier" onmouseup="identifierOrTypeChanged(this)" />
 						</td>
+						<openmrs:extensionPoint pointId="newPatientForm.identifierBody" />
 						<td valign="top">
 							<select name="identifierType" onclick="identifierOrTypeChanged(this)">
 								<openmrs:forEachRecord name="patientIdentifierType">

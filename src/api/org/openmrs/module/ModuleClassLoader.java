@@ -444,18 +444,6 @@ public class ModuleClassLoader extends URLClassLoader {
 				return result;
 			}
 			
-			// we have to look in the requiredModules list before doing a "findClass" 
-			// so that the class is loaded by the correct ModuleClassLoader
-			for (Module reqMod : requiredModules) {
-				if (name.startsWith(reqMod.getPackageName())) {
-					ModuleClassLoader mcl = ModuleFactory.getModuleClassLoader(reqMod);
-					
-					result = mcl.loadClass(name, resolve, requestor, seenModules);
-					if (result != null)
-						return result;
-				}
-			}
-			
 			// we didn't find a loaded class and this isn't a class 
 			// from another module
 			try {
@@ -565,8 +553,8 @@ public class ModuleClassLoader extends URLClassLoader {
 		if ((name == null) || "".equals(name.trim()))
 			return null;
 		
-		if (log.isDebugEnabled()) {
-			log.debug("findLibrary(String): name=" + name
+		if (log.isTraceEnabled()) {
+			log.trace("findLibrary(String): name=" + name
 					+ ", this=" + this);
 		}
 		String libname = System.mapLibraryName(name);
@@ -613,8 +601,8 @@ public class ModuleClassLoader extends URLClassLoader {
 //				break;
 //			}
 //		}
-		if (log.isDebugEnabled()) {
-			log.debug("findLibrary(String): name=" + name
+		if (log.isTraceEnabled()) {
+			log.trace("findLibrary(String): name=" + name
 					+ ", libname=" + libname
 					+ ", result=" + result
 					+ ", this=" + this);
@@ -732,12 +720,12 @@ public class ModuleClassLoader extends URLClassLoader {
 	 */
 	protected URL findResource(final String name,
 			final ModuleClassLoader requestor, Set<String> seenModules) {
-		if (log.isDebugEnabled()) {
+		if (log.isTraceEnabled()) {
 			if (name != null && name.contains("starter")) {
-				if (seenModules != null) log.debug("seenModules.size: " + seenModules.size());
-				log.debug("name: " + name);
+				if (seenModules != null) log.trace("seenModules.size: " + seenModules.size());
+				log.trace("name: " + name);
 				for (URL url : getURLs()) {
-					log.debug("url: " + url);
+					log.trace("url: " + url);
 				}
 			}
 		}

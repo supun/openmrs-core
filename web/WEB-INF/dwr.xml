@@ -29,9 +29,12 @@
 		<convert converter="bean" match="org.openmrs.Tribe"/>
 		<convert converter="bean" match="org.openmrs.notification.web.dwr.AlertListItem"/>
 		<convert converter="bean" match="org.openmrs.web.dwr.EnteredField"/>
-		<convert converter="bean" match="org.openmrs.reporting.PatientSet" >
+		<convert converter="bean" match="org.openmrs.Cohort" >
 			<param name="exclude" value="patients"/>
 		</convert>
+        <convert converter="bean" match="org.openmrs.cohort.Cohort" >
+            <param name="exclude" value="patients"/>
+        </convert>
 		<convert converter="bean" match="org.openmrs.cohort.CohortSearchHistory"/>
 	
 		<create creator="new" javascript="DWRPatientService">
@@ -90,6 +93,7 @@
 		
 		<create creator="new" javascript="DWRObsService">
 			<param name="class" value="org.openmrs.web.dwr.DWRObsService" />
+			<include method="voidObservation"/>
 			<include method="findObs"/>
 			<include method="getObservations"/>
 			<include method="createObs"/>
@@ -134,8 +138,6 @@
 			<include method="removeFromMyPatientSet"/>
 			<include method="setMyPatientSet"/>
 			<include method="clearMyPatientSet"/>
-			<include method="addFilterToMyAnalysis"/>
-			<include method="removeFilterFromMyAnalysis"/>
 		</create>
 
 		<create creator="new" javascript="DWRRelationshipService">

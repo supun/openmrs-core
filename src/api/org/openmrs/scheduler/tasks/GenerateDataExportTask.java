@@ -19,47 +19,51 @@ import java.util.Vector;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.openmrs.api.APIException;
-import org.openmrs.api.AdministrationService;
 import org.openmrs.api.context.Context;
-import org.openmrs.api.context.ContextAuthenticationException;
-import org.openmrs.reporting.ReportService;
+import org.openmrs.report.EvaluationContext;
+import org.openmrs.reporting.ReportObjectService;
 import org.openmrs.reporting.export.DataExportReportObject;
 import org.openmrs.reporting.export.DataExportUtil;
-import org.openmrs.scheduler.Schedulable;
-import org.openmrs.scheduler.TaskConfig;
+import org.openmrs.scheduler.TaskDefinition;
 
 /**
  *  Generates a data export 
  */
-public class GenerateDataExportTask implements Schedulable { 
+public class GenerateDataExportTask extends AbstractTask { 
 
 	// Logger 
 	private Log log = LogFactory.getLog( GenerateDataExportTask.class );
 
 	// Instance of configuration information for task
-	private TaskConfig taskConfig;
 	private String idString = "";
+	private EvaluationContext context;
+	
 	/**
-	 * Initialize task.
-	 * 
-	 * @param config
+	 * @see org.openmrs.scheduler.tasks.AbstractTask#initialize(org.openmrs.scheduler.TaskConfig)
 	 */
-	public void initialize(TaskConfig config) { 
-		this.taskConfig = config;
-		this.idString = config.getProperty("dataExportIds");
+	public void initialize(TaskDefinition definition) { 
+		super.initialize(definition);
+		this.idString = definition.getProperty("dataExportIds");
 	} 
+	
+	public void setEvaluationContext(EvaluationContext context) {
+		this.context = context;
+	}
+	
+	public EvaluationContext getEvaluationContext( ) {
+		return this.context;
+	}
+
 	/** 
 	 *  Process the next form entry in the database and then remove the form entry from the database.
 	 */
-	public void run() {
+	public void execute( ) {
 		Context.openSession();
 		try {
 			log.debug("Generating data exports...");
 			
-			if (Context.isAuthenticated() == false)
+			if (!Context.isAuthenticated())
 				authenticate();
-			
-			authenticate();
 			
 			if (idString != null && idString.length() > 0) {
 				idString = idString.replace(",", " ");
@@ -67,7 +71,7 @@ public class GenerateDataExportTask implements Schedulable {
 				String[] ids = idString.split(" ");
 				
 				List<DataExportReportObject> reports = new Vector<DataExportReportObject>();
-				ReportService rs = Context.getReportService();
+				ReportObjectService rs = Context.getReportObjectService();
 				
 				for (String id : ids) {
 					if (id != null) {
@@ -79,7 +83,7 @@ public class GenerateDataExportTask implements Schedulable {
 					}
 				}
 				
-				DataExportUtil.generateExports(reports);
+				DataExportUtil.generateExports(reports, this.getEvaluationContext());
 			}
 			
 		} catch (Exception e) {
@@ -90,15 +94,5 @@ public class GenerateDataExportTask implements Schedulable {
 		}
 		
 	}
-
-	private void authenticate() {
-		try {
-			AdministrationService adminService = Context.getAdministrationService();
-			Context.authenticate(adminService.getGlobalProperty("scheduler.username"),
-				adminService.getGlobalProperty("scheduler.password"));
-			
-		} catch (ContextAuthenticationException e) {
-			log.error("Error authenticating user", e);
-		}
-	}
+	
 }

@@ -314,7 +314,7 @@ public final class OpenmrsConstants {
 			CORE_PRIVILEGES.put(PRIV_DELETE_PERSONS, "Able to delete objects");
 		}
 		
-		// always add the module core privileges back on	
+		// always add the module core privileges back on
 		for (Privilege privilege : ModuleFactory.getPrivileges()) {
 			CORE_PRIVILEGES.put(privilege.getPrivilege(), privilege.getDescription());
 		}
@@ -361,6 +361,8 @@ public final class OpenmrsConstants {
 	public static final String GLOBAL_PROPERTY_PATIENT_SEARCH_MAX_RESULTS  = "patient.searchMaxResults";
 	public static final String GLOBAL_PROPERTY_GZIP_ENABLED                = "gzip.enabled";
 	public static final String GLOBAL_PROPERTY_MEDICAL_RECORD_OBSERVATIONS = "concept.medicalRecordObservations";
+	public static final String GLOBAL_PROPERTY_REPORT_XML_MACROS           = "report.xmlMacros";
+	public static final String GLOBAL_PROPERTY_STANDARD_DRUG_REGIMENS      = "dashboard.regimen.standardRegimens";	
 	
 	// These properties (and default values) are set if not found in the database on startup
 	public static final List<GlobalProperty> CORE_GLOBAL_PROPERTIES() {
@@ -381,7 +383,114 @@ public final class OpenmrsConstants {
 		props.add(new GlobalProperty("dashboard.relationships.show_types", "", "Types of relationships separated by commas.  Doctor/Patient,Parent/Child"));
 		props.add(new GlobalProperty("dashboard.regimen.displayDrugSetIds", "ANTIRETROVIRAL DRUGS,TUBERCULOSIS TREATMENT DRUGS", "Drug sets that appear on the Patient Dashboard Regimen tab. Comma separated list of name of concepts that are defined as drug sets."));
 		
+		String standardRegimens = "<list>" +
+			"  <regimenSuggestion>" +
+			"    <drugComponents>" +
+			"      <drugSuggestion>" +
+			"        <drugId>2</drugId>" +
+			"        <dose>1</dose>" +
+			"        <units>tab(s)</units>" +
+			"        <frequency>2/day x 7 days/week</frequency>" +
+			"        <instructions></instructions>" +
+			"      </drugSuggestion>" +
+			"    </drugComponents>" +
+			"    <displayName>3TC + d4T(30) + NVP (Triomune-30)</displayName>" +
+			"    <codeName>standardTri30</codeName>" +
+			"    <canReplace>ANTIRETROVIRAL DRUGS</canReplace>" +
+			"  </regimenSuggestion>" +
+			"  <regimenSuggestion>" +
+			"    <drugComponents>" +
+			"      <drugSuggestion>" +
+			"        <drugId>3</drugId>" +
+			"        <dose>1</dose>" +
+			"        <units>tab(s)</units>" +
+			"        <frequency>2/day x 7 days/week</frequency>" +
+			"        <instructions></instructions>" +
+			"      </drugSuggestion>" +
+			"    </drugComponents>" +
+			"    <displayName>3TC + d4T(40) + NVP (Triomune-40)</displayName>" +
+			"    <codeName>standardTri40</codeName>" +
+			"    <canReplace>ANTIRETROVIRAL DRUGS</canReplace>" +
+			"  </regimenSuggestion>" +
+			"  <regimenSuggestion>" +
+			"    <drugComponents>" +
+			"      <drugSuggestion>" +
+			"        <drugId>39</drugId>" +
+			"        <dose>1</dose>" +
+			"        <units>tab(s)</units>" +
+			"        <frequency>2/day x 7 days/week</frequency>" +
+			"        <instructions></instructions>" +
+			"      </drugSuggestion>" +
+			"      <drugSuggestion>" +
+			"        <drugId>22</drugId>" +
+			"        <dose>200</dose>" +
+			"        <units>mg</units>" +
+			"        <frequency>2/day x 7 days/week</frequency>" +
+			"        <instructions></instructions>" +
+			"      </drugSuggestion>" +
+			"    </drugComponents>" +
+			"    <displayName>AZT + 3TC + NVP</displayName>" +
+			"    <codeName>standardAztNvp</codeName>" +
+			"    <canReplace>ANTIRETROVIRAL DRUGS</canReplace>" +
+			"  </regimenSuggestion>" +
+			"  <regimenSuggestion>" +
+			"    <drugComponents>" +
+			"      <drugSuggestion reference=\"../../../regimenSuggestion[3]/drugComponents/drugSuggestion\"/>" +
+			"      <drugSuggestion>" +
+			"        <drugId>11</drugId>" +
+			"        <dose>600</dose>" +
+			"        <units>mg</units>" +
+			"        <frequency>1/day x 7 days/week</frequency>" +
+			"        <instructions></instructions>" +
+			"      </drugSuggestion>" +
+			"    </drugComponents>" +
+			"    <displayName>AZT + 3TC + EFV(600)</displayName>" +
+			"    <codeName>standardAztEfv</codeName>" +
+			"    <canReplace>ANTIRETROVIRAL DRUGS</canReplace>" +
+			"  </regimenSuggestion>" +
+			"  <regimenSuggestion>" +
+			"    <drugComponents>" +
+			"      <drugSuggestion>" +
+			"        <drugId>5</drugId>" +
+			"        <dose>30</dose>" +
+			"        <units>mg</units>" +
+			"        <frequency>2/day x 7 days/week</frequency>" +
+			"        <instructions></instructions>" +
+			"      </drugSuggestion>" +
+			"      <drugSuggestion>" +
+			"        <drugId>42</drugId>" +
+			"        <dose>150</dose>" +
+			"        		<units>mg</units>" +
+			"        <frequency>2/day x 7 days/week</frequency>" +
+			"        <instructions></instructions>" +
+			"      </drugSuggestion>" +
+			"      <drugSuggestion reference=\"../../../regimenSuggestion[4]/drugComponents/drugSuggestion[2]\"/>" +
+			"    </drugComponents>" +
+			"    <displayName>d4T(30) + 3TC + EFV(600)</displayName>" +
+			"    <codeName>standardD4t30Efv</codeName>" +
+			"    <canReplace>ANTIRETROVIRAL DRUGS</canReplace>" +
+			"  </regimenSuggestion>" +
+			"  <regimenSuggestion>" +
+			"    <drugComponents>" +
+			"      <drugSuggestion>" +
+			"        <drugId>6</drugId>" +
+			"        <dose>40</dose>" +
+			"        <units>mg</units>" +
+			"        <frequency>2/day x 7 days/week</frequency>" +
+			"        <instructions></instructions>" +
+			"      </drugSuggestion>" +
+			"      <drugSuggestion reference=\"../../../regimenSuggestion[5]/drugComponents/drugSuggestion[2]\"/>" +
+			"      <drugSuggestion reference=\"../../../regimenSuggestion[4]/drugComponents/drugSuggestion[2]\"/>" +
+			"    </drugComponents>" +
+			"    <displayName>d4T(40) + 3TC + EFV(600)</displayName>" +
+			"    <codeName>standardD4t40Efv</codeName>" +
+			"    <canReplace>ANTIRETROVIRAL DRUGS</canReplace>" +
+			"  </regimenSuggestion>" +
+			"</list>"; 
+		props.add(new GlobalProperty(GLOBAL_PROPERTY_STANDARD_DRUG_REGIMENS, standardRegimens, "XML description of standard drug regimens, to be shown as shortcuts on the dashboard regimen entry tab"));		
+		
 		props.add(new GlobalProperty("concept.weight", "5089", "Concept id of the concept defining the WEIGHT concept"));
+		props.add(new GlobalProperty("concept.height", "5090", "Concept id of the concept defining the HEIGHT concept"));
 		props.add(new GlobalProperty("concept.cd4_count", "5497", "Concept id of the concept defining the CD4 count concept"));
 		props.add(new GlobalProperty("concept.causeOfDeath", "5002", "Concept id of the concept defining the CAUSE OF DEATH concept"));
 		props.add(new GlobalProperty("concept.none", "1107", "Concept id of the concept defining the NONE concept"));
@@ -423,8 +532,11 @@ public final class OpenmrsConstants {
 		props.add(new GlobalProperty(GLOBAL_PROPERTY_PATIENT_SEARCH_MAX_RESULTS, "1000", "The maximum number of results returned by patient searches"));
 		
         props.add(new GlobalProperty(GLOBAL_PROPERTY_GZIP_ENABLED, "false", "Set to 'true' to turn on OpenMRS's gzip filter, and have the webapp compress data before sending it to any client that supports it. Generally use this if you are running Tomcat standalone. If you are running Tomcat behind Apache, then you'd want to use Apache to do gzip compression."));
-        
+        props.add(new GlobalProperty(GLOBAL_PROPERTY_REPORT_XML_MACROS, "", "Macros that will be applied to Report Schema XMLs when they are interpreted. This should be java.util.properties format."));
+		
         props.add(new GlobalProperty(GLOBAL_PROPERTY_MEDICAL_RECORD_OBSERVATIONS, "1238", "The concept id of the MEDICAL_RECORD_OBSERVATIONS concept.  This concept_id is presumed to be the generic grouping (obr) concept in hl7 messages.  An obs_group row is not created for this concept."));
+        
+        props.add(new GlobalProperty(GLOBAL_PROPERTY_LOG_LEVEL, LOG_LEVEL_INFO, "log level used by the logger 'org.openmrs'. This value will override the log4j.xml value. Valid values are trace, debug, info, warn, error or fatal"));
         
 		for (GlobalProperty gp : ModuleFactory.getGlobalProperties()) {
 			props.add(gp);
@@ -547,7 +659,7 @@ public final class OpenmrsConstants {
 	public static String OPERATING_SYSTEM_LINUX = "Linux";
 	public static String OPERATING_SYSTEM_FREEBSD = "FreeBSD";
 	public static String OPERATING_SYSTEM_OSX = "Mac OS X";
-	
+		
     // Shortcut booleans used to make some OS specific checks
     // more generic; note the un*x flavored check is missing
     // some less obvious choices
@@ -558,4 +670,24 @@ public final class OpenmrsConstants {
     public static boolean WINDOWS_BASED_OPERATING_SYSTEM = OPERATING_SYSTEM.indexOf("Windows") > -1;
     public static boolean WINDOWS_VISTA_OPERATING_SYSTEM = 
 		OPERATING_SYSTEM.equals(OPERATING_SYSTEM_WINDOWS_VISTA);
+		
+	/**
+	 * Marker put into the serialization session map to tell @Replace methods 
+	 * whether or not to do just the very basic serialization
+	 */
+	public static final String SHORT_SERIALIZATION = "isShortSerialization";
+	
+    // Global property key for global logger level
+    public static final String GLOBAL_PROPERTY_LOG_LEVEL = "log.level.openmrs";
+    // Global logger category
+    public static final String LOG_CLASS_DEFAULT = "org.openmrs";
+    
+    // Log levels
+    public static final String LOG_LEVEL_TRACE = "trace";
+    public static final String LOG_LEVEL_DEBUG = "debug";
+    public static final String LOG_LEVEL_INFO  = "info";
+    public static final String LOG_LEVEL_WARN = "warn";
+    public static final String LOG_LEVEL_ERROR = "error";
+    public static final String LOG_LEVEL_FATAL = "fatal";
+    
 }

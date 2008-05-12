@@ -2,14 +2,23 @@
 <openmrs:htmlInclude file="/scripts/easyAjax.js" />
 <openmrs:htmlInclude file="/dwr/interface/DWRRelationshipService.js" />
 <openmrs:htmlInclude file="/dwr/interface/DWRPatientService.js" />
+<openmrs:htmlInclude file="/dwr/interface/DWRObsService.js" />
 <openmrs:htmlInclude file="/dwr/engine.js" />
 <openmrs:htmlInclude file="/dwr/util.js" />
 
 <openmrs:globalProperty var="importantIdentifiers" key="patient_identifier.importantTypes" />
 <openmrs:globalProperty key="use_patient_attribute.healthCenter" defaultValue="false" var="showHealthCenter"/>
 
-<div class="boxHeader${model.patientVariation}"><spring:message code="Patient.actions" /></div>
-<div class="box${model.patientVariation}">
+<openmrs:extensionPoint pointId="org.openmrs.patientDashboard.overviewBox" type="html">
+	<openmrs:hasPrivilege privilege="${extension.requiredPrivilege}">
+		<div class="boxHeader${model.patientVariation}"><spring:message code="${extension.title}" /></div>
+		<div class="box${model.patientVariation}"><spring:message code="${extension.content}" /></div>
+		<br />
+	</openmrs:hasPrivilege>
+</openmrs:extensionPoint>
+
+<div id="patientActionsBoxHeader" class="boxHeader${model.patientVariation}"><spring:message code="Patient.actions" /></div>
+<div id="patientActionsBox" class="box${model.patientVariation}">
 	<table id="patientActions">
 		<tr>
 			<td id="patientActionsPatientSummary">
@@ -122,8 +131,28 @@
 			</td>
 		</c:if>
 		<c:if test="${not empty model.patientReasonForExit}">
+			<script type="text/javascript">
+				<spring:message code="general.voidReasonQuestion" var="reasonText"/>
+				function handleCancelExit() {
+					var reason = DWRUtil.getValue('cancelExitReason');
+					if (reason == '') {
+						alert("<spring:message code="general.required" arguments="${reasonText}"/>");
+						return;
+					} else {
+						DWRObsService.voidObservation(${model.patientReasonForExit.obsId}, reason,
+							function() { window.location.reload(); } );
+					}
+				}
+			</script>
 			<td id="patientActionsOutcome">
-				<span id="reasonForExit"><spring:message code="Patient.outcome.exitType" />: <b>${model.patientReasonForExit} (${model.patientDateOfExit})</b></span>
+				<span id="reasonForExit"><spring:message code="Patient.outcome.exitType" />: <b><openmrs_tag:concept conceptId="${model.patientReasonForExit.valueCoded.conceptId}"/> (<openmrs:formatDate date="${model.patientReasonForExit.obsDatetime}"/>)</b></span>
+				<a id="cancelExitButton" href="javascript:showDiv('cancelExit'); hideDiv('cancelExitButton')">[X]</a>
+				<span id="cancelExit" style="display: none; border: 1px black dashed">
+					<spring:message code="Patient.outcome.exit.cancelReason"/>:
+					<input type="text" id="cancelExitReason" value="<spring:message code="general.dataEntryError"/>"/>
+					<input type="button" value="<spring:message code="general.delete"/>" onClick="handleCancelExit()" />
+					<input type="button" value="<spring:message code="general.cancel"/>" onClick="hideDiv('cancelExit'); showDiv('cancelExitButton')"/>
+				</span>
 			</td>
 		</c:if>
 		</tr>
@@ -132,31 +161,30 @@
 <br />
 
 <c:if test="${not empty importantIdentifiers}">
-	<div class="boxHeader${model.patientVariation}"><spring:message code="Patient.identifiers" /></div>
-	<div class="box${model.patientVariation}">
+	<div id="patientIdentifiersBoxHeader" class="boxHeader${model.patientVariation}"><spring:message code="Patient.identifiers" /></div>
+	<div id="patientIdentifiersBox" class="box${model.patientVariation}">
 		<openmrs:portlet url="patientIdentifiers" size="normal" patientId="${model.patientId}" parameters="showIfSet=true|showIfMissing=true|highlightIfMissing=false" />
 	</div>
 	<p>
 </c:if>
 
-<div class="boxHeader${model.patientVariation}"><spring:message code="Program.title"/></div>
-<div class="box${model.patientVariation}">
+<div id="patientProgramsBoxHeader" class="boxHeader${model.patientVariation}"><spring:message code="Program.title"/></div>
+<div id="patientProgramsBox" class="box${model.patientVariation}">
 	<openmrs:portlet url="patientPrograms" id="patientPrograms" patientId="${patient.patientId}" parameters="allowEdits=true"/>
 </div>
 <br/>
 
 <openmrs:globalProperty var="conceptIdsToUse" key="dashboard.overview.showConcepts" />
 <c:if test="${not empty conceptIdsToUse}">
-	<div class="boxHeader${model.patientVariation}"><spring:message code="patientDashboard.mostRecentObs"/></div>
-	<div class="box${model.patientVariation}">
+	<div id="patientMostRecentObsBoxHeader" class="boxHeader${model.patientVariation}"><spring:message code="patientDashboard.mostRecentObs"/></div>
+	<div id="patientMostRecentObsBox" class="box${model.patientVariation}">
 		<openmrs:portlet url="customMostRecentObs" size="normal" patientId="${patient.patientId}" parameters="conceptIds=${conceptIdsToUse}|allowNew=true" />
 	</div>
 	
 	<br/>
 </c:if>
 
-<div class="boxHeader${model.patientVariation}"><spring:message code="Relationship.relationships" /></div>
-<div class="box${model.patientVariation}">
+<div id="patientRelationshipsBoxHeader" class="boxHeader${model.patientVariation}"><spring:message code="Relationship.relationships" /></div>
+<div id="patientRelationshipsBox" class="box${model.patientVariation}">
 	<openmrs:portlet url="personRelationships" size="normal" patientId="${patient.patientId}" />
 </div>
-
