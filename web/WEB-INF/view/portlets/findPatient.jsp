@@ -88,7 +88,12 @@
 					}
 					//	only allow the first item to be automatically selected if:
 					//		the entered text is a string or the entered text is a valid identifier
-					return (savedText.match(/\d/) == false || isValidCheckDigit(savedText));	
+					//return (savedText.match(/\d/) == false || isValidCheckDigit(savedText));
+					
+					//don't autojump anymore.  keeping the above functionality
+					//would require adding a field to PatientListItem, and this inelegant solution
+					//doesn't seem worth the minimal functionality conferred above.
+					return false;
 				}
 				
 			</script>
@@ -189,6 +194,16 @@
 			ERROR! unknown size '${model.size}' in FindOnePatientWidget
 		</c:otherwise>
 	</c:choose>
+
+	<p/>
+	<openmrs:extensionPoint pointId="org.openmrs.findPatientPortlet.linksAtBottom" type="html"
+		requiredClass="org.openmrs.module.web.extension.LinkExt">
+		<openmrs:hasPrivilege privilege="${extension.requiredPrivilege}">
+			<a href="${extension.url}"><spring:message code="${extension.label}"/></a>
+			<br/>
+		</openmrs:hasPrivilege>
+	</openmrs:extensionPoint>
+
 
 	<p/>
 	<openmrs:extensionPoint pointId="org.openmrs.findPatientPortlet.linksAtBottom" type="html"

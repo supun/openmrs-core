@@ -60,11 +60,13 @@ public class ObsTableWidget extends TagSupport {
 	private Boolean showEmptyConcepts = true;
 	private Boolean showConceptHeader = true;
 	private Boolean showDateHeader = true;
+	private Boolean combineEqualResults = true;
 	private String id;
 	private String cssClass;
 	private Date fromDate;
 	private Date toDate;
 	private Integer limit = 0;
+	private String conceptLink = null;
 	//private String combineBy = "day";
 	
 	public ObsTableWidget() { }
@@ -76,6 +78,12 @@ public class ObsTableWidget extends TagSupport {
 		if (concepts == null || concepts.length() == 0) return;
 		this.concepts = concepts;
 	}
+	public String getConceptLink() {
+    	return conceptLink;
+    }
+	public void setConceptLink(String conceptLink) {
+    	this.conceptLink = conceptLink;
+    }
 	public String getCssClass() {
 		return cssClass;
 	}
@@ -152,6 +160,12 @@ public class ObsTableWidget extends TagSupport {
 		if (limit == null) return;
 		this.limit = limit;
 	}
+	public Boolean getCombineEqualResults() {
+    	return combineEqualResults;
+    }
+	public void setCombineEqualResults(Boolean combineEqualResults) {
+    	this.combineEqualResults = combineEqualResults;
+    }
 
 	public int doStartTag() {
 		Locale loc = Context.getLocale();
@@ -251,7 +265,15 @@ public class ObsTableWidget extends TagSupport {
 					String name = cn.getShortName();
 					if (name == null || name.length() == 0)
 						name = cn.getName();
-					ret.append("<th>" + name + "</th>");
+					ret.append("<th>");
+					if (conceptLink != null) {
+						ret.append("<a href=\"" + conceptLink + "conceptId=" + c.getConceptId() + "\">");
+					}
+					ret.append(name);
+					if (conceptLink != null) {
+						ret.append("</a>");
+					}
+					ret.append("</th>");
 				}
 				ret.append("</tr>");
 			}
@@ -264,9 +286,15 @@ public class ObsTableWidget extends TagSupport {
 					String key = c.getConceptId() + "." + date;
 					List<Obs> list = groupedObs.get(key);
 					if (list != null) {
-						for (Obs obs : list) {
-							ret.append(obs.getValueAsString(loc));
-							ret.append("<br/>");
+						if (combineEqualResults) {
+							List<String> unique = new ArrayList<String>();
+							for (Obs obs : list)
+								unique.add(obs.getValueAsString(loc));
+							for (String s : unique)
+								ret.append(s).append("<br/>");
+						} else {
+							for (Obs obs : list)
+								ret.append(obs.getValueAsString(loc)).append("<br/>");
 						}
 					}
 					ret.append("</td>");
@@ -289,16 +317,30 @@ public class ObsTableWidget extends TagSupport {
 					String name = cn.getShortName();
 					if (name == null || name.length() == 0)
 						name = cn.getName();
-					ret.append("<th>" + name + "</th>");
+					ret.append("<th>");
+					if (conceptLink != null) {
+						ret.append("<a href=\"" + conceptLink + "conceptId=" + c.getConceptId() + "\">");
+					}
+					ret.append(name);
+					if (conceptLink != null) {
+						ret.append("</a>");
+					}
+					ret.append("</th>");
 				}
 				for (Date date : dateOrder) {
 					ret.append("<td>");
 					String key = c.getConceptId() + "." + date;
 					List<Obs> list = groupedObs.get(key);
 					if (list != null) {
-						for (Obs obs : list) {
-							ret.append(obs.getValueAsString(loc));
-							ret.append("<br/>");
+						if (combineEqualResults) {
+							List<String> unique = new ArrayList<String>();
+							for (Obs obs : list)
+								unique.add(obs.getValueAsString(loc));
+							for (String s : unique)
+								ret.append(s).append("<br/>");
+						} else {
+							for (Obs obs : list)
+								ret.append(obs.getValueAsString(loc)).append("<br/>");
 						}
 					}
 					ret.append("</td>");
@@ -322,6 +364,10 @@ public class ObsTableWidget extends TagSupport {
 		observations = null;
 		sortDescending = true;
 		orientVertical = true;
+		showEmptyConcepts = true;
+		showConceptHeader = true;
+		showDateHeader = true;
+		combineEqualResults = true;
 		id = null;
 		cssClass = null;
 		showEmptyConcepts = true;
@@ -329,6 +375,7 @@ public class ObsTableWidget extends TagSupport {
 		fromDate = null;
 		toDate = null;
 		limit = 0;
+		conceptLink = null;
 		return EVAL_PAGE;
 	}
 	

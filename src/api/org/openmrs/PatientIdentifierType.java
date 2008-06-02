@@ -33,6 +33,12 @@ public class PatientIdentifierType implements java.io.Serializable {
 	private String description;
 	private Date dateCreated;
 	private User creator;
+	private String validator;
+
+	private User retiredBy;
+	private Boolean retired = Boolean.FALSE;
+	private Date dateRetired;
+	private String retireReason;
 
 	/** default constructor */
 	public PatientIdentifierType() {
@@ -177,12 +183,10 @@ public class PatientIdentifierType implements java.io.Serializable {
 		this.patientIdentifierTypeId = patientIdentifierTypeId;
 	}
 
-	public String toString() {
-		return this.name;
-	}
-
 	/**
 	 * @return Returns the checkdigit.
+	 * @deprecated No need to know if it has a check digit now that any validator algorithm
+	 * can be chosen.
 	 */
 	public Boolean getCheckDigit() {
 		return hasCheckDigit();
@@ -190,6 +194,8 @@ public class PatientIdentifierType implements java.io.Serializable {
 	
 	/**
 	 * @return Returns the checkdigit.
+	 * @deprecated No need to know if it has a check digit now that any validator algorithm
+	 * can be chosen.
 	 */
 	public Boolean hasCheckDigit() {
 		return checkDigit;
@@ -197,9 +203,93 @@ public class PatientIdentifierType implements java.io.Serializable {
 
 	/**
 	 * @param checkdigit The checkdigit to set.
+	 * @deprecated No need for this field now that any validator algorithm can be chosen.
 	 */
 	public void setCheckDigit(Boolean checkDigit) {
 		this.checkDigit = checkDigit;
+	}
+
+	/**
+     * @return the retiredBy
+     */
+    public User getRetiredBy() {
+    	return retiredBy;
+    }
+
+	/**
+     * @param retiredBy the retiredBy to set
+     */
+    public void setRetiredBy(User retiredBy) {
+    	this.retiredBy = retiredBy;
+    }
+
+	/**
+     * @return the retired
+     */
+    public Boolean getRetired() {
+    	return retired;
+    }
+
+	/**
+     * @param retired the retired to set
+     */
+    public void setRetired(Boolean retired) {
+    	this.retired = retired;
+    }
+
+	/**
+     * @return the dateRetired
+     */
+    public Date getDateRetired() {
+    	return dateRetired;
+    }
+
+	/**
+     * @param dateRetired the dateRetired to set
+     */
+    public void setDateRetired(Date dateRetired) {
+    	this.dateRetired = dateRetired;
+    }
+
+	/**
+     * @return the retireReason
+     */
+    public String getRetireReason() {
+    	return retireReason;
+    }
+
+	/**
+     * @param retireReason the retireReason to set
+     */
+    public void setRetireReason(String retireReason) {
+    	this.retireReason = retireReason;
+    }
+    
+    public String getValidator() {
+    	return validator;
+    }
+
+	public void setValidator(String validator) {
+    	this.validator = validator;
+    }
+
+	/**
+     *
+     * @return Whether this identifier type has a validator.
+     */
+    public boolean hasValidator() {
+	    return validator != null && !validator.equals("");
+    }
+
+	/**
+	 * TODO: make this return a more debug-worth string instead
+	 * 		of just the name.  Check the webapp to make
+	 * 		sure it is not depending on this
+	 * 
+	 * @see java.lang.Object#toString()
+	 */
+	public String toString() {
+		return this.name;
 	}
 	
 }

@@ -11,11 +11,15 @@
 			<generator class="native" />
 		</id>
 		
+		<discriminator column="patient_state_id" insert="false" />
+		
 		<property name="startDate" type="java.util.Date" column="start_date" length="19" />
 
 		<property name="endDate" type="java.util.Date" column="end_date" length="19" />
 	
 		<property name="dateCreated" type="java.util.Date" column="date_created" not-null="true" length="19" />
+		
+		<property name="dateChanged" type="java.util.Date" column="date_changed" length="19" />
 		
 		<property name="voided" type="java.lang.Boolean" column="voided" length="1" not-null="true" />
 		
@@ -28,6 +32,8 @@
 		<many-to-one name="patientProgram" class="PatientProgram" column="patient_program_id" not-null="true" />
 
 		<many-to-one name="creator" class="User" column="creator" not-null="true" />
+		
+		<many-to-one name="changedBy" class="User" column="changed_by" />
 		
 		<many-to-one name="voidedBy" class="User" column="voided_by" />
 

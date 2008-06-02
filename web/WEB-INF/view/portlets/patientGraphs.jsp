@@ -71,12 +71,14 @@ table#labTestTable th {
 					<openmrs:obsTable
 						observations="${model.patientObs}"
 						concepts="name:CD4 COUNT|name:WEIGHT (KG)|set:name:LABORATORY EXAMINATIONS CONSTRUCT"
+						conceptLink="admin/observations/personObs.form?personId=${model.patientId}&"
 						id="labTestTable"
 						showEmptyConcepts="false"
 						showConceptHeader="true"
 						showDateHeader="true"
 						orientation="horizontal"
 						sort="asc"
+						combineEqualResults="true"
 						limit="-1"
 					/>
 				</td>

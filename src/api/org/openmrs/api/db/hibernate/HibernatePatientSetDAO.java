@@ -456,7 +456,7 @@ public class HibernatePatientSetDAO implements PatientSetDAO {
 		Set<Integer> ids = new HashSet<Integer>();
 		ids.addAll(query.list());
 		
-		return new Cohort(ids);
+		return new Cohort("All patients", "", ids);
 	}
 	
 	/**

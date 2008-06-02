@@ -182,25 +182,7 @@ public class NewPatientFormController extends SimpleFormController {
 								log.debug("and type: " + types[i]);
 								log.debug("and location: " + locs[i]);
 							}
-						
-							try {
-								if (pit.hasCheckDigit() && !OpenmrsUtil.isValidCheckDigit(id)) {
-									log.error("hasCheckDigit and is not valid: " + pit.getName() + " " + id);
-									String msg = getMessageSourceAccessor().getMessage("error.checkdigits.verbose", args);
-									errors.rejectValue("identifier", msg);
-								}
-	//							else if (pit.hasCheckDigit() == false && id.contains("-")) {
-	//								log.error("hasn't CheckDigit and contains '-': " + pit.getName() + " " + id);
-	//								String[] args2 = {"-", id}; 
-	//								String msg = getMessageSourceAccessor().getMessage("error.character.invalid", args2);
-	//								errors.rejectValue("identifier", msg);
-	//							}
-							} catch (Exception e) {
-								log.error("exception thrown with: " + pit.getName() + " " + id);
-								log.error("Error while adding patient identifiers to savedIdentifier list", e);
-								String msg = getMessageSourceAccessor().getMessage("error.checkdigits", args);
-								errors.rejectValue("identifier", msg);
-							}
+
 						}
 					}
 				}
@@ -584,6 +566,7 @@ public class NewPatientFormController extends SimpleFormController {
 	 */
     protected Object formBackingObject(HttpServletRequest request) throws ServletException {
 		
+    	newIdentifiers = new HashSet<PatientIdentifier>(); 
 		Patient p = null;
 		Integer id = null;
     	
@@ -596,7 +579,7 @@ public class NewPatientFormController extends SimpleFormController {
 	    			p = ps.getPatient(id);
 	    		}
 	    		catch (NumberFormatException numberError) {
-	    			log.warn("Invalid userId supplied: '" + patientId + "'", numberError);
+	    			log.warn("Invalid patientId supplied: '" + patientId + "'", numberError);
 	    		}
 	    		catch (ObjectRetrievalFailureException noUserEx) {
 	    			// continue

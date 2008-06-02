@@ -44,6 +44,7 @@ import org.openmrs.util.OpenmrsUtil;
 import org.openmrs.web.WebConstants;
 import org.springframework.beans.propertyeditors.CustomDateEditor;
 import org.springframework.beans.propertyeditors.CustomNumberEditor;
+import org.springframework.util.StringUtils;
 import org.springframework.validation.BindException;
 import org.springframework.validation.Errors;
 import org.springframework.validation.ValidationUtils;
@@ -91,12 +92,17 @@ public class EncounterFormController extends SimpleFormController {
 		Context.addProxyPrivilege(OpenmrsConstants.PRIV_VIEW_PATIENTS);
 		try {
 			if (Context.isAuthenticated()) {
-				if (request.getParameter("patientId") != null)
+				if (StringUtils.hasText(request.getParameter("patientId")))
 					encounter.setPatient(Context.getPatientService().getPatient(Integer.valueOf(request.getParameter("patientId"))));
-				if (request.getParameter("providerId") != null)
+				if (StringUtils.hasText(request.getParameter("providerId")))
 					encounter.setProvider(Context.getUserService().getUser(Integer.valueOf(request.getParameter("providerId"))));
 				if (encounter.isVoided())
 					ValidationUtils.rejectIfEmptyOrWhitespace(errors, "voidReason", "error.null");
+				
+				ValidationUtils.rejectIfEmptyOrWhitespace(errors, "patient", "error.null");
+				ValidationUtils.rejectIfEmptyOrWhitespace(errors, "provider", "error.null");
+				ValidationUtils.rejectIfEmptyOrWhitespace(errors, "location", "error.null");
+				ValidationUtils.rejectIfEmptyOrWhitespace(errors, "encounterDatetime", "error.null");
 				
 			}
 		} finally {
@@ -194,9 +200,9 @@ public class EncounterFormController extends SimpleFormController {
 		List<Integer> editedObs = new Vector<Integer>();
 
 		// the map returned to the form
-		// This is a mapping between the formfield and the Obs/ObsGroup
+		// This is a mapping between the formfield and a list of the Obs/ObsGroup in that field
 		// This mapping is sorted according to the comparator in FormField.java
-		SortedMap<FormField, Obs> obsMapToReturn = new TreeMap<FormField, Obs>();
+		SortedMap<FormField, List<Obs>> obsMapToReturn = new TreeMap<FormField, List<Obs>>();
 		
 		// this maps the obs to form field objects for non top-level obs
 		// it is keyed on obs so that when looping over an exploded obsGroup
@@ -235,7 +241,12 @@ public class EncounterFormController extends SimpleFormController {
 				// be the obs that don't have an obs grouper 
 				if (o.getObsGroup() == null) {
 					// populate the obs map with this formfield and obs
-					obsMapToReturn.put(ff, o);
+					List<Obs> list = obsMapToReturn.get(ff);
+					if (list == null) {
+						list = new Vector<Obs>();
+						obsMapToReturn.put(ff, list);
+					}
+					list.add(o);
 				}
 				else {
 					// this is not a top-level obs, just put the formField

@@ -43,6 +43,9 @@ public class Concept implements java.io.Serializable, Attributable<Concept> {
 	@Attribute(required=true)
 	private Integer conceptId;
 	private Boolean retired = false;
+	private User retiredBy;
+	private Date dateRetired;
+	private String retireReason;
 	private ConceptDatatype datatype;
 	private ConceptClass conceptClass;
 	private Boolean set = false;
@@ -315,34 +318,52 @@ public class Concept implements java.io.Serializable, Attributable<Concept> {
 	 */
 	public ConceptName getName(Locale locale, boolean exact) {
 		log.debug("Getting conceptName for locale: " + locale);
-		
+
+		ConceptName bestMatch = null; // name from compatible locale (not exactly exact)
+		ConceptName defaultName = null; // any available name for the concept
+
 		if (locale == null)
-			locale = Locale.US;
-		
-		String loc = locale.getLanguage();
-		if (loc.length() > 2)
-			loc = loc.substring(0, 2);
-		ConceptName defaultName = null;
+			locale = Context.getLocale(); // Don't presume en_US;
+
+		String desiredLanguage = locale.getLanguage();
+		String desiredCountry = locale.getCountry();
+
 		for (Iterator<ConceptName> i = getNames().iterator(); i.hasNext();) {
-			ConceptName name = i.next();
-			String lang = name.getLocale();
-			if (lang.equals(loc))
-				return name;
-			if (lang.equals("en"))
-				defaultName = name;
+			ConceptName possibleName = i.next();
+
+			if (possibleName.getLocale().equals(locale)) {
+				bestMatch = possibleName;
+				break;
+			} else {
+				if (defaultName == null)
+					defaultName = possibleName;
+				if (bestMatch == null) {
+					if (possibleName.getLocale()
+					                .getLanguage()
+					                .equals(desiredLanguage)) {
+						bestMatch = possibleName;
+					}
+				}
+			}
 		}
-		
-		//no name with the given locale was found.
-		// return null if exact match desired
+
 		if (exact) {
-			log.warn("No concept name found for concept id " + conceptId + " for locale " + loc);
-			return null;
+			if (bestMatch == null)
+				log.warn("No concept name found for concept id " + conceptId
+				        + " for locale " + locale.toString());
+			return bestMatch;
 		}
-		
-		// returning default name locale ("en") if exact match not desired
-		if (defaultName == null)
-			log.warn("No concept name found for default locale for concept id " + conceptId);
-		
+
+		if (bestMatch != null)
+			return bestMatch;
+
+		log.warn("No compatible concept name found for default locale for concept id "
+		        + conceptId);
+
+		if (defaultName == null) {
+			log.error("No concept names exist for concept id: " + conceptId);
+		}
+
 		return defaultName;
 	}
 	
@@ -411,6 +432,48 @@ public class Concept implements java.io.Serializable, Attributable<Concept> {
 	}
 
 	/**
+     * @return the retiredBy
+     */
+    public User getRetiredBy() {
+    	return retiredBy;
+    }
+
+	/**
+     * @param retiredBy the retiredBy to set
+     */
+    public void setRetiredBy(User retiredBy) {
+    	this.retiredBy = retiredBy;
+    }
+
+	/**
+     * @return the dateRetired
+     */
+    public Date getDateRetired() {
+    	return dateRetired;
+    }
+
+	/**
+     * @param dateRetired the dateRetired to set
+     */
+    public void setDateRetired(Date dateRetired) {
+    	this.dateRetired = dateRetired;
+    }
+
+	/**
+     * @return the retireReason
+     */
+    public String getRetireReason() {
+    	return retireReason;
+    }
+
+	/**
+     * @param retireReason the retireReason to set
+     */
+    public void setRetireReason(String retireReason) {
+    	this.retireReason = retireReason;
+    }
+
+	/**
 	 * @return Returns the synonyms.
 	 */
 	public Collection<ConceptSynonym> getSynonyms() {
@@ -424,12 +487,12 @@ public class Concept implements java.io.Serializable, Attributable<Concept> {
 	 * @return Collection of ConceptSynonym attributed to the Concept in the given locale
 	 */
 	public Collection<ConceptSynonym> getSynonyms(Locale locale) {
-		String loc = locale.getLanguage().substring(0, 2);
+		String conceptLanguage = locale.getLanguage().substring(0, 2);
 		Collection<ConceptSynonym> syns = new Vector<ConceptSynonym>();
 		for (ConceptSynonym syn : getSynonyms()) {
-			String lang = syn.getLocale();
-			if (lang == null) lang = "en";
-			if (lang.equals(loc))
+			String synLanguage = syn.getLocale().getLanguage().substring(0, 2);
+			if (synLanguage == null) synLanguage = Context.getLocale().getLanguage().substring(0, 2);
+			if (synLanguage.equals(conceptLanguage))
 				syns.add(syn);
 		}
 		log.debug("returning: " + syns);
@@ -552,6 +615,9 @@ public class Concept implements java.io.Serializable, Attributable<Concept> {
 	}
 
 	
+	/**
+	 * @see org.openmrs.Attributable#findPossibleValues(java.lang.String)
+	 */
 	public List<Concept> findPossibleValues(String searchText) {
 		List<Concept> concepts = new Vector<Concept>();
 		try {
@@ -566,6 +632,9 @@ public class Concept implements java.io.Serializable, Attributable<Concept> {
 	}
 	
 
+	/**
+	 * @see org.openmrs.Attributable#getPossibleValues()
+	 */
 	public List<Concept> getPossibleValues() {
 		try {
 			return Context.getConceptService().getConceptsByName("");
@@ -577,6 +646,9 @@ public class Concept implements java.io.Serializable, Attributable<Concept> {
 	}
 	
 
+	/**
+	 * @see org.openmrs.Attributable#hydrate(java.lang.String)
+	 */
 	public Concept hydrate(String s) {
 		try {
 			return Context.getConceptService().getConcept(Integer.valueOf(s));
@@ -588,8 +660,21 @@ public class Concept implements java.io.Serializable, Attributable<Concept> {
 	}
 	
 
+	/**
+	 * @see org.openmrs.Attributable#serialize()
+	 */
 	public String serialize() {
 		return "" + this.getConceptId();
+	}
+	
+	/**
+	 * @see org.openmrs.Attributable#getDisplayString()
+	 */
+	public String getDisplayString() {
+		if (getName() == null)
+			return toString();
+		else
+			return getName().getName();
 	}
 
 	
