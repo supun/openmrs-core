@@ -13,6 +13,8 @@
  */
 package org.openmrs.api.db.hibernate;
 
+import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.Collection;
 import java.util.HashSet;
@@ -41,6 +43,7 @@ import org.openmrs.Concept;
 import org.openmrs.ConceptAnswer;
 import org.openmrs.ConceptClass;
 import org.openmrs.ConceptDatatype;
+import org.openmrs.ConceptDerived;
 import org.openmrs.ConceptName;
 import org.openmrs.ConceptNumeric;
 import org.openmrs.ConceptProposal;
@@ -78,9 +81,63 @@ public class HibernateConceptDAO implements ConceptDAO {
 	public Concept saveConcept(Concept concept) throws DAOException {
 		if (concept.getConceptId() == null || concept.getConceptId() < 1)
 			concept.setConceptId(this.getNextAvailableId());
+		else {
+			// this method checks the concept_numeric, concept_derived, etc tables
+			// to see if a row exists there or not.  This is needed because hibernate
+			// doesn't like to insert into concept_numeric but update concept in the 
+			// same go.  It assumes that its either in both tables or no tables
+			insertRowIntoSubclassIfNecessary(concept);
+		}
+		
 		sessionFactory.getCurrentSession().saveOrUpdate(concept);
 		return concept;
 	}
+
+	/**
+     * Convenience method that will check this concept for subtype values (ConceptNumeric, ConceptDerived, etc)
+     * and insert a line into that subtable if needed.
+     * 
+     * This prevents a hibernate ConstraintViolationException
+     * 
+     * @param concept the concept that will be inserted
+     */
+    private void insertRowIntoSubclassIfNecessary(Concept concept) {
+    	Connection connection = sessionFactory.getCurrentSession().connection();
+		
+    	// check the concept_numeric table
+    	if (concept instanceof ConceptNumeric) {
+    		
+    		try {
+				PreparedStatement ps = connection.prepareStatement("SELECT * FROM concept WHERE concept_id = ? and not exists (select * from concept_numeric WHERE concept_id = ?)");
+				ps.setInt(1, concept.getConceptId());
+				ps.setInt(2, concept.getConceptId());
+				ps.execute();
+		
+				if (ps.getResultSet().next()) {
+					// we have to evict the current concept out of the session because
+					// the user probably had to change the class of this object to get it 
+					// to now be a numeric
+					// (must be done before the "insert into...")
+					sessionFactory.getCurrentSession().clear();
+					
+					ps = connection.prepareStatement("INSERT INTO concept_numeric (concept_id, precise) VALUES (?, false)");
+					ps.setInt(1, concept.getConceptId());
+					ps.executeUpdate();
+				}
+				else {
+					// no stub insert is needed because either a concept row 
+					// doesn't exist or a concept_numeric row does exist
+				}
+				
+			}
+			catch (SQLException e) {
+				log.error("Error while trying to see if this ConceptNumeric is in the concept_numeric table already", e);
+			}
+    	}
+    	else if (concept instanceof ConceptDerived) {
+    		// check the concept_derived table
+    	}
+    }
 
 	/**
 	 * @see org.openmrs.api.db.ConceptDAO#purgeConcept(org.openmrs.Concept)
@@ -240,9 +297,6 @@ public class HibernateConceptDAO implements ConceptDAO {
 	 * @see org.openmrs.api.db.ConceptDAO#purgeConceptClass(org.openmrs.ConceptClass)
 	 */
 	public void purgeConceptClass(ConceptClass cc) throws DAOException  {
-		sessionFactory.getCurrentSession().createQuery("delete from ConceptClass where concept_class_id = :c")
-					.setInteger("c", cc.getConceptClassId())
-					.executeUpdate();			
 		sessionFactory.getCurrentSession().delete(cc);
 	}
 
@@ -256,6 +310,7 @@ public class HibernateConceptDAO implements ConceptDAO {
     /**
      * @see org.openmrs.api.db.ConceptDAO#getAllConceptDatatypes(boolean)
      */
+    @SuppressWarnings("unchecked")
     public List<ConceptDatatype> getAllConceptDatatypes(boolean includeRetired)
             throws DAOException {
     	Criteria crit = sessionFactory.getCurrentSession().createCriteria(ConceptDatatype.class);
@@ -269,6 +324,7 @@ public class HibernateConceptDAO implements ConceptDAO {
     /**
      * @see org.openmrs.api.db.ConceptDAO#getConceptDatatypes(java.lang.String)
      */
+    @SuppressWarnings("unchecked")
     public List<ConceptDatatype> getConceptDatatypes(String name)
             throws DAOException {
     	Criteria crit = sessionFactory.getCurrentSession().createCriteria(ConceptDatatype.class);

@@ -1021,14 +1021,12 @@
 	<!-- =====    Programs and Workflows    ===== -->
 	<!-- ======================================== -->
 	<bean id="programList" class="org.openmrs.web.controller.program.ProgramListController">
-		<property name="sessionForm"><value>true</value></property>
 		<property name="commandName"><value>programList</value></property>
 		<property name="formView"><value>/admin/programs/programList</value></property>
 		<property name="successView"><value>program.list</value></property>
 	</bean>
 	<bean id="programValidator" class="org.openmrs.web.controller.program.ProgramValidator" />
 	<bean id="programForm" class="org.openmrs.web.controller.program.ProgramFormController">
-		<property name="sessionForm"><value>true</value></property>
 		<property name="commandName"><value>program</value></property>
 		<property name="validator">
 			<ref bean="programValidator" />
@@ -1488,6 +1486,8 @@
 				
 				<prop key="stateProvince">Location.province</prop>
 				<prop key="postalCode">Location.postalCode</prop>
+				<prop key="longitude">Location.longitude</prop>
+				<prop key="latitude">Location.latitude</prop>
 				<prop key="country">Location.country</prop>
 			</props>
 		</property>
@@ -1508,6 +1508,8 @@
 				
 				<prop key="stateProvince">24</prop>
 				<prop key="postalCode">6</prop>
+				<prop key="longitude">10</prop>
+				<prop key="latitude">10</prop>
 				<prop key="country">10</prop>
 				
 			</props>
@@ -1524,7 +1526,9 @@
 				<value>neighborhoodCell cityVillage</value>
 				<value>subregion region</value>
 				<value>townshipDivision countyDistrict</value>
-				<value>stateProvince postalCode country</value>
+				<value>stateProvince postalCode</value>
+				<value>latitude longitude</value>
+                                <value>country</value>
 			</list>
 		</property>
 	</bean>
