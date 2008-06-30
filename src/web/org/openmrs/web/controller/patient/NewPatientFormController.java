@@ -113,7 +113,9 @@ public class NewPatientFormController extends SimpleFormController {
 	}
 
 	protected ModelAndView processFormSubmission(HttpServletRequest request, HttpServletResponse response, Object obj, BindException errors) throws Exception {
-	
+		
+		newIdentifiers = new HashSet<PatientIdentifier>();
+		
 		ShortPatientModel shortPatient = (ShortPatientModel)obj;
 		
 		log.debug("\nNOW GOING THROUGH PROCESSFORMSUBMISSION METHOD.......................................\n\n");
@@ -175,6 +177,9 @@ public class NewPatientFormController extends SimpleFormController {
 							
 							PatientIdentifier pi = new PatientIdentifier(id, pit, loc);
 							pi.setPreferred(pref.equals(id+types[i]));
+							if (newIdentifiers.contains(pi))
+								newIdentifiers.remove(pi);
+							
 							newIdentifiers.add(pi);
 							
 							if (log.isDebugEnabled()) {
@@ -312,10 +317,27 @@ public class NewPatientFormController extends SimpleFormController {
 			for (PatientIdentifier pi : patient.getIdentifiers()) {
 				pi.setPreferred(pref.equals(pi.getIdentifier()+pi.getIdentifierType().getPatientIdentifierTypeId()));
 			}
+
+			// look for person attributes in the request and save to person
+			for (PersonAttributeType type : personService.getPersonAttributeTypes(PERSON_TYPE.PATIENT, ATTR_VIEW_TYPE.VIEWING)) {
+				String value = request.getParameter(type.getPersonAttributeTypeId().toString());
+				
+				patient.addAttribute(new PersonAttribute(type, value));
+			}
 			
-			
-			// add the new identifiers
-			//patient.getIdentifiers().addAll(newIdentifiers);
+			// add the new identifiers.  First remove them so that things like
+			// changes to preferred status and location are persisted 
+			for (PatientIdentifier identifier : newIdentifiers) {
+				// this loop is used instead of just using removeIdentifier becuase
+				// the identifier set on patient is a TreeSet which will use .compareTo
+				identifier.setPatient(patient);
+				for (PatientIdentifier currentIdentifier : patient.getActiveIdentifiers()) {
+					if (currentIdentifier.equals(identifier)) {
+						patient.removeIdentifier(currentIdentifier);
+						Context.evictFromSession(currentIdentifier);
+					}
+				}
+			}
 			patient.addIdentifiers(newIdentifiers);
 			
 			
@@ -330,7 +352,6 @@ public class NewPatientFormController extends SimpleFormController {
 					identifier.setVoided(true);
 				}
 			}
-			
 			
 			// set the other patient attributes
 			patient.setBirthdate(shortPatient.getBirthdate());
@@ -351,13 +372,6 @@ public class NewPatientFormController extends SimpleFormController {
 			else {
 				patient.setDeathDate(null);
 				patient.setCauseOfDeath(null);
-			}
-			
-			// look for person attributes in the request and save to person
-			for (PersonAttributeType type : personService.getPersonAttributeTypes(PERSON_TYPE.PATIENT, ATTR_VIEW_TYPE.VIEWING)) {
-				String value = request.getParameter(type.getPersonAttributeTypeId().toString());
-				
-				patient.addAttribute(new PersonAttribute(type, value));
 			}
 			
 			// save or add the patient
@@ -544,7 +558,10 @@ public class NewPatientFormController extends SimpleFormController {
 			if ( isError ) {
 				log.error("Had an error during processing. Redirecting to " + this.getFormView());
 				
-				return this.showForm(request, response, errors);
+				Map<String, Object> model = new HashMap<String, Object>();
+				model.put(getCommandName(), new ShortPatientModel(patient));
+				
+				return this.showForm(request, response, errors, model);
 				//return new ModelAndView(new RedirectView(getFormView()));
 			}
 			else {

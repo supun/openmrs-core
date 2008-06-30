@@ -16,7 +16,7 @@
 
 /*!40000 DROP DATABASE IF EXISTS `openmrs`*/;
 
-CREATE DATABASE /*!32312 IF NOT EXISTS*/ `openmrs` /*!40100 DEFAULT CHARACTER SET utf8 */;
+CREATE DATABASE openmrs DEFAULT CHARACTER SET utf8;
 DELETE FROM mysql.user WHERE User='test';
 CREATE USER test IDENTIFIED BY 'test';
 GRANT ALL ON openmrs.* TO test;
@@ -1852,7 +1852,7 @@ SET character_set_client = @saved_cs_client;
 --
 
 /*!40000 ALTER TABLE `person_attribute_type` DISABLE KEYS */;
-INSERT INTO `person_attribute_type` VALUES (1,'Race','Group of persons related by common descent or heredity','java.lang.String',NULL,0,1,'2007-05-04 09:59:23',NULL,NULL,0,NULL,NULL,NULL),(2,'Birthplace','Location of persons birth','java.lang.String',NULL,0,1,'2007-05-04 09:59:23',NULL,NULL,0,NULL,NULL,NULL),(3,'Citizenship','Country of which this person is a member','java.lang.String',NULL,0,1,'2007-05-04 09:59:23',NULL,NULL,0,NULL,NULL,NULL),(4,'Mother\'s Name','First or last name of this person\'s mother','java.lang.String',NULL,0,1,'2007-05-04 09:59:23',NULL,NULL,0,NULL,NULL,NULL),(5,'Civil Status','Marriage status of this person','org.openmrs.Concept',NULL,0,1,'2007-05-04 09:59:23',NULL,NULL,0,NULL,NULL,NULL),(6,'Health District','District/region in which this patient\' home health center resides','java.lang.String',NULL,0,1,'2007-05-04 09:59:23',NULL,NULL,0,NULL,NULL,NULL),(7,'Health Center','Specific Location of this person\'s home health center.','org.openmrs.Location',NULL,0,1,'2007-05-04 09:59:23',NULL,NULL,0,NULL,NULL,NULL);
+INSERT INTO `person_attribute_type` VALUES (1,'Race','Group of persons related by common descent or heredity','java.lang.String',NULL,0,1,'2007-05-04 09:59:23',NULL,NULL,0,NULL,NULL,NULL),(2,'Birthplace','Location of persons birth','java.lang.String',NULL,0,1,'2007-05-04 09:59:23',NULL,NULL,0,NULL,NULL,NULL),(3,'Citizenship','Country of which this person is a member','java.lang.String',NULL,0,1,'2007-05-04 09:59:23',NULL,NULL,0,NULL,NULL,NULL),(4,'Mother\'s Name','First or last name of this person\'s mother','java.lang.String',NULL,0,1,'2007-05-04 09:59:23',NULL,NULL,0,NULL,NULL,NULL),(5,'Civil Status','Marriage status of this person','org.openmrs.Concept',1054,0,1,'2007-05-04 09:59:23',NULL,NULL,0,NULL,NULL,NULL),(6,'Health District','District/region in which this patient\' home health center resides','java.lang.String',NULL,0,1,'2007-05-04 09:59:23',NULL,NULL,0,NULL,NULL,NULL),(7,'Health Center','Specific Location of this person\'s home health center.','org.openmrs.Location',NULL,0,1,'2007-05-04 09:59:23',NULL,NULL,0,NULL,NULL,NULL);
 /*!40000 ALTER TABLE `person_attribute_type` ENABLE KEYS */;
 
 --
@@ -2171,7 +2171,7 @@ SET character_set_client = @saved_cs_client;
 --
 
 /*!40000 ALTER TABLE `role` DISABLE KEYS */;
-INSERT INTO `role` VALUES ('System Developer','Developers of the OpenMRS .. have additional access to change fundamental structure of the database model.');
+INSERT INTO `role` VALUES ('System Developer','Developers of the OpenMRS .. have additional access to change fundamental structure of the database model.'), ('Clinician','Users who are a part of direct patient care.'), ('Data Assistant','Clerks who perform data entry.'), ('Data Manager','User who maintains clinical data stored within the OpenMRS repository.'), ('Provider','General privileges held by all providers');
 /*!40000 ALTER TABLE `role` ENABLE KEYS */;
 
 --
@@ -2195,7 +2195,7 @@ SET character_set_client = @saved_cs_client;
 --
 
 /*!40000 ALTER TABLE `role_privilege` DISABLE KEYS */;
-INSERT INTO `role_privilege` VALUES ('Anonymous','View Navigation Menu');
+INSERT INTO `role_privilege` VALUES ('Anonymous','View Navigation Menu'), ('Data Assistant','Add Patients'), ('Data Assistant','Add People'), ('Data Assistant','Edit Patients'), ('Data Assistant','Edit People'), ('Data Assistant','Manage Programs'), ('Data Assistant','Manage Relationships'), ('Data Assistant','Patient Dashboard - View Demographics Section'), ('Data Assistant','Patient Dashboard - View Encounters Section'), ('Data Assistant','Patient Dashboard - View Forms Section'), ('Data Assistant','Patient Dashboard - View Overview Section'), ('Data Assistant','View Concepts'), ('Data Assistant','View Encounters'), ('Data Assistant','View Forms'), ('Data Assistant','View Navigation Menu'), ('Data Assistant','View Observations'), ('Data Assistant','View Patients'), ('Data Assistant','View People'), ('Data Assistant','View Programs'), ('Data Assistant','View Users'), ('Data Manager','Add Observations'), ('Data Manager','Add Patients'), ('Data Manager','Delete Observations'), ('Data Manager','Delete Report Objects'), ('Data Manager','Edit Encounters'), ('Data Manager','Edit Observations'), ('Data Manager','Edit Patients'), ('Data Manager','Manage Alerts'), ('Data Manager','Manage Locations'), ('Data Manager','Manage Tribes'), ('Data Manager','Patient Dashboard - View Demographics Section'), ('Data Manager','Patient Dashboard - View Encounters Section'), ('Data Manager','Patient Dashboard - View Forms Section'), ('Data Manager','Patient Dashboard - View Graphs Section'), ('Data Manager','View Administration Functions'), ('Data Manager','View Concepts'), ('Data Manager','View Data Entry Statistics'), ('Data Manager','View Encounters'), ('Data Manager','View Forms'), ('Data Manager','View Navigation Menu'), ('Data Manager','View Observations'), ('Data Manager','View Orders'), ('Data Manager','View Patient Cohorts'), ('Data Manager','View Patients'), ('Data Manager','View People'), ('Data Manager','View Programs'), ('Data Manager','View Users'), ('Provider','View Concepts'), ('Provider','View Encounters'), ('Provider','View Observations'), ('Provider','View Patients'), ('Provider','View People');
 /*!40000 ALTER TABLE `role_privilege` ENABLE KEYS */;
 
 --
@@ -2219,6 +2219,7 @@ SET character_set_client = @saved_cs_client;
 --
 
 /*!40000 ALTER TABLE `role_role` DISABLE KEYS */;
+INSERT INTO `role_role` VALUES ('Provider','Clinician'), ('Data Assistant','Data Manager');
 /*!40000 ALTER TABLE `role_role` ENABLE KEYS */;
 
 --
