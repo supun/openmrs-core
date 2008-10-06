@@ -220,3 +220,17 @@ function gotoUser(select, userId) {
 		window.location = openmrsContextPath + "/admin/users/user.form?userId=" + userId;
 	return false;
 }
+
+/**
+ * Writes a <script src=... > tag to the current body
+ * element.  This precludes the need for document.write(<script...)  
+ * 
+ * @param filename the full path to the file to include
+ */
+ function importJavascriptFile(filename) {
+	var head = document.getElementsByTagName('head').item(0);
+	script = document.createElement('script');
+	script.src = filename;
+	script.type = 'text/javascript';
+	head.appendChild(script);
+ }
