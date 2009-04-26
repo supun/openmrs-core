@@ -44,6 +44,7 @@ function makeCalendar(obj) {
 
 if (addEvent) {
 	addEvent(window, "load", makeCalendar);
-}else {
+}
+else {
 	makeCalendar();
 }

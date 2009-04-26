@@ -16,55 +16,81 @@ package org.openmrs;
 import java.util.Date;
 
 /**
- * EncounterType 
- * @version 1.0
+ * An EncounterType defines how a certain kind of {@link Encounter}.
+ * 
+ * @see Encounter
  */
 public class EncounterType implements java.io.Serializable {
-
+	
 	public static final long serialVersionUID = 789L;
-
-	// Fields
-
+	
 	private Integer encounterTypeId;
+	
 	private String name;
+	
 	private String description;
+	
 	private Date dateCreated;
+	
 	private User creator;
+	
 	private User retiredBy;
+	
 	private Boolean retired = Boolean.FALSE;
+	
 	private Date dateRetired;
+	
 	private String retireReason;
-
+	
 	// Constructors
-
+	
 	/** default constructor */
 	public EncounterType() {
 	}
-
+	
 	/** constructor with id */
 	public EncounterType(Integer encounterTypeId) {
 		this.encounterTypeId = encounterTypeId;
 	}
-
-	/** 
+	
+	/**
+	 * Required values constructor. This is the minimum number of values that must be non-null in
+	 * order to have a successful save to the database
+	 * 
+	 * @param name the name of this encounter type
+	 * @param description a short description of why this encounter type exists
+	 */
+	public EncounterType(String name, String description) {
+		this.name = name;
+		this.description = description;
+	}
+	
+	/**
 	 * Compares two EncounterType objects for similarity
 	 * 
 	 * @param obj
 	 * @return boolean true/false whether or not they are the same objects
 	 */
 	public boolean equals(Object obj) {
-		if (encounterTypeId == null || obj == null || !(obj instanceof EncounterType))
+		if (obj == null || !(obj instanceof EncounterType))
 			return false;
 		
 		EncounterType encounterType = (EncounterType) obj;
-		return (this.encounterTypeId.equals(encounterType.getEncounterTypeId()));
+		if (this.encounterTypeId != null && encounterType.getEncounterTypeId() != null)
+			return (this.encounterTypeId.equals(encounterType.getEncounterTypeId()));
+		else
+			return this == encounterType;
 	}
 	
+	/**
+	 * @see java.lang.Object#hashCode()
+	 */
 	public int hashCode() {
-		if (this.getEncounterTypeId() == null) return super.hashCode();
+		if (this.getEncounterTypeId() == null)
+			return super.hashCode();
 		return this.getEncounterTypeId().hashCode();
 	}
-
+	
 	// Property accessors
 	
 	/**
@@ -73,63 +99,63 @@ public class EncounterType implements java.io.Serializable {
 	public User getCreator() {
 		return creator;
 	}
-
+	
 	/**
 	 * @param creator The creator to set.
 	 */
 	public void setCreator(User creator) {
 		this.creator = creator;
 	}
-
+	
 	/**
 	 * @return Returns the dateCreated.
 	 */
 	public Date getDateCreated() {
 		return dateCreated;
 	}
-
+	
 	/**
 	 * @param dateCreated The dateCreated to set.
 	 */
 	public void setDateCreated(Date dateCreated) {
 		this.dateCreated = dateCreated;
 	}
-
+	
 	/**
 	 * @return Returns the description.
 	 */
 	public String getDescription() {
 		return description;
 	}
-
+	
 	/**
 	 * @param description The description to set.
 	 */
 	public void setDescription(String description) {
 		this.description = description;
 	}
-
+	
 	/**
 	 * @return Returns the encounterTypeId.
 	 */
 	public Integer getEncounterTypeId() {
 		return encounterTypeId;
 	}
-
+	
 	/**
 	 * @param encounterTypeId The encounterTypeId to set.
 	 */
 	public void setEncounterTypeId(Integer encounterTypeId) {
 		this.encounterTypeId = encounterTypeId;
 	}
-
+	
 	/**
 	 * @return Returns the name.
 	 */
 	public String getName() {
 		return name;
 	}
-
+	
 	/**
 	 * @param name The name to set.
 	 */
@@ -142,59 +168,66 @@ public class EncounterType implements java.io.Serializable {
 	}
 	
 	/**
-     * @return the retiredBy
-     */
-    public User getRetiredBy() {
-    	return retiredBy;
-    }
-
+	 * @return the retiredBy
+	 */
+	public User getRetiredBy() {
+		return retiredBy;
+	}
+	
 	/**
-     * @param retiredBy the retiredBy to set
-     */
-    public void setRetiredBy(User retiredBy) {
-    	this.retiredBy = retiredBy;
-    }
-
+	 * @param retiredBy the retiredBy to set
+	 */
+	public void setRetiredBy(User retiredBy) {
+		this.retiredBy = retiredBy;
+	}
+	
 	/**
-     * @return the retired
-     */
-    public Boolean getRetired() {
-    	return retired;
-    }
-
+	 * @return the retired status
+	 */
+	public Boolean getRetired() {
+		return isRetired();
+	}
+	
 	/**
-     * @param retired the retired to set
-     */
-    public void setRetired(Boolean retired) {
-    	this.retired = retired;
-    }
-
+	 * @return the retired status
+	 */
+	public Boolean isRetired() {
+		return retired;
+	}
+	
 	/**
-     * @return the dateRetired
-     */
-    public Date getDateRetired() {
-    	return dateRetired;
-    }
-
+	 * @param retired the retired to set
+	 */
+	public void setRetired(Boolean retired) {
+		this.retired = retired;
+	}
+	
 	/**
-     * @param dateRetired the dateRetired to set
-     */
-    public void setDateRetired(Date dateRetired) {
-    	this.dateRetired = dateRetired;
-    }
-
+	 * @return the dateRetired
+	 */
+	public Date getDateRetired() {
+		return dateRetired;
+	}
+	
 	/**
-     * @return the retireReason
-     */
-    public String getRetireReason() {
-    	return retireReason;
-    }
-
+	 * @param dateRetired the dateRetired to set
+	 */
+	public void setDateRetired(Date dateRetired) {
+		this.dateRetired = dateRetired;
+	}
+	
 	/**
-     * @param retireReason the retireReason to set
-     */
-    public void setRetireReason(String retireReason) {
-    	this.retireReason = retireReason;
-    }
+	 * @return the retireReason
+	 */
+	public String getRetireReason() {
+		return retireReason;
+	}
+	
+	/**
+	 * @param retireReason the retireReason to set
+	 */
+	public void setRetireReason(String retireReason) {
+		this.retireReason = retireReason;
+	}
 	
 }

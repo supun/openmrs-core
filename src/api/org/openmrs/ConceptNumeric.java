@@ -13,30 +13,37 @@
  */
 package org.openmrs;
 
+import org.simpleframework.xml.Attribute;
 
 /**
- * The ConceptNumeric extends upon the Concept object by adding some
- * number range values 
+ * The ConceptNumeric extends upon the Concept object by adding some number range values
  * 
  * @see Concept
  */
 public class ConceptNumeric extends Concept implements java.io.Serializable {
-
+	
 	public static final long serialVersionUID = 47323L;
-
+	
 	// Fields
-
+	
 	private Double hiAbsolute;
+	
 	private Double hiCritical;
+	
 	private Double hiNormal;
+	
 	private Double lowAbsolute;
+	
 	private Double lowCritical;
+	
 	private Double lowNormal;
+	
 	private String units;
+	
 	private Boolean precise = false;
-
+	
 	// Constructors
-
+	
 	/** default constructor */
 	public ConceptNumeric() {
 	}
@@ -51,8 +58,9 @@ public class ConceptNumeric extends Concept implements java.io.Serializable {
 	}
 	
 	/**
-	 * Optional constructor for turning a Concept into a ConceptNumeric
-	 * Note: This cannot copy over numeric specific values
+	 * Optional constructor for turning a Concept into a ConceptNumeric Note: This cannot copy over
+	 * numeric specific values
+	 * 
 	 * @param c
 	 */
 	public ConceptNumeric(Concept c) {
@@ -67,26 +75,27 @@ public class ConceptNumeric extends Concept implements java.io.Serializable {
 		this.setDateCreated(c.getDateCreated());
 		this.setSet(c.isSet());
 		this.setNames(c.getNames());
-		this.setRetired(c.getRetired());
-		this.setSynonyms(c.getSynonyms());
+		this.setDescriptions(c.getDescriptions());
+		this.setConceptMappings(c.getConceptMappings());
+		this.setRetired(c.isRetired());
 		this.setVersion(c.getVersion());
 		
-		this.hiAbsolute  = null;
-		this.hiCritical  = null;
-		this.hiNormal    = null;
+		this.hiAbsolute = null;
+		this.hiCritical = null;
+		this.hiNormal = null;
 		this.lowAbsolute = null;
 		this.lowCritical = null;
-		this.lowNormal   = null;
-		this.units     = "";
-		this.precise   = false;
+		this.lowNormal = null;
+		this.units = "";
+		this.precise = false;
 	}
-
+	
 	/**
 	 * @see org.openmrs.Concept#equals(java.lang.Object)
 	 */
 	public boolean equals(Object obj) {
 		if (obj instanceof ConceptNumeric) {
-			ConceptNumeric c = (ConceptNumeric)obj;
+			ConceptNumeric c = (ConceptNumeric) obj;
 			return (this.getConceptId().equals(c.getConceptId()));
 		}
 		return false;
@@ -96,104 +105,127 @@ public class ConceptNumeric extends Concept implements java.io.Serializable {
 	 * @see org.openmrs.Concept#hashCode()
 	 */
 	public int hashCode() {
-		if (getConceptId() == null) return super.hashCode();
+		if (getConceptId() == null)
+			return super.hashCode();
 		int hash = 6;
 		if (getConceptId() != null)
 			hash = hash + getConceptId().hashCode() * 31;
 		return hash;
 	}
-
+	
 	// Property accessors
-
+	
 	/**
 	 * 
 	 */
+	@Attribute(required = false)
 	public Double getHiAbsolute() {
 		return this.hiAbsolute;
 	}
-
+	
+	@Attribute(required = false)
 	public void setHiAbsolute(Double hiAbsolute) {
 		this.hiAbsolute = hiAbsolute;
 	}
-
+	
 	/**
 	 * 
 	 */
+	@Attribute(required = false)
 	public Double getHiCritical() {
 		return this.hiCritical;
 	}
-
+	
+	@Attribute(required = false)
 	public void setHiCritical(Double hiCritical) {
 		this.hiCritical = hiCritical;
 	}
-
+	
 	/**
 	 * 
 	 */
+	@Attribute(required = false)
 	public Double getHiNormal() {
 		return this.hiNormal;
 	}
-
+	
+	@Attribute(required = false)
 	public void setHiNormal(Double hiNormal) {
 		this.hiNormal = hiNormal;
 	}
-
+	
 	/**
 	 * 
 	 */
+	@Attribute(required = false)
 	public Double getLowAbsolute() {
 		return this.lowAbsolute;
 	}
-
+	
+	@Attribute(required = false)
 	public void setLowAbsolute(Double lowAbsolute) {
 		this.lowAbsolute = lowAbsolute;
 	}
-
+	
 	/**
 	 * 
 	 */
+	@Attribute(required = false)
 	public Double getLowCritical() {
 		return this.lowCritical;
 	}
-
+	
+	@Attribute(required = false)
 	public void setLowCritical(Double lowCritical) {
 		this.lowCritical = lowCritical;
 	}
-
+	
 	/**
 	 * 
 	 */
+	@Attribute(required = false)
 	public Double getLowNormal() {
 		return this.lowNormal;
 	}
-
+	
+	@Attribute(required = false)
 	public void setLowNormal(Double lowNormal) {
 		this.lowNormal = lowNormal;
 	}
-
+	
 	/**
 	 * 
 	 */
+	@Attribute(required = false)
 	public String getUnits() {
 		return this.units;
 	}
-
+	
+	@Attribute(required = false)
 	public void setUnits(String units) {
 		this.units = units;
 	}
-
+	
 	public Boolean isPrecise() {
 		return (precise == null ? false : precise);
 	}
 	
+	@Attribute
 	public Boolean getPrecise() {
 		return isPrecise();
 	}
-
+	
+	@Attribute
 	public void setPrecise(Boolean precise) {
 		this.precise = precise;
 	}
 	
+	/**
+	 * This method will <i>always</i> return true for ConceptNumeric objects that have a datatype of
+	 * Numeric
+	 * 
+	 * @see org.openmrs.Concept#isNumeric()
+	 */
 	public boolean isNumeric() {
 		return (getDatatype().getName().equals("Numeric"));
 	}

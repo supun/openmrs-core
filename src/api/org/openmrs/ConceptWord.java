@@ -22,46 +22,49 @@ import java.util.Vector;
 import org.openmrs.util.OpenmrsConstants;
 
 /**
- * ConceptWord
+ * ConceptWord Concept words are the individual terms of which a concept name is composed. They are
+ * case-preserving but compare case insensitively.
  */
-public class ConceptWord implements java.io.Serializable,
-		Comparable<ConceptWord> {
-
+public class ConceptWord implements java.io.Serializable, Comparable<ConceptWord> {
+	
 	public static final long serialVersionUID = 888677L;
-
+	
 	// Fields
-
+	
 	private Concept concept;
-
+	
+	private ConceptName conceptName;
+	
 	private String word;
-
+	
 	private String synonym;
-
+	
 	private Locale locale;
-
+	
 	private Double weight = 0.0;
-
+	
 	// Constructors
-
+	
 	/** default constructor */
 	public ConceptWord() {
 	}
-
-	public ConceptWord(String word, Concept concept, Locale locale,
-			String synonym) {
+	
+	public ConceptWord(String word, Concept concept, ConceptName conceptName, Locale locale, String synonym) {
 		this.concept = concept;
+		this.conceptName = conceptName;
 		this.word = word;
 		this.locale = locale;
 		this.synonym = synonym;
 	}
-
-	public ConceptWord(Concept c) {
+	
+	public ConceptWord(Concept c, ConceptName conceptName) {
 		this.concept = c;
+		this.conceptName = conceptName;
 		this.word = null;
 		this.locale = null;
 		this.synonym = null;
 	}
-
+	
 	public boolean equals(Object obj) {
 		if (obj instanceof ConceptWord) {
 			ConceptWord c = (ConceptWord) obj;
@@ -69,7 +72,7 @@ public class ConceptWord implements java.io.Serializable,
 			if (concept != null && c.getConcept() != null)
 				matches = matches && concept.equals(c.getConcept());
 			if (word != null && c.getWord() != null)
-				matches = matches && word.equals(c.getWord());
+				matches = matches && word.equalsIgnoreCase(c.getWord());
 			if (locale != null && c.getLocale() != null)
 				matches = matches && locale.equals(c.getLocale());
 			if (synonym != null && c.getSynonym() != null)
@@ -78,96 +81,109 @@ public class ConceptWord implements java.io.Serializable,
 		}
 		return false;
 	}
-
+	
 	public int hashCode() {
 		int hash = 3;
 		if (concept != null)
 			hash = 37 * hash + this.getConcept().hashCode();
 		if (word != null)
-			hash = 37 * hash + this.getWord().hashCode();
+			hash = 37 * hash + this.getWord().toLowerCase().hashCode(); // ABKTODO: MySQL searches are case insensitive 
 		if (locale != null)
 			hash = 37 * hash + this.getLocale().hashCode();
 		if (synonym != null)
 			hash = 37 * hash + this.getSynonym().hashCode();
-
+		
 		return hash;
 	}
-
+	
 	/**
 	 * @return Returns the locale.
 	 */
 	public Locale getLocale() {
 		return locale;
 	}
-
+	
 	/**
-	 * @param locale
-	 *            The locale to set.
+	 * @param locale The locale to set.
 	 */
 	public void setLocale(Locale locale) {
 		this.locale = locale;
 	}
-
+	
 	/**
 	 * @return Returns the synonym.
 	 */
 	public String getSynonym() {
 		return synonym;
 	}
-
+	
 	/**
-	 * @param synonym
-	 *            The synonym to set.
+	 * @param synonym The synonym to set.
 	 */
 	public void setSynonym(String synonym) {
 		this.synonym = synonym;
 	}
-
+	
 	/**
 	 * @return Returns the word.
 	 */
 	public String getWord() {
 		return word;
 	}
-
+	
 	/**
-	 * @param word
-	 *            The word to set.
+	 * @param word The word to set.
 	 */
 	public void setWord(String word) {
 		this.word = word;
 	}
-
+	
 	/**
 	 * @return Returns the concept.
 	 */
 	public Concept getConcept() {
 		return concept;
 	}
-
+	
 	/**
-	 * @param concept
-	 *            The concept to set.
+	 * @param concept The concept to set.
 	 */
 	public void setConcept(Concept concept) {
 		this.concept = concept;
 	}
-
+	
+	/**
+	 * Sets the concept name associated with this word.
+	 * 
+	 * @param conceptName
+	 */
+	public void setConceptName(ConceptName conceptName) {
+		this.conceptName = conceptName;
+	}
+	
+	/**
+	 * Gets the concept name from which this word was derived.
+	 * 
+	 * @return
+	 */
+	public ConceptName getConceptName() {
+		return conceptName;
+	}
+	
 	/**
 	 * @return Returns the weight.
 	 */
 	public Double getWeight() {
 		return weight;
 	}
-
+	
 	/**
-	 * @param weight
-	 *            The weight to set.
+	 * @param weight The weight to set.
 	 */
 	public void setWeight(Double weight) {
 		this.weight = weight;
 	}
-
+	
 	/**
 	 * Increment the weight by i
 	 * 
@@ -176,36 +192,24 @@ public class ConceptWord implements java.io.Serializable,
 	public void increaseWeight(Double i) {
 		this.weight += i;
 	}
-
+	
 	/**
-	 * 
 	 * @param concept
 	 * @return
 	 */
-
+	
 	public static Set<ConceptWord> makeConceptWords(Concept concept) {
 		Set<ConceptWord> words = new HashSet<ConceptWord>();
-
+		
 		for (ConceptName name : concept.getNames()) {
 			List<String> uniqueParts = getUniqueWords(name.getName());
 			for (String part : uniqueParts) {
-				words.add(new ConceptWord(part, concept, name.getLocale(), ""));
+				words.add(new ConceptWord(part, concept, name, name.getLocale(), ""));
 			}
 		}
-		
-		if (concept.getSynonyms() != null)
-			for (ConceptSynonym synonym : concept.getSynonyms()) {
-				String syn = synonym.getSynonym();
-				List<String> uniqueParts = getUniqueWords(syn);
-				for (String part : uniqueParts) {
-					words.add(new ConceptWord(part, concept, synonym.getLocale(),
-							syn));
-				}
-			}
-
 		return words;
 	}
-
+	
 	/**
 	 * Split the given phrase on words and remove unique and stop words
 	 * 
@@ -213,21 +217,20 @@ public class ConceptWord implements java.io.Serializable,
 	 * @return
 	 */
 	public static List<String> getUniqueWords(String phrase) {
-
+		
 		String[] parts = splitPhrase(phrase);
-
+		
 		List<String> uniqueParts = new Vector<String>();
-
+		
 		for (String part : parts) {
 			String p = part.trim();
 			String upper = p.toUpperCase();
-			if (!p.equals("") && !OpenmrsConstants.STOP_WORDS().contains(upper)
-					&& !uniqueParts.contains(upper))
-				uniqueParts.add(p);
+			if (!p.equals("") && !OpenmrsConstants.STOP_WORDS().contains(upper) && !uniqueParts.contains(upper))
+				uniqueParts.add(upper);
 		}
 		return uniqueParts;
 	}
-
+	
 	/**
 	 * Split words according to OpenmrsConstants.REGEXes, newlines, and spaces
 	 * 
@@ -244,7 +247,7 @@ public class ConceptWord implements java.io.Serializable,
 		String[] words = phrase.trim().replace('\n', ' ').split(" ");
 		return words;
 	}
-
+	
 	public String toString() {
 		String s = "";
 		if (concept != null)
@@ -257,14 +260,14 @@ public class ConceptWord implements java.io.Serializable,
 			s += locale;
 		return s;
 	}
-
+	
 	/**
 	 * @see java.lang.Comparable#compareTo(T)
 	 */
 	public int compareTo(ConceptWord word) {
-
+		
 		return Double.compare(word.getWeight(), weight);
-
+		
 	}
-
+	
 }

@@ -12,12 +12,13 @@ dojo.require("dojo.widget.HtmlWidget");
 dojo.require("dojo.style");
 dojo.require("dojo.event.*");
 
-// Add parse handler.  
-dojo.widget.tags.addParseTreeHandler("dojo:OpenmrsSearch");
-
 var openmrsSearchBase = djConfig["baseScriptUri"].substring(0, djConfig["baseScriptUri"].indexOf("/", 1));
 importJavascriptFile(openmrsSearchBase + "/dwr/engine.js");
 importJavascriptFile(openmrsSearchBase + "/dwr/util.js");
+
+// Add parse handler.  
+dojo.widget.tags.addParseTreeHandler("dojo:OpenmrsSearch");
+
 
 dojo.widget.openmrs.OpenmrsSearch = function() {
 	//dojo.widget.HtmlWidget.call(this);
@@ -97,14 +98,6 @@ dojo.widget.defineWidget(
 		// add search label
 		if (this.searchLabel)
 			this.searchLabelNode.innerHTML = this.searchLabel;
-			
-		// move default DWR error handling to the status bar
-		var handler = function(ex) {
-			if (typeof ex == "string")
-				window.status = "DWR warning/error: " + ex;
-		};
-		DWREngine.setErrorHandler(handler);
-		DWREngine.setWarningHandler(handler);
 	},
 		
 	fillInTemplate: function(args, frag){
@@ -783,12 +776,12 @@ dojo.widget.defineWidget(
 		// if its a shortened page
 		if (lastItemDisplayed > total)
 			lastItemDisplayed = total;
-		
+			
 		// there may be strings mixed in the list, correct the list size here
-		//if (lastItemDisplayed != this.objectsFound.length) {
-		//	total = total - (lastItemDisplayed - this.objectsFound.length);
-		//	lastItemDisplayed = this.objectsFound.length;
-		//}
+		if (lastItemDisplayed > this.objectsFound.length) {
+			total = total - (lastItemDisplayed - this.objectsFound.length);
+			lastItemDisplayed = this.objectsFound.length;
+		}
 		
 		this.infoBar.innerHTML = '';
 		if (this.lastPhraseSearched != null)

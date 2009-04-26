@@ -31,7 +31,8 @@
 			for (var i in selects)
 				if (selects[i] && selects[i].name == "identifierType") {
 					var selectedOpt;
-					for (o in selects[i].options) {
+					var thisSelect = selects[i];
+					for (var o = 0; o < thisSelect.options.length ;o++) {
 						if (selects[i].options[o].value == type) {
 							selectedOpt = selects[i].options[o];
 							selectedOpt.selected = true;
@@ -57,7 +58,8 @@
 			for (var i in selects)
 				if (selects[i] && selects[i].name == "location") {
 					var selectedOpt;
-					for (o in selects[i].options) {
+					var thisSelect = selects[i];
+					for (var o = 0; o < thisSelect.options.length ;o++) {
 						if (selects[i].options[o].value == location) {
 							selectedOpt = selects[i].options[o];
 							selectedOpt.selected = true;
@@ -93,7 +95,7 @@
 		var birthdateBox = document.getElementById('birthdate');
 		var ageBox = document.getElementById('age');
 		try {
-			var birthdate = new Date(birthdateBox.value);
+			var birthdate = parseSimpleDate(birthdateBox.value, '<openmrs:datePattern />');
 			var age = getAge(birthdate);
 			if (age > 0)
 				ageBox.innerHTML = "(" + age + ' <spring:message code="Person.age.years"/>)';
@@ -449,6 +451,31 @@
 			</spring:nestedPath>
 		</td>
 	</tr>
+	
+	<c:forEach var="relationshipMap" items="${relationships}">
+		<c:choose>
+			<c:when test="${fn:contains(relationshipMap.key, 'a')}" >
+				<tr>
+					<th class="headerCell">
+						${relationshipMap.value.relationshipType.aIsToB}
+					</th>
+					<td class="inputCell">
+						<openmrs_tag:personField formFieldName="${relationshipMap.key}" searchLabelCode="Person.find" initialValue="${relationshipMap.value.personA.personId}" linkUrl="" callback="" />
+					</td>
+				</tr>
+			</c:when>
+			<c:otherwise>
+				<tr>
+					<th class="headerCell">
+						${relationshipMap.value.relationshipType.bIsToA}
+					</th>
+					<td class="inputCell">
+						<openmrs_tag:personField formFieldName="${relationshipMap.key}" searchLabelCode="Person.find" initialValue="${relationshipMap.value.personB.personId}" linkUrl="" callback="" />
+					</td>
+			</c:otherwise>
+		</c:choose>
+	</c:forEach>
+	
 	<openmrs:forEachDisplayAttributeType personType="patient" displayType="viewing" var="attrType">
 		<tr>
 			<th class="headerCell"><spring:message code="PersonAttributeType.${fn:replace(attrType.name, ' ', '')}" text="${attrType.name}"/></th>

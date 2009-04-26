@@ -1,13 +1,9 @@
 <?xml version="1.0"?>
 <!-- *********************************************************** -->
-<!-- ** OpenMRS                                               ** -->
+<!-- ** Ant build script for OpenMRS                          ** -->
 <!-- **                                                       ** -->
-<!-- ** Open-Source EMR for Developing Countries              ** -->
-<!-- **                                                       ** -->
-<!-- ** @author Burke Mamlin                                  ** -->
-<!-- ** @version 1.0                                          ** -->
 <!-- *********************************************************** -->
-<project name="OpenMRS-trunk-1.3.x" default="dist">
+<project name="OpenMRS-1.4.x" default="dist">
 
 	<tstamp>
 		<format property="timestamp" pattern="MMM dd yyyy hh:mm aa" />
@@ -26,6 +22,11 @@
 	<path id="lib.path">
         <fileset refid="lib.files" />
 	</path>
+	
+	<!-- Every java and xml file in the test directory -->
+	<fileset id="test.files" dir="${test.dir}" description="All files in /test/">
+		<include name="**/*" />
+	</fileset>
 	
 	<!-- Base definitions (cannot be overwritten by user property file) -->
 	<property file="build.properties" />
@@ -92,8 +93,9 @@
 			input="${diffFileInput}"
 			regexp="${openmrs.database.version.expected.regexp}"
 			select="\1"
-			defaultValue="${openmrs.version.major}.${openmrs.version.minor}.0.0" 
+			defaultValue="${openmrs.version.major}.${openmrs.version.minor}.0.00" 
 			casesensitive="false" />
+        <echo>openmrs.database.version.expected: ${openmrs.database.version.expected}</echo>
 		<propertyregex property="openmrs.database.version.expected.short"
 			input="${openmrs.database.version.expected}"
 			regexp="${openmrs.version.major}\.${openmrs.version.minor}\.${openmrs.version.maintenance}\.([0-9][0-9]+)"
@@ -165,6 +167,7 @@
 	<target name="package-all" depends="package-api,package-api-tests,package-web-src"
 		description="packages api, test, and web jars for use in modules"/>
 	
+	<!-- the api package will contain test classes unless a "ant clean" is done right before -->
 	<target name="package-api" depends="compile-api" description="create api jar">
 		<mkdir dir="${dist.dir}" />
 		<jar destfile="${dist.dir}/${openmrs.api.name}">
@@ -187,8 +190,11 @@
 			<fileset dir="${build.dir}">
 				<include name="**/*"/>
 				<exclude name="**/web/**" />
-				<exclude name="**/test/**" />
-				<exclude name="log4j.xml" />
+				<exclude name="junit*/" /> <!-- the junit built files -->
+				<exclude name="**/*Test.class" />
+				<exclude name="**/include/" /> <!-- to skip all xml and omod files -->
+				<exclude name="**/test/" />
+				<exclude name="log4j*" />
 			</fileset>
 		</jar>
 	</target>
@@ -216,10 +222,10 @@
 		<javac srcdir="${test.dir}/api" destdir="${build.dir}" debug="${javac.debug}" debuglevel="${javac.debuglevel}" deprecation="${compile.deprecation}" optimize="${compile.optimize}" classpathref="api.test.classpath">
 			<compilerarg line="${compile.arguments}" />
 		</javac>
-		
+
 		<!-- move files over that are required for modules to use this test-openmrs-api*.jar file -->
-		<copy todir="${build.dir}/org/openmrs/test" file="${test.dir}/api/org/openmrs/test/TestingApplicationContext.xml" />
-		<copy todir="${build.dir}/org/openmrs/test/include" file="${test.dir}/api/org/openmrs/test/include/initialInMemoryTestDataSet.xml" />
+		<copy todir="${build.dir}/org/openmrs/test/" file="${test.dir}/api/org/openmrs/test/TestingApplicationContext.xml" />
+		<copy todir="${build.dir}/org/openmrs/include" file="${test.dir}/api/org/openmrs/include/initialInMemoryTestDataSet.xml" />
 		
 		<!-- copy the extra files to the build dir in case an ant-clean was just done -->
 		<copy todir="${build.dir}">
@@ -254,11 +260,13 @@
 				<attribute name="Class-Path" value="tests-${openmrs.api.name}" />
 			</manifest>
 			<fileset dir="${build.dir}">
-				<exclude name="**/web/test/*.class" />
-				<include name="**/test/*.class" />
-				<include name="org/openmrs/test/TestingApplicationContext.xml" />
-				<include name="org/openmrs/test/include/initialInMemoryTestDataSet.xml" />
+				<exclude name="**/web/" />
+				<include name="**/test/*.class" /> <!-- include the helper files -->
+				<include name="**/*Test*.class" /> <!-- include all junit tests and inner classes -->
+				<include name="org/openmrs/include/*.xml" />
 			</fileset>
+			<!-- Put this xml in a separate fileset so that its in the root of the jar file -->
+			<fileset file="${build.dir}/org/openmrs/test/TestingApplicationContext.xml" />
 		</jar>
 	</target>
 
@@ -279,16 +287,14 @@
 	-->
     <target name="deploy" depends="package-web" if="tomcat.home" description="Move war into the tomcat's webapps directory - ">
 		<echo message="Deploying webapp to Tomcat.  NOTE: The 'deploy' target is not working as expected yet."/>
-        <war src="${dist.dir}/${webapp.name}.war"
-            dest="${tomcat.home}/webapps/${webapp.name}"/>
+        <copy todir="${tomcat.home}/webapps" file="${dist.dir}/${webapp.name}.war"/>
     </target>
 	
 	<target name="undeploy" if="tomcat.home" description="undeploy war file to servlet container's deployment dir">
 		<echo message="Undeploying webapp from Tomcat"/>
 		<delete file="${tomcat.home}/webapps/${webapp.name}.war"/>
 		<delete dir="${tomcat.home}/webapps/${webapp.name}"/>
-	</target>		
-	
+    </target>
 	
 	<target name="deploy-web" description="standalone copy web target">
 		<copy todir="${tomcat.home}/webapps/${webapp.name}">
@@ -300,14 +306,13 @@
 				<include name="**/*.withjstl"/>
 				<include name="**/*.tag"/>
 				<include name="**/messages*.properties"/>
+				<include name="**/*_theme*.properties"/>
 				<include name="**/images/**/*" />
-			</fileset>			
+				<!-- This fileset doesn't exclude /web/test so that 
+					 developers can easily test files -->
+			</fileset>
 		</copy>
 	</target>
-
-	
-
-	
 	
 	<target name="package-web-init" depends="compile-web" description="start creation of webapp. Use package-web for complete">
 		<mkdir dir="${dist.dir}/web" />
@@ -347,7 +352,7 @@
 			<zipfileset dir="${neal-reporting.dir}" includes="*.jar" />
 			<zipfileset dir="${saxon.dir}" includes="*.jar" />
 			<zipfileset dir="${simple.dir}" includes="*.jar" />
-			<zipfileset dir="${spring.dir}" includes="*.jar" excludes="*Test*.jar"/>
+			<zipfileset dir="${spring.dir}" includes="*.jar" excludes="*test*.jar"/>
 			<zipfileset dir="${stax.dir}" includes="*.jar" />
 			<zipfileset dir="${taglibs.dir}" includes="*.jar" />
 			<zipfileset dir="${velocity.dir}" includes="*.jar" />
@@ -362,6 +367,9 @@
 			<classes dir="${build.dir}">
 				<include name="**/web/**/*.class" />
 				<include name="log4j.xml" />
+			</classes>
+			<classes dir="web/WEB-INF">
+				<include name="*_theme*.properties"/>
 			</classes>
 			<lib file="${dist.dir}/${openmrs.api.name}" />
 			<lib src="${libs-zipped-temp}" />
@@ -387,6 +395,9 @@
 			<classes dir="${build.dir}" >
 				<include name="**/web/**/*.class" />
 				<include name="log4j.xml" />
+			</classes>
+			<classes dir="web/WEB-INF">
+				<include name="*_theme*.properties"/>
 			</classes>
 		</war>
 	</target>
@@ -422,10 +433,12 @@
 	<target name="dist" depends="package-web" description="create distribution packages" />
 
 	<target name="install" description="Install application in Tomcat" depends="package-web">
+		<echo>Installing ${webapp.name} to ${tomcat.manager.url} as tomcat user named ${tomcat.username}</echo>
 		<deploy url="${tomcat.manager.url}" username="${tomcat.username}" password="${tomcat.password}" path="/${webapp.name}" war="${dist.dir}/${webapp.name}.war" />
 	</target>
 
 	<target name="remove" depends="init" description="Remove application in Tomcat">
+		<echo>Removing ${webapp.name} from ${tomcat.manager.url} as tomcat user named ${tomcat.username}</echo>
 		<undeploy url="${tomcat.manager.url}" username="${tomcat.username}" password="${tomcat.password}" path="/${webapp.name}" />
 	</target>
 
@@ -517,6 +530,28 @@
 		</java>
 	</target>
 	
+	<target name="queryparser-clean-grammar" description="TODO: write description">
+		<delete>
+			<fileset dir="${build.dir}/org/openmrs/logic/queryparser">
+			    <include name="**/*.class"/>
+			    <include name="**/*.java"/>
+			</fileset>
+			<fileset dir="${src.dir}/api/org/openmrs/logic/queryparser">
+			    <include name="**/LogicQuery*.java"/>
+			    <include name="**/*.txt"/>
+			    <include name="**/*.smap"/>
+			    <include name="**/*.class"/>
+			    <include name="**/*.txt"/>
+			</fileset>
+		</delete>
+	</target>
+		
+	<target name="queryparser-make-antlr" description="TODO: write description">
+		<antlr target="${src.dir}/api/org/openmrs/logic/queryparser/LogicQueryParser.g">
+			<classpath path="lib/antlr/antlr_2.7.6.jar" />
+		</antlr>
+	</target>
+		
 	<target name="hl7-test" description="Spawns the HL7API test panel for testing HL7 messages (see http://hl7api.sourceforge.net)">
 		<java classname="ca.uhn.hl7v2.app.TestPanel" fork="yes" spawn="yes">
 			<classpath>
@@ -550,6 +585,10 @@
 		<exec os="Linux" executable="firefox" failifexecutionfails="false">
 			<arg value="file:///${junit-reports.dir}/index.html"/>
 		</exec>
+		<exec os="Mac OS X" executable="open" failifexecutionfails="false">
+			<arg line="-a Firefox"/>
+			<arg value="file:///${junit-reports.dir}/index.html"/>
+		</exec>
 		
 	</target>
 
@@ -560,25 +599,23 @@
 	    <path id="junit-path">
 			<fileset refid="lib.files" />
 		    <pathelement path="${build.dir}"/>
+	    	<pathelement path="web/WEB-INF/"/>
 			<pathelement location="${dist.dir}/${openmrs.api.name}"/>
 		</path>
 		
-        <junit printsummary="yes" dir="${junit-tests.dir}" maxmemory="256M" fork="yes" forkmode="perBatch">
+        <junit dir="${junit-tests.dir}" maxmemory="256M" fork="yes" forkmode="perBatch" newenvironment="true">
 			<classpath refid="junit-path"/>
-			<formatter type="plain"/>
-			<formatter type="xml"/>
+        	<sysproperty key="diffFileInput" value="--"/> <!-- put here so this property isn't printed and wasting space -->
+			<formatter type="brief"/>
+        	<formatter type="xml"/>
             <batchtest todir="${junit-tests.dir}" haltonfailure="no">
 				<fileset dir="${build.dir}">
 					<include name="**/*Test.class" />
-					<exclude name="org/openmrs/test/BaseContextSensitiveTest.class" />
-					<exclude name="org/openmrs/test/BaseModuleContextSensitiveTest.class" />
-					<exclude name="org/openmrs/web/taglib/SummaryTest.class" />
+					<exclude name="**/SummaryTest.class" />
+					<exclude name="**/test/*" /> <!-- util classes used by junit -->
 				</fileset>
 			</batchtest>
 		</junit>
 	</target>
-	
-	
-
 	
 </project>

@@ -8,8 +8,8 @@
 	<property name="webapp.description" value="An Open-Source EMR System" />
 
 	<!-- Properties for running unit tests and webapp [un]deploy with tomcat -->
-    <property name="tomcat.home" value="C:/Program Files/Apache Software Foundation/Tomcat 5.5"/>
-    <property name="catalina.home" value="C:/Program Files/Apache Software Foundation/Tomcat 5.5"/>
+    <property name="tomcat.home" value="${env.CATALINA_HOME}"/>
+    <property name="catalina.home" value="${env.CATALINA_HOME}"/>
     <property name="tomcat.server" value="localhost" />
 	<property name="tomcat.port" value="8080" />
     <property name="tomcat.manager.url" value="http://${tomcat.server}:${tomcat.port}/manager" />
@@ -18,9 +18,12 @@
     
     <!-- Documentation settings -->
     <property name="doc.title" value="${ant.project.name} API" />
-    <property name="doc.bottom" value="&lt;em&gt;&lt;small&gt;Generated ${timestamp}. NOTE - these libraries are in active development and subject to change&lt;/small&gt;&lt;/em&gt;" />
-    <property name="doc.header" value="&lt;a href=&quot;http://www.openmrs.org&quot; target=_top&gt;&lt;img src=&quot;/doc/openmrs-logo-small.gif&quot; border=0/&gt;&lt;/a&gt;" />
-    <property name="doc.footer" value="&lt;a href=&quot;http://www.openmrs.org&quot; target=_top&gt;${ant.project.name}&lt;/a&gt;" />
+    <property name="doc.bottom"
+              value="&lt;em&gt;&lt;small&gt;Generated ${timestamp}. NOTE - these libraries are in active development and subject to change&lt;/small&gt;&lt;/em&gt;"/>
+    <property name="doc.header"
+              value="&lt;a href=&quot;http://www.openmrs.org&quot; target=_top&gt;&lt;img src=&quot;/doc/openmrs-logo-small.gif&quot; border=0/&gt;&lt;/a&gt;"/>
+    <property name="doc.footer"
+              value="&lt;a href=&quot;http://www.openmrs.org&quot; target=_top&gt;${ant.project.name}&lt;/a&gt;"/>
         
     <!-- =================================================================== -->
     <!-- Classpaths                                                          -->
@@ -45,6 +48,7 @@
 		<!--<fileset dir="${activemq.dir}" includes="*.jar" />-->
 		<fileset dir="${antlr.dir}" includes="*.jar" />
 		<fileset dir="${commons-io.dir}" includes="*.jar" />
+    	<fileset dir="${commons-lang.dir}" includes="*.jar"/>
 		<fileset dir="${commons-logging.dir}" includes="*.jar" />
     	<fileset dir="${commons-collections.dir}" includes="*.jar" />
 		<fileset dir="${dom4j.dir}" includes="*.jar" />
@@ -57,6 +61,7 @@
 		<!--<fileset dir="${quartz.dir}" includes="*.jar" />-->
     	<fileset dir="${simple.dir}" includes="*.jar" />
 		<fileset dir="${spring.dir}" includes="*.jar" />
+    	<fileset dir="${stax.dir}" includes="*.jar" />
 		<fileset dir="${velocity.dir}" includes="*.jar" />
     	<fileset dir="${xerces.dir}" includes="*.jar" />
     	<fileset dir="${xstream.dir}" includes="*.jar" />
@@ -67,6 +72,7 @@
 		<fileset dir="${junit.dir}" includes="*.jar" />
 		<fileset dir="${test.dir}/api" includes="**/*.java" />
 		<fileset dir="${tomcat.dir}" includes="*.jar" />
+        <fileset dir="${benerator.dir}" includes="*.jar" />
     </path>
         
     <!-- Web -->
@@ -84,10 +90,10 @@
 		<fileset dir="${jstl.dir}" includes="*.jar" />
 		<fileset dir="${log4j.dir}" includes="*.jar" />
 		<fileset dir="${neal-reporting.dir}" includes="*.jar" />
-    	<fileset dir="${log4j.dir}" includes="*.jar" />
-		<fileset dir="${simple.dir}" includes="*.jar" />
+		<fileset dir="${log4j.dir}" includes="*.jar" />
+    	<fileset dir="${simple.dir}" includes="*.jar" />
 		<fileset dir="${spring.dir}" includes="*.jar" />
-		<fileset dir="${stax.dir}" includes="*.jar" />
+    	<fileset dir="${stax.dir}" includes="*.jar" />
 		<fileset dir="${taglibs.dir}" includes="*.jar" />
 		<fileset dir="${tomcat.dir}" includes="*.jar" />
 		<fileset dir="${velocity.dir}" includes="*.jar" />

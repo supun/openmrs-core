@@ -19,21 +19,23 @@ import org.openmrs.api.APIException;
  * 
  */
 public class ImmutableResultException extends APIException {
-
-    public ImmutableResultException() {
-        super();
-    }
-
-    public ImmutableResultException(String message, Throwable cause) {
-        super(message, cause);
-    }
-
-    public ImmutableResultException(String message) {
-        super(message);
-    }
-
-    public ImmutableResultException(Throwable cause) {
-        super(cause);
-    }
-
+	
+	private static final long serialVersionUID = 7182777087671695215L;
+	
+	public ImmutableResultException() {
+		super();
+	}
+	
+	public ImmutableResultException(String message, Throwable cause) {
+		super(message, cause);
+	}
+	
+	public ImmutableResultException(String message) {
+		super(message);
+	}
+	
+	public ImmutableResultException(Throwable cause) {
+		super(cause);
+	}
+	
 }

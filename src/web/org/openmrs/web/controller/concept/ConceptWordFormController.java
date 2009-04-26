@@ -29,16 +29,19 @@ import org.springframework.web.servlet.view.RedirectView;
 
 public class ConceptWordFormController extends SimpleFormController {
 	
-    /** Logger for this class and subclasses */
-    protected final Log log = LogFactory.getLog(getClass());
-    
+	/** Logger for this class and subclasses */
+	protected final Log log = LogFactory.getLog(getClass());
+	
 	/**
-	 * The onSubmit function receives the form/command object that was modified
-	 *   by the input form and saves it to the db
+	 * The onSubmit function receives the form/command object that was modified by the input form
+	 * and saves it to the db
 	 * 
-	 * @see org.springframework.web.servlet.mvc.SimpleFormController#onSubmit(javax.servlet.http.HttpServletRequest, javax.servlet.http.HttpServletResponse, java.lang.Object, org.springframework.validation.BindException)
+	 * @see org.springframework.web.servlet.mvc.SimpleFormController#onSubmit(javax.servlet.http.HttpServletRequest,
+	 *      javax.servlet.http.HttpServletResponse, java.lang.Object,
+	 *      org.springframework.validation.BindException)
 	 */
-	protected ModelAndView onSubmit(HttpServletRequest request, HttpServletResponse response, Object obj, BindException errors) throws Exception {
+	protected ModelAndView onSubmit(HttpServletRequest request, HttpServletResponse response, Object obj,
+	                                BindException errors) throws Exception {
 		
 		HttpSession httpSession = request.getSession();
 		
@@ -46,6 +49,7 @@ public class ConceptWordFormController extends SimpleFormController {
 		
 		if (Context.isAuthenticated()) {
 			String s = request.getParameter("conceptId");
+			String successMessageKey;
 			if (s != null && !s.equals("")) {
 				try {
 					s = s.trim();
@@ -55,8 +59,7 @@ public class ConceptWordFormController extends SimpleFormController {
 						String start = parts[0].trim();
 						String end = parts[1].trim();
 						Context.getConceptService().updateConceptWords(Integer.valueOf(start), Integer.valueOf(end));
-					}
-					else {
+					} else {
 						// they put in an integer
 						Concept c = Context.getConceptService().getConcept(Integer.valueOf(s));
 						if (c != null) {
@@ -73,13 +76,15 @@ public class ConceptWordFormController extends SimpleFormController {
 					httpSession.setAttribute(WebConstants.OPENMRS_ERROR_ATTR, "ConceptWord.rangeError");
 					return showForm(request, response, errors);
 				}
-			}
-			else {
+				successMessageKey = "ConceptWord.update";
+			} else {
 				Context.getConceptService().updateConceptWords();
+				successMessageKey = "ConceptWord.updateInProgress";
 			}
 			
 			view = getSuccessView();
-			httpSession.setAttribute(WebConstants.OPENMRS_MSG_ATTR, "ConceptWord.updated");
+			httpSession.setAttribute(WebConstants.OPENMRS_MSG_ATTR, successMessageKey);
+			
 		}
 		
 		return new ModelAndView(new RedirectView(view));

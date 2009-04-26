@@ -15,23 +15,32 @@ package org.openmrs;
 
 import java.util.Date;
 
+import org.simpleframework.xml.Attribute;
+import org.simpleframework.xml.Element;
+import org.simpleframework.xml.Root;
+
 /**
  * This represents a single concept within a concept set.
  */
+@Root
 public class ConceptSet implements java.io.Serializable {
-
+	
 	public static final long serialVersionUID = 3787L;
-
+	
 	// Fields
-
-	private Concept concept;
-	private Concept conceptSet;
+	
+	private Concept concept; // concept in the set
+	
+	private Concept conceptSet; // parent concept that uses this set
+	
 	private Double sortWeight;
+	
 	private User creator;
+	
 	private Date dateCreated;
-
+	
 	// Constructors
-
+	
 	/** default constructor */
 	public ConceptSet() {
 	}
@@ -43,85 +52,95 @@ public class ConceptSet implements java.io.Serializable {
 	
 	public boolean equals(Object obj) {
 		if (obj instanceof ConceptSet) {
-			ConceptSet c = (ConceptSet)obj;
-			return (this.concept.equals(c.getConcept()) &&
-					this.conceptSet.equals(c.getConceptSet()));
+			if (concept == null || conceptSet == null)
+				return false;
+			
+			ConceptSet c = (ConceptSet) obj;
+			return (this.concept.equals(c.getConcept()) && this.conceptSet.equals(c.getConceptSet()));
 		}
 		return false;
 	}
 	
 	public int hashCode() {
-		if (this.getConcept() == null || this.getConceptSet() == null) return super.hashCode();
+		if (this.getConcept() == null || this.getConceptSet() == null)
+			return super.hashCode();
 		return this.getConcept().hashCode() + this.getConceptSet().hashCode();
 	}
-
+	
 	// Property accessors
-
+	
 	/**
 	 * 
 	 */
+	@Element
 	public Concept getConcept() {
 		return concept;
 	}
-
+	
+	@Element
 	public void setConcept(Concept concept) {
 		this.concept = concept;
 	}
-
+	
 	/**
 	 * 
 	 */
+	@Element
 	public Concept getConceptSet() {
 		return conceptSet;
 	}
-
+	
+	@Element
 	public void setConceptSet(Concept set) {
 		this.conceptSet = set;
 	}
-
+	
 	/**
 	 * @return Returns the sortWeight.
 	 */
+	@Attribute
 	public Double getSortWeight() {
 		return sortWeight;
 	}
-
+	
 	/**
-	 * @param sortWeight
-	 *            The sortWeight to set.
+	 * @param sortWeight The sortWeight to set.
 	 */
+	@Attribute
 	public void setSortWeight(Double sortWeight) {
 		this.sortWeight = sortWeight;
 	}
-
+	
 	/**
 	 * @return Returns the creator.
 	 */
+	@Element
 	public User getCreator() {
 		return creator;
 	}
-
+	
 	/**
-	 * @param creator
-	 *            The creator to set.
+	 * @param creator The creator to set.
 	 */
+	@Element
 	public void setCreator(User creator) {
 		this.creator = creator;
 	}
-
+	
 	/**
 	 * @return Returns the dateCreated.
 	 */
+	@Element
 	public Date getDateCreated() {
 		return dateCreated;
 	}
-
+	
 	/**
-	 * @param dateCreated
-	 *            The dateCreated to set.
+	 * @param dateCreated The dateCreated to set.
 	 */
+	@Element
 	public void setDateCreated(Date dateCreated) {
 		this.dateCreated = dateCreated;
 	}
-
+	
 }

@@ -17,10 +17,10 @@
 <openmrs:htmlInclude file="/scripts/calendar/calendar.js" />
 
 <openmrs:globalProperty var="SHOW_LAST_N" defaultValue="5" key="cohort.cohortBuilder.showLastSearches"/>
+<openmrs:globalProperty var="ENABLE_LOGIC_TAB" defaultValue="false" key="cohortBuilder.enableLogicTab"/>
 
 <script type="text/javascript">
 	dojo.require("dojo.widget.openmrs.ConceptSearch");
-	dojo.hostenv.writeIncludes();
 	
 	dojo.addOnLoad( function() {
 		dojo.event.topic.subscribe("concept_to_filter_search/select", 
@@ -94,7 +94,7 @@
 		if (hl7Abbrev == 'ZZ')
 			//return 'Handling Datatype N/A not yet implemented. Any suggestions on how it should behave?';
 			return null;
-		if (hl7Abbrev != 'NM' && hl7Abbrev != 'ST' && hl7Abbrev != 'CWE' && hl7Abbrev != 'DT' && hl7Abbrev != 'TS') {
+		if (hl7Abbrev != 'NM' && hl7Abbrev != 'ST' && hl7Abbrev != 'CWE' && hl7Abbrev != 'DT' && hl7Abbrev != 'TS' && hl7Abbrev != 'BIT') {
 			return null;
 		}
 		var lookupAnswers = false;
@@ -113,7 +113,7 @@
 			str += '<br/><span style="margin-left: 40px">Which observations? <select name="timeModifier"><option value="ANY">Any</option><option value="NO">None</option><option value="FIRST">Earliest</option><option value="LAST" selected="true">Most Recent</option><option value="MIN">Lowest</option><option value="MAX">Highest</option><option value="AVG">Average</option></select></span> ';
 		else if (hl7Abbrev == 'DT' || hl7Abbrev == 'TS')
 			str += '<br/><span style="margin-left: 40px">Which observations? <select name="timeModifier"><option value="ANY" selected="true">Any</option><option value="NO">None</option><option value="MIN">Earliest Value</option><option value="MAX">Most Recent Value</option><option value="FIRST">Earliest Recorded</option><option value="LAST">Most Recent Recorded</option></select></span> ';
-		else if (hl7Abbrev == 'ST' || hl7Abbrev == 'CWE')
+		else if (hl7Abbrev == 'ST' || hl7Abbrev == 'CWE' || hl7Abbrev == 'BIT')
 			str += '<br/><span style="margin-left: 40px">Which observations? <select name="timeModifier"><option value="ANY">Any</option><option value="NO">None</option><option value="FIRST">Earliest</option><option value="LAST" selected="true">Most Recent</option></select></span> ';
 		if (hl7Abbrev == 'NM') {
 			str += ' <br/><br/><span style="margin-left: 40px">';
@@ -130,6 +130,10 @@
 			str += ' <small><spring:message code="CohortBuilder.optionalPrefix" /></small> <spring:message code="CohortBuilder.whatValueQuestion" /> ';
 			str += ' <input type="hidden" name="modifier" value="EQUAL" /> ';
 			str += '</span>';
+		} else if (hl7Abbrev == 'BIT') {
+			str += ' <br/><br/><span style="margin-left: 40px">';
+			str += ' <small><spring:message code="CohortBuilder.optionalPrefix" /></small> <spring:message code="CohortBuilder.whatValueQuestion" /> ';
+			str += ' <input type="hidden" name="modifier" value="EQUAL" /> ';
 		}
 		if (hl7Abbrev == 'NM' || hl7Abbrev == 'ST') {
 			str += '<input type="text" name="value" size="10"/>';
@@ -140,6 +144,8 @@
 		} else if (hl7Abbrev == 'CWE') {
 			str += '<select name="value" id="replace_with_answer_options"><option value=""><spring:message code="general.loading"/></option></select>';
 			lookupAnswers = true;
+		} else if (hl7Abbrev == 'BIT') {
+			str += '<select name="value"><option value=""></option><option value="true"><spring:message code="general.true"/><option value="false"><spring:message code="general.false"/></option></option></select>';
 		}
 		str += ' <br/><br/><span style="margin-left: 40px">';
 		str += ' <small><spring:message code="CohortBuilder.optionalPrefix" /> (obsDatetime)</small> <spring:message code="CohortBuilder.whenPrefix" /> <spring:message code="CohortBuilder.withinMonthsAndDays" arguments="withinLastMonths,withinLastDays" />';
@@ -376,7 +382,7 @@
 		} else
 			DWRProgramWorkflowService.getWorkflowsByProgram(program, function(wfs) {
 					DWRUtil.removeAllOptions('workflow');
-					DWRUtil.addOptions('workflow', [" "]);
+					DWRUtil.addOptions('workflow', [ { label:" ", val:"" } ], 'val', 'label');
 					DWRUtil.addOptions('workflow', wfs, 'id', 'name');
 					if (wfs.length > 0)
 						showDiv('workflow');
@@ -556,6 +562,9 @@
 		<ul>
 			<li>&nbsp;</li>
 			<li><a id="searchTab_concept" href="#" onClick="changeSearchTab(this, 'concept_to_filter_search')"><spring:message code="CohortBuilder.searchTab.concept"/></a></li>
+			<c:if test="${ENABLE_LOGIC_TAB == 'true'}">
+				<li><a id="searchTab_logic" href="#" onClick="changeSearchTab(this)"><spring:message code="CohortBuilder.searchTab.logic"/></a></li>
+			</c:if>
 			<li><a id="searchTab_attribute" href="#" onClick="changeSearchTab(this)"><spring:message code="CohortBuilder.searchTab.personAttribute"/></a></li>
 			<li><a id="searchTab_encounter" href="#" onClick="changeSearchTab(this)"><spring:message code="CohortBuilder.searchTab.encounter"/></a></li>
 			<li><a id="searchTab_program" href="#" onClick="changeSearchTab(this)"><spring:message code="CohortBuilder.searchTab.program"/></a></li>
@@ -570,6 +579,25 @@
 			<div dojoType="ConceptSearch" widgetId="concept_to_filter_search" conceptId="" searchLabel='<spring:message code="CohortBuilder.addConceptFilter"/>' showVerboseListing="true" includeVoided="false"></div>
 			<div id="concept_filter_box" style="display: none; border-top: 1px #aaaaaa solid"></div>
 		</div>
+		
+		<c:if test="${ENABLE_LOGIC_TAB == 'true'}">
+			<div id="searchTab_logic_content" style="display: none">
+				<div style="background: #f6f6f6; border: 1px #808080 solid; padding: 0.5em; margin: 0.5em">
+					<form method="post" action="cohortBuilder.form">
+						<input type="hidden" name="method" value="addDynamicFilter"/>
+						<input type="hidden" name="filterClass" value="org.openmrs.reporting.LogicPatientFilter" />
+						<input type="hidden" name="vars" value="criteria#org.openmrs.logic.LogicCriteria" />
+						<spring:message code="CohortBuilder.logicCriteria"/>:
+						<br/>
+						<small><spring:message code="CohortBuilder.logicCriteria.help"/></small>
+						<br/>
+						<textarea name="criteria" rows="4" cols="72"></textarea>
+						<br/>
+						<input type="submit" value="<spring:message code="general.search"/>" />
+					</form>
+				</div>
+			</div>
+		</c:if>
 		
 		<div id="searchTab_attribute_content" style="display: none">
 			<div style="background: #f6f6f6; border: 1px #808080 solid; padding: 0.5em; margin: 0.5em">

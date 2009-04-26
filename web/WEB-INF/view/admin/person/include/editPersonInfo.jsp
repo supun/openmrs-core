@@ -32,7 +32,7 @@
 				var birthdateBox = document.getElementById('birthdate');
 				var ageBox = document.getElementById('age');
 				try {
-					var birthdate = new Date(birthdateBox.value);
+					var birthdate = parseSimpleDate(birthdateBox.value, '<openmrs:datePattern />');
 					var age = getAge(birthdate);
 					if (age > 0)
 						ageBox.innerHTML = "(" + age + ' <spring:message code="Person.age.years"/>)';
@@ -279,7 +279,7 @@
 </tr>
 
 <spring:bind path="voidedBy">
-	<c:if test="${status.value}" >
+	<c:if test="${status.value != null}" >
 		<tr>
 			<td><spring:message code="general.voidedBy"/></td>
 			<td>
