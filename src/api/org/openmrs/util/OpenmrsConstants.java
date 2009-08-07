@@ -671,6 +671,10 @@ public final class OpenmrsConstants {
 	
 	public static final String GLOBAL_PROPERTY_NEWPATIENTFORM_RELATIONSHIPS = "newPatientForm.relationships";
 	
+	public static final String GLOBAL_PROPERTY_PATIENT_SEARCH_MATCH_MODE = "patientSearch.matchMode";
+	
+	public static final String GLOBAL_PROPERTY_PATIENT_SEARCH_MATCH_ANYWHERE = "ANYWHERE";
+	
 	/**
 	 * These properties (and default values) are set if not found in the database when OpenMRS is
 	 * started if they do not exist yet
@@ -975,13 +979,12 @@ public final class OpenmrsConstants {
 		return languages;
 	}
 	
+	@Deprecated
 	private static Map<String, String> OPENMRS_LOCALE_DATE_PATTERNS = null;
 	
 	/**
-	 * This method is necessary until SimpleDateFormat(SHORT, java.util.locale) returns a pattern
-	 * with a four digit year <locale.toString().toLowerCase(), pattern>
-	 * 
 	 * @return Mapping of Locales to locale specific date pattern
+	 * @deprecated use the {@link org.openmrs.api.context.Context#getDateFormat()}
 	 */
 	public static final Map<String, String> OPENMRS_LOCALE_DATE_PATTERNS() {
 		if (OPENMRS_LOCALE_DATE_PATTERNS == null) {

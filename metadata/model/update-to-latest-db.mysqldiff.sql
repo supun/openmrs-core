@@ -1772,16 +1772,13 @@ BEGIN
 		    (select 
 		      min(cn.concept_name_id)
 		     from
-		      concept_name cn,
-		      concept_name_tag_map map
+		      concept_name cn
 		     where
 		      cn.concept_id = concept_word.concept_id
 		      and
 		      locate(word, cn.name) > 0
 		      and
-		      map.concept_name_id = cn.concept_name_id
-		      and
-		      map.concept_name_tag_id = 4)
+		      cn.locale = concept_word.locale)
 		where synonym = '';
 		
 		# update all synonym words
@@ -1790,64 +1787,24 @@ BEGIN
 		set
 		  concept_name_id = 
 		    (select 
-		      min(cn.concept_name_id)
+		      cn.concept_name_id
 		     from
 		      concept_name cn,
 		      concept_name_tag_map map
 		     where
 		      cn.concept_id = concept_word.concept_id
 		      and
-		      locate(word, cn.name) > 0
+		      cn.name = synonym
+		      and
+		      cn.locale = concept_word.locale
 		      and
 		      map.concept_name_id = cn.concept_name_id
 		      and
 		      map.concept_name_tag_id = 3)
 		where synonym <> '';
 		
-		# find duplicate words and delete the synonym part
-		drop table if exists tmp_concept_word_helper;
-		create table tmp_concept_word_helper like concept_word;
-		ALTER TABLE tmp_concept_word_helper DROP PRIMARY KEY;
-		insert into 
-		 tmp_concept_word_helper
-		(select
-		  cw2.*
-		from
-		  concept_word cw1,
-		  concept_word cw2
-		where
-		  cw1.concept_id = cw2.concept_id
-		  and
-		  cw1.word = cw2.word
-		  and
-		  cw1.synonym = ''
-		  and
-		  cw2.synonym <> ''
-		);
-		
-		# delete those synonym words that are duplicate.
-		delete from
-		concept_word
-		where
-		  exists (
-		  select
-		    *
-		  from
-		   tmp_concept_word_helper tmp
-		  where
-		   concept_word.concept_id = tmp.concept_id
-		   and
-		   concept_word.word = tmp.word
-		   and
-		   concept_word.synonym = tmp.synonym
-		   and
-		   concept_word.concept_name_id = tmp.concept_name_id);
-		
 		# clean up any synonyms that were in the word table but werent really ever synonyms
 		delete from concept_word where concept_name_id = 0 or concept_name_id is null;
-		
-		# clean up
-		drop table tmp_concept_word_helper;
 		
 		ALTER TABLE concept_word CHANGE concept_name_id concept_name_id INTEGER NOT NULL; 
 		
@@ -2097,6 +2054,75 @@ END;
 //
 delimiter ;
 call diff_procedure('1.4.0.23');
+
+#-----------------------------------------------------------
+# OpenMRS Datamodel version 1.4.2.00
+# Ben Wolfe   Jul 1 2009
+#
+# fix concept_word table with concept_name_ids
+#-----------------------------------------------------------
+DROP PROCEDURE IF EXISTS diff_procedure;
+delimiter //
+CREATE PROCEDURE diff_procedure (IN new_db_version VARCHAR(10))
+BEGIN
+	IF (SELECT REPLACE(property_value, '.', '0') < REPLACE(new_db_version, '.', '0') FROM global_property WHERE property = 'database_version') THEN
+
+		select 'Cleaning up bogus concept_word entries' AS '*** Step: ***', new_db_version from dual;
+		
+		delete from concept_word where not exists (select * from concept_name cn where cn.concept_id = concept_word.concept_id and cn.locale = concept_word.locale);
+
+		select 'Fixing preferred names in concept_word table columns' AS '*** Step: ***', new_db_version from dual;
+
+		# Update all non-synonym words
+		update 
+		 concept_word
+		set
+		  concept_name_id = 
+		    (select 
+		      min(cn.concept_name_id)
+		     from
+		      concept_name cn
+		     where
+		      cn.concept_id = concept_word.concept_id
+		      and
+		      locate(word, cn.name) > 0
+		      and
+		      cn.locale = concept_word.locale)
+		where synonym = '';
+		
+		select 'Fixing synonyms in concept_word table columns' AS '*** Step: ***', new_db_version from dual;
+
+		# update all synonym words
+		update 
+		 concept_word
+		set
+		  concept_name_id = 
+		    (select 
+		      cn.concept_name_id
+		     from
+		      concept_name cn,
+		      concept_name_tag_map map
+		     where
+		      cn.concept_id = concept_word.concept_id
+		      and
+		      cn.name = synonym
+		      and
+		      cn.locale = concept_word.locale
+		      and
+		      map.concept_name_id = cn.concept_name_id
+		      and
+		      map.concept_name_tag_id = 3)
+		where synonym <> '';
+		
+		select 'done' AS '*** Step: ***';
+		
+		UPDATE `global_property` SET property_value=new_db_version WHERE property = 'database_version';
+
+	END IF;
+END;
+//
+delimiter ;
+call diff_procedure('1.4.2.00');
 
 
 #-----------------------------------------------------------
