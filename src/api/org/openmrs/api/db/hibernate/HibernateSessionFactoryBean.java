@@ -15,8 +15,6 @@ package org.openmrs.api.db.hibernate;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.sql.Connection;
-import java.sql.DriverManager;
 import java.util.HashSet;
 import java.util.Properties;
 import java.util.Set;
@@ -26,7 +24,6 @@ import org.apache.commons.logging.LogFactory;
 import org.hibernate.HibernateException;
 import org.hibernate.cfg.Configuration;
 import org.hibernate.util.ConfigHelper;
-import org.openmrs.api.APIException;
 import org.openmrs.api.context.Context;
 import org.openmrs.module.Module;
 import org.openmrs.module.ModuleFactory;
@@ -72,66 +69,8 @@ public class HibernateSessionFactoryBean extends LocalSessionFactoryBean {
 			log.fatal("Unable to load default hibernate properties", e);
 		}
 		
-		// check database connection before configuring session factory
-		// If not done, Hibernate blocks until a successful connection is made
-		String driver = config.getProperty("hibernate.connection.driver_class");
-		String username = config.getProperty("hibernate.connection.username");
-		String password = config.getProperty("hibernate.connection.password");
-		String url = config.getProperty("hibernate.connection.url");
-		int check = checkDatabaseConnection(driver, username, password, url);
+		return config;
 		
-		if (check == 0)
-			return config;
-		else
-			throw new APIException("Error connecting to database. See error log for details.");
-		
-	}
-	
-	/**
-	 * Non zero represents an error and should prevent hibernate from starting
-	 * 
-	 * @param driver
-	 * @param user
-	 * @param pw
-	 * @param url
-	 * @return int
-	 */
-	private int checkDatabaseConnection(String driver, String user, String pw, String url) {
-		
-		try {
-			Class.forName(driver).newInstance();
-		}
-		catch (Exception e) {
-			log.error("Error while starting up. Bad driver class: " + driver, e);
-			System.err.println(e.getMessage());
-			System.err.println("Could not find driver_class '" + driver
-			        + "'.  Can be set with runtime property: 'connection.driver_class'");
-			return 1;
-		}
-		
-		log.debug("checking database connection");
-		try {
-			@SuppressWarnings("unused")
-			Connection db_connection = DriverManager.getConnection(url, user, pw);
-			log.debug("Successful database connection");
-			db_connection.close();
-		}
-		catch (Exception e) {
-			log.error("Error while starting up.  Unable to connection using ", e);
-			System.err.println(e.getMessage());
-			pw = pw.replaceAll(".", "*");
-			System.err
-			        .println("Could not connect to database using url '"
-			                + url
-			                + "', username '"
-			                + user
-			                + "', and pw '"
-			                + pw
-			                + "'. Connection properties can be set with runtime property: 'connection.username', 'connection.password', and 'connection.url'");
-			return 1;
-		}
-		
-		return 0;
 	}
 	
 	/**

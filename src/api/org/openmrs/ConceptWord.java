@@ -30,6 +30,10 @@ public class ConceptWord implements java.io.Serializable, Comparable<ConceptWord
 	public static final long serialVersionUID = 888677L;
 	
 	// Fields
+	/**
+	 * @since 1.5
+	 */
+	private Integer conceptWordId;
 	
 	private Concept concept;
 	
@@ -43,6 +47,22 @@ public class ConceptWord implements java.io.Serializable, Comparable<ConceptWord
 	private Locale locale;
 	
 	private Double weight = 0.0;
+	
+	/**
+	 * Get the unique internal database identifier for this concept word
+	 * @since 1.5
+	 */
+	public Integer getConceptWordId() {
+		return conceptWordId;
+	}
+	
+	/**
+	 * Set the unique identifier for this concept word
+	 * @since 1.5
+	 */
+	public void setConceptWordId(Integer conceptWordId) {
+		this.conceptWordId = conceptWordId;
+	}
 	
 	// Constructors
 	
@@ -191,9 +211,7 @@ public class ConceptWord implements java.io.Serializable, Comparable<ConceptWord
 	}
 	
 	/**
-	 * Gets the concept name from which this word was derived.
-	 * 
-	 * @return
+	 * @return Returns the concept name from which this word was derived.
 	 */
 	public ConceptName getConceptName() {
 		return conceptName;
@@ -228,6 +246,7 @@ public class ConceptWord implements java.io.Serializable, Comparable<ConceptWord
 	 * @should return separate ConceptWord objects for the same word in different ConceptNames
 	 * @should not include voided names
 	 */
+	
 	public static Set<ConceptWord> makeConceptWords(Concept concept) {
 		Set<ConceptWord> words = new HashSet<ConceptWord>();
 		
@@ -246,7 +265,7 @@ public class ConceptWord implements java.io.Serializable, Comparable<ConceptWord
 	 * Split the given phrase on words and remove unique and stop words
 	 * 
 	 * @param phrase
-	 * @return
+	 * @return Returns a list of the unique parts of the phrase, in all upper case.
 	 */
 	public static List<String> getUniqueWords(String phrase) {
 		

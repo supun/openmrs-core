@@ -46,7 +46,6 @@ import org.openmrs.PersonAttributeType;
 import org.openmrs.PersonName;
 import org.openmrs.Relationship;
 import org.openmrs.RelationshipType;
-import org.openmrs.Tribe;
 import org.openmrs.api.APIException;
 import org.openmrs.api.DuplicateIdentifierException;
 import org.openmrs.api.IdentifierNotUniqueException;
@@ -60,7 +59,6 @@ import org.openmrs.api.PersonService.ATTR_VIEW_TYPE;
 import org.openmrs.api.context.Context;
 import org.openmrs.propertyeditor.ConceptEditor;
 import org.openmrs.propertyeditor.LocationEditor;
-import org.openmrs.propertyeditor.TribeEditor;
 import org.openmrs.util.OpenmrsConstants;
 import org.openmrs.util.OpenmrsUtil;
 import org.openmrs.util.OpenmrsConstants.PERSON_TYPE;
@@ -108,7 +106,6 @@ public class NewPatientFormController extends SimpleFormController {
 		NumberFormat nf = NumberFormat.getInstance(Context.getLocale());
 		binder.registerCustomEditor(java.lang.Integer.class, new CustomNumberEditor(java.lang.Integer.class, nf, true));
 		binder.registerCustomEditor(java.util.Date.class, new CustomDateEditor(Context.getDateFormat(), true, 10));
-		binder.registerCustomEditor(Tribe.class, new TribeEditor());
 		binder.registerCustomEditor(Location.class, new LocationEditor());
 		binder.registerCustomEditor(Concept.class, "causeOfDeath", new ConceptEditor());
 	}
@@ -181,6 +178,7 @@ public class NewPatientFormController extends SimpleFormController {
 							if (newIdentifiers.contains(pi))
 								newIdentifiers.remove(pi);
 							
+//							pi.setUuid(null);
 							newIdentifiers.add(pi);
 							
 							if (log.isDebugEnabled()) {
@@ -196,8 +194,11 @@ public class NewPatientFormController extends SimpleFormController {
 			
 			ValidationUtils.rejectIfEmptyOrWhitespace(errors, "gender", "error.null");
 			
-			// check patients birthdate against future dates and really old dates
-			if (shortPatient.getBirthdate() != null) {
+			if (shortPatient.getBirthdate() == null) {
+				Object[] args = { "Birthdate" };
+				errors.rejectValue("birthdate", "error.required", args, "");
+			} else {
+				// check patients birthdate against future dates and really old dates
 				if (shortPatient.getBirthdate().after(new Date()))
 					errors.rejectValue("birthdate", "error.date.future");
 				else {
@@ -292,6 +293,7 @@ public class NewPatientFormController extends SimpleFormController {
 				// add the new name
 				newName.setPersonNameId(null);
 				newName.setPreferred(true);
+				newName.setUuid(null);
 				patient.addName(newName);
 			}
 			
@@ -316,6 +318,7 @@ public class NewPatientFormController extends SimpleFormController {
 					PersonAddress newAddress = (PersonAddress) shortPatient.getAddress().clone();
 					newAddress.setPersonAddressId(null);
 					newAddress.setPreferred(true);
+					newAddress.setUuid(null);
 					patient.addAddress(newAddress);
 				}
 			}
@@ -369,7 +372,7 @@ public class NewPatientFormController extends SimpleFormController {
 			// add the new identifiers.  First remove them so that things like
 			// changes to preferred status and location are persisted 
 			for (PatientIdentifier identifier : newIdentifiers) {
-				// this loop is used instead of just using removeIdentifier becuase
+				// this loop is used instead of just using removeIdentifier because
 				// the identifier set on patient is a TreeSet which will use .compareTo
 				identifier.setPatient(patient);
 				for (PatientIdentifier currentIdentifier : patient.getActiveIdentifiers()) {
@@ -390,6 +393,7 @@ public class NewPatientFormController extends SimpleFormController {
 				if (!newIdentifiersList.contains(identifier)) {
 					// mark the "removed" identifiers as voided
 					identifier.setVoided(true);
+					identifier.setVoidReason("Removed from new patient screen");
 				}
 			}
 			
@@ -397,12 +401,6 @@ public class NewPatientFormController extends SimpleFormController {
 			patient.setBirthdate(shortPatient.getBirthdate());
 			patient.setBirthdateEstimated(shortPatient.getBirthdateEstimated());
 			patient.setGender(shortPatient.getGender());
-			if (shortPatient.getTribe() == "" || shortPatient.getTribe() == null)
-				patient.setTribe(null);
-			else {
-				Tribe t = ps.getTribe(Integer.valueOf(shortPatient.getTribe()));
-				patient.setTribe(t);
-			}
 			
 			patient.setDead(shortPatient.getDead());
 			if (patient.isDead()) {

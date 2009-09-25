@@ -37,8 +37,8 @@ import org.springframework.context.support.MessageSourceAccessor;
 import org.springframework.util.StringUtils;
 import org.springframework.validation.BindException;
 import org.springframework.validation.Errors;
-import org.springframework.web.bind.ServletRequestUtils;
 import org.springframework.web.bind.ServletRequestDataBinder;
+import org.springframework.web.bind.ServletRequestUtils;
 import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.mvc.SimpleFormController;
 import org.springframework.web.servlet.view.RedirectView;
@@ -87,7 +87,7 @@ public class OrderByUserListController extends SimpleFormController {
 			String ord = msa.getMessage("Order.title");
 			for (String p : orderList) {
 				try {
-					os.deleteOrder(os.getOrder(Integer.valueOf(p)));
+					os.purgeOrder(os.getOrder(Integer.valueOf(p)));
 					if (!success.equals(""))
 						success += "<br/>";
 					success += ord + " " + p + " " + deleted;

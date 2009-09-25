@@ -13,6 +13,9 @@
 		
 		<discriminator column="field_id" insert="false" />
 		
+		<property name="uuid" type="java.lang.String"
+			column="uuid" length="38" unique="true" />
+
 		<property name="name" type="java.lang.String"
 			length="255" not-null="true"/>
 		
@@ -48,12 +51,14 @@
 		<property name="dateChanged" type="java.util.Date"
 			column="date_changed" length="19" />
 
+		<!--
 		<set name="answers" lazy="true" inverse="true" cascade="save-update">
 			<key>
 				<column name="field_id" />
 			</key>
 			<one-to-many class="FieldAnswer" />
 		</set>
+		-->
 		
 		<set name="forms" table="form_field" lazy="true" inverse="true" cascade="none">
 			<key column="field_id" />

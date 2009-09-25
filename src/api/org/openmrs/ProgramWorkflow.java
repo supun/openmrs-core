@@ -15,25 +15,20 @@ package org.openmrs;
 
 import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.Date;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 import java.util.TreeSet;
-import java.util.HashSet;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.springframework.beans.support.PropertyComparator;
+import org.openmrs.util.NaturalStrings;
 
 /**
  * ProgramWorkflow
  */
-public class ProgramWorkflow implements java.io.Serializable {
+public class ProgramWorkflow extends BaseOpenmrsMetadata implements java.io.Serializable {
 	
 	private static final long serialVersionUID = 1L;
-	
-	protected final Log log = LogFactory.getLog(getClass());
 	
 	// ******************
 	// Properties
@@ -44,16 +39,6 @@ public class ProgramWorkflow implements java.io.Serializable {
 	private Program program;
 	
 	private Concept concept;
-	
-	private User creator;
-	
-	private Date dateCreated;
-	
-	private Boolean retired = false;
-	
-	private User changedBy;
-	
-	private Date dateChanged;
 	
 	private Set<ProgramWorkflowState> states = new HashSet<ProgramWorkflowState>();
 	
@@ -124,8 +109,8 @@ public class ProgramWorkflow implements java.io.Serializable {
 	/**
 	 * Returns a {@link ProgramWorkflowState} whose Concept matches the passed concept
 	 * 
-	 * @param name the Concept to match
-	 * @return a {@link ProgramWorkflowState} whose {@link Concept} matches the passed
+	 * @param concept the Concept to match
+	 * @return Returns a {@link ProgramWorkflowState} whose {@link Concept} matches the passed
 	 *         <code>concept</code>
 	 */
 	public ProgramWorkflowState getState(Concept concept) {
@@ -172,7 +157,7 @@ public class ProgramWorkflow implements java.io.Serializable {
 	}
 	
 	/**
-	 * Returns a {@link Set<ProgramWorkflowState>} including all non-retired ProgramWorkflowStates
+	 * Returns a Set<{@link ProgramWorkflowState}> including all non-retired ProgramWorkflowStates
 	 * and all retired ProgramWorkflowStates in this ProgramWorkflow if <code>includeRetired</code>
 	 * is true
 	 * 
@@ -191,15 +176,25 @@ public class ProgramWorkflow implements java.io.Serializable {
 	}
 	
 	/**
-	 * Returns a {@link Set<ProgramWorkflowState>} including all ProgramWorkflowStates, sorted by
+	 * Returns a Set<{@link ProgramWorkflowState}> including all ProgramWorkflowStates, sorted by
 	 * {@link ConceptName}
 	 * 
 	 * @return Set<ProgramWorkflowState> - all ProgramWorkflowStates, sorted by {@link ConceptName}
+	 * @should sort names containing numbers intelligently
 	 */
-	@SuppressWarnings("unchecked")
 	public Set<ProgramWorkflowState> getSortedStates() {
-		Comparator c = new PropertyComparator("concept.name.name", true, true);
-		TreeSet<ProgramWorkflowState> sorted = new TreeSet<ProgramWorkflowState>(c);
+		final Comparator<String> naturalComparator = NaturalStrings.getNaturalComparator();
+		
+		Comparator<ProgramWorkflowState> stateComparator = new Comparator<ProgramWorkflowState>() {
+			
+			public int compare(ProgramWorkflowState o1, ProgramWorkflowState o2) {
+				return naturalComparator.compare(o1.getConcept().getBestName(null).getName(), o2.getConcept().getBestName(
+				    null).getName());
+			}
+			
+		};
+		
+		TreeSet<ProgramWorkflowState> sorted = new TreeSet<ProgramWorkflowState>(stateComparator);
 		if (getStates() != null) {
 			sorted.addAll(getStates());
 		}
@@ -207,10 +202,10 @@ public class ProgramWorkflow implements java.io.Serializable {
 	}
 	
 	/**
-	 * Returns a {@link List<ProgramWorkflowState>} including all possible next
+	 * Returns a List<{@link ProgramWorkflowState}> including all possible next
 	 * ProgramWorkflowStates, for the passed {@link PatientProgram} ordered by {@link ConceptName}
 	 * 
-	 * @param - patientProgram - The PatientProgram to check
+	 * @param patientProgram - The PatientProgram to check
 	 * @return List<ProgramWorkflowState> - all possible next ProgramWorkflowStates, for the passed
 	 *         {@link PatientProgram} ordered by {@link ConceptName}
 	 */
@@ -226,7 +221,7 @@ public class ProgramWorkflow implements java.io.Serializable {
 	}
 	
 	/**
-	 * Returns a {@link List<ProgramWorkflowState>} including all possible next
+	 * Returns a List<{@link ProgramWorkflowState}> including all possible next
 	 * ProgramWorkflowStates, for the passed {@link PatientProgram} ordered by {@link ConceptName}.
 	 * 
 	 * @param fromState {@link ProgramWorkflowState} to check transition from
@@ -253,12 +248,11 @@ public class ProgramWorkflow implements java.io.Serializable {
 	public boolean equals(Object obj) {
 		if (obj != null && obj instanceof ProgramWorkflow) {
 			ProgramWorkflow p = (ProgramWorkflow) obj;
-			if (this.getProgramWorkflowId() == null) {
-				return p.getProgramWorkflowId() == null;
+			if (this.getProgramWorkflowId() != null) {
+				return (this.getProgramWorkflowId().equals(p.getProgramWorkflowId()));
 			}
-			return (this.getProgramWorkflowId().equals(p.getProgramWorkflowId()));
 		}
-		return false;
+		return this == obj;
 	}
 	
 	/** @see Object#toString() */
@@ -279,56 +273,12 @@ public class ProgramWorkflow implements java.io.Serializable {
 		this.states = states;
 	}
 	
-	public Boolean getRetired() {
-		return retired;
-	}
-	
-	public Boolean isRetired() {
-		return getRetired();
-	}
-	
-	public void setRetired(Boolean retired) {
-		this.retired = retired;
-	}
-	
-	public User getChangedBy() {
-		return changedBy;
-	}
-	
-	public void setChangedBy(User changedBy) {
-		this.changedBy = changedBy;
-	}
-	
-	public Date getDateChanged() {
-		return dateChanged;
-	}
-	
-	public void setDateChanged(Date dateChanged) {
-		this.dateChanged = dateChanged;
-	}
-	
 	public Concept getConcept() {
 		return concept;
 	}
 	
 	public void setConcept(Concept concept) {
 		this.concept = concept;
-	}
-	
-	public User getCreator() {
-		return creator;
-	}
-	
-	public void setCreator(User creator) {
-		this.creator = creator;
-	}
-	
-	public Date getDateCreated() {
-		return dateCreated;
-	}
-	
-	public void setDateCreated(Date dateCreated) {
-		this.dateCreated = dateCreated;
 	}
 	
 	public Program getProgram() {
@@ -345,5 +295,23 @@ public class ProgramWorkflow implements java.io.Serializable {
 	
 	public void setProgramWorkflowId(Integer programWorkflowId) {
 		this.programWorkflowId = programWorkflowId;
+	}
+	
+	/**
+	 * @since 1.5
+	 * @see org.openmrs.OpenmrsObject#getId()
+	 */
+	public Integer getId() {
+		
+		return getProgramWorkflowId();
+	}
+	
+	/**
+	 * @since 1.5
+	 * @see org.openmrs.OpenmrsObject#setId(java.lang.Integer)
+	 */
+	public void setId(Integer id) {
+		setProgramWorkflowId(id);
+		
 	}
 }

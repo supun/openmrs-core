@@ -27,6 +27,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.openmrs.Encounter;
 import org.openmrs.Patient;
+import org.openmrs.api.APIException;
 import org.openmrs.api.EncounterService;
 import org.openmrs.api.PatientService;
 import org.openmrs.api.context.Context;
@@ -96,13 +97,20 @@ public class MergePatientsFormController extends SimpleFormController {
 				preferred = ps.getPatient(Integer.valueOf(patient2Id));
 			}
 			
-			ps.mergePatients(preferred, notPreferred);
+			try {
+				ps.mergePatients(preferred, notPreferred);
+			}
+			catch (APIException e) {
+				log.error("Unable to merge patients", e);
+				httpSession.setAttribute(WebConstants.OPENMRS_ERROR_ATTR, "Patient.merge.fail");
+				return new ModelAndView(new RedirectView(view + "?patientId=" + preferred.getPatientId() + "&patientId="
+				        + notPreferred.getPatientId()));
+			}
 			
 			httpSession.setAttribute(WebConstants.OPENMRS_MSG_ATTR, "Patient.merged");
 			
-			view += "?patientId=" + preferred.getPatientId() + "&patientId=" + notPreferred.getPatientId();
-			
-			return new ModelAndView(new RedirectView(view));
+			return new ModelAndView(new RedirectView(view + "?patientId=" + preferred.getPatientId() + "&patientId="
+			        + notPreferred.getPatientId()));
 		}
 		
 		return new ModelAndView(new RedirectView(getFormView()));
@@ -135,7 +143,7 @@ public class MergePatientsFormController extends SimpleFormController {
 	 * 
 	 * @see org.springframework.web.servlet.mvc.SimpleFormController#referenceData(javax.servlet.http.HttpServletRequest)
 	 */
-	protected Map referenceData(HttpServletRequest request, Object obj, Errors errors) throws Exception {
+	protected Map<String, Object> referenceData(HttpServletRequest request, Object obj, Errors errors) throws Exception {
 		
 		Map<String, Object> map = new HashMap<String, Object>();
 		
@@ -146,14 +154,14 @@ public class MergePatientsFormController extends SimpleFormController {
 		
 		if (Context.isAuthenticated()) {
 			EncounterService es = Context.getEncounterService();
-			patient1Encounters = es.getEncounters(p1);
+			patient1Encounters = es.getEncountersByPatient(p1);
 			
 			String[] patientIds = request.getParameterValues("patientId");
 			if (patientIds != null && patientIds.length > 1 && !patientIds[0].equals(patientIds[1])) {
 				String patientId = patientIds[1];
 				Integer pId = Integer.valueOf(patientId);
 				p2 = Context.getPatientService().getPatient(pId);
-				patient2Encounters = es.getEncounters(p2);
+				patient2Encounters = es.getEncountersByPatient(p2);
 			}
 		}
 		

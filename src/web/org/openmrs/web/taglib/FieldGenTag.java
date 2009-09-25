@@ -26,6 +26,7 @@ import javax.servlet.jsp.tagext.TagSupport;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.openmrs.api.context.Context;
 import org.openmrs.util.OpenmrsUtil;
 import org.openmrs.web.taglib.fieldgen.FieldGenHandler;
 import org.openmrs.web.taglib.fieldgen.FieldGenHandlerFactory;
@@ -170,7 +171,7 @@ public class FieldGenTag extends TagSupport {
 							output += falseLabel;
 							output += "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;";
 							output += "<input type=\"radio\" name=\"" + formFieldName + "\" id=\"" + formFieldName
-							        + "_t\" =\"t\"" + ("t".equals(startVal) ? " checked" : "") + "/> ";
+							        + "_t\" value=\"t\"" + ("t".equals(startVal) ? " checked" : "") + "/> ";
 							output += trueLabel;
 						} else {
 							output = "<input type=\"radio\" name=\"" + formFieldName + "\" id=\"" + formFieldName
@@ -448,13 +449,13 @@ public class FieldGenTag extends TagSupport {
 			
 			if (handlerClassName != null) {
 				try {
-					Class cls = Class.forName(handlerClassName);
-					Constructor ct = cls.getConstructor();
+					Class<?> cls = Context.loadClass(handlerClassName);
+					Constructor<?> ct = cls.getConstructor();
 					FieldGenHandler handler = (FieldGenHandler) ct.newInstance();
 					return handler;
 				}
 				catch (Exception e) {
-					log.error("Unable to handle type [" + className + "] with handler [" + handlerClassName + "].");
+					log.error("Unable to handle type [" + className + "] with handler [" + handlerClassName + "]. " + e);
 					return null;
 				}
 			} else {

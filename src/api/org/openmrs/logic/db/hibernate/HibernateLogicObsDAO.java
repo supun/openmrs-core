@@ -148,7 +148,7 @@ public class HibernateLogicObsDAO implements LogicObsDAO {
 				criterion.add(Restrictions.eq("valueCoded", concept));
 				
 			} else if (rightOperand instanceof String) {
-				concept = Context.getConceptService().getConceptByIdOrName((String) rightOperand);
+				concept = Context.getConceptService().getConcept((String) rightOperand);
 				criterion.add(Restrictions.eq("valueCoded", concept));
 				
 			} else if (rightOperand instanceof Concept) {
@@ -343,8 +343,8 @@ public class HibernateLogicObsDAO implements LogicObsDAO {
 	
 	/**
 	 * @throws LogicException
-	 * @see org.openmrs.api.db.ObsDAO#getObservations(org.openmrs.Person,
-	 *      org.openmrs.logic.LogicCriteria)
+	 * @see org.openmrs.api.db.ObsDAO#getObservations(List, List, List, List, List, List, List,
+	 *      Integer, Integer, Date, Date, boolean)
 	 */
 	@SuppressWarnings("unchecked")
 	public List<Obs> getObservations(Cohort who, LogicCriteria logicCriteria) throws LogicException {

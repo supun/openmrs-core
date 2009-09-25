@@ -14,6 +14,7 @@
 package org.openmrs.hl7.impl;
 
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 
@@ -27,6 +28,7 @@ import org.openmrs.User;
 import org.openmrs.api.APIException;
 import org.openmrs.api.context.Context;
 import org.openmrs.api.impl.BaseOpenmrsService;
+import org.openmrs.hl7.HL7Constants;
 import org.openmrs.hl7.HL7InArchive;
 import org.openmrs.hl7.HL7InError;
 import org.openmrs.hl7.HL7InQueue;
@@ -96,7 +98,7 @@ public class HL7ServiceImpl extends BaseOpenmrsService implements HL7Service {
 	 * @deprecated
 	 */
 	public void createHL7Source(HL7Source hl7Source) {
-		saveHL7Source(hl7Source);
+		Context.getHL7Service().saveHL7Source(hl7Source);
 	}
 	
 	/**
@@ -141,7 +143,7 @@ public class HL7ServiceImpl extends BaseOpenmrsService implements HL7Service {
 	 * @deprecated
 	 */
 	public void updateHL7Source(HL7Source hl7Source) {
-		saveHL7Source(hl7Source);
+		Context.getHL7Service().saveHL7Source(hl7Source);
 	}
 	
 	/**
@@ -149,7 +151,7 @@ public class HL7ServiceImpl extends BaseOpenmrsService implements HL7Service {
 	 * @deprecated
 	 */
 	public void deleteHL7Source(HL7Source hl7Source) {
-		purgeHL7Source(hl7Source);
+		Context.getHL7Service().purgeHL7Source(hl7Source);
 	}
 	
 	/**
@@ -173,6 +175,9 @@ public class HL7ServiceImpl extends BaseOpenmrsService implements HL7Service {
 		if (hl7InQueue.getDateCreated() == null)
 			hl7InQueue.setDateCreated(new Date());
 		
+		if (hl7InQueue.getMessageState() == null)
+			hl7InQueue.setMessageState(HL7Constants.HL7_STATUS_PENDING);
+		
 		return dao.saveHL7InQueue(hl7InQueue);
 	}
 	
@@ -181,7 +186,7 @@ public class HL7ServiceImpl extends BaseOpenmrsService implements HL7Service {
 	 * @deprecated
 	 */
 	public void createHL7InQueue(HL7InQueue hl7InQueue) {
-		saveHL7InQueue(hl7InQueue);
+		Context.getHL7Service().saveHL7InQueue(hl7InQueue);
 	}
 	
 	/**
@@ -211,7 +216,14 @@ public class HL7ServiceImpl extends BaseOpenmrsService implements HL7Service {
 	 * @deprecated
 	 */
 	public void deleteHL7InQueue(HL7InQueue hl7InQueue) {
-		purgeHL7InQueue(hl7InQueue);
+		Context.getHL7Service().purgeHL7InQueue(hl7InQueue);
+	}
+	
+	/**
+	 * @see org.openmrs.hl7.HL7Service#getHL7InArchiveByState(java.lang.Integer)
+	 */
+	public List<HL7InArchive> getHL7InArchiveByState(Integer state) throws APIException {
+		return dao.getHL7InArchiveByState(state);
 	}
 	
 	/**
@@ -243,7 +255,7 @@ public class HL7ServiceImpl extends BaseOpenmrsService implements HL7Service {
 	 * @deprecated
 	 */
 	public void createHL7InArchive(HL7InArchive hl7InArchive) {
-		saveHL7InArchive(hl7InArchive);
+		Context.getHL7Service().saveHL7InArchive(hl7InArchive);
 	}
 	
 	/**
@@ -266,7 +278,7 @@ public class HL7ServiceImpl extends BaseOpenmrsService implements HL7Service {
 	 * @deprecated
 	 */
 	public void updateHL7InArchive(HL7InArchive hl7InArchive) {
-		saveHL7InArchive(hl7InArchive);
+		Context.getHL7Service().saveHL7InArchive(hl7InArchive);
 	}
 	
 	/**
@@ -274,7 +286,7 @@ public class HL7ServiceImpl extends BaseOpenmrsService implements HL7Service {
 	 * @deprecated
 	 */
 	public void deleteHL7InArchive(HL7InArchive hl7InArchive) {
-		purgeHL7InArchive(hl7InArchive);
+		Context.getHL7Service().purgeHL7InArchive(hl7InArchive);
 	}
 	
 	/**
@@ -305,7 +317,7 @@ public class HL7ServiceImpl extends BaseOpenmrsService implements HL7Service {
 	 * @deprecated
 	 */
 	public void createHL7InError(HL7InError hl7InError) {
-		saveHL7InError(hl7InError);
+		Context.getHL7Service().saveHL7InError(hl7InError);
 	}
 	
 	/**
@@ -328,7 +340,7 @@ public class HL7ServiceImpl extends BaseOpenmrsService implements HL7Service {
 	 * @see org.openmrs.hl7.HL7Service#updateHL7InError(org.openmrs.hl7.HL7InError)
 	 */
 	public void updateHL7InError(HL7InError hl7InError) {
-		saveHL7InError(hl7InError);
+		Context.getHL7Service().saveHL7InError(hl7InError);
 	}
 	
 	/**
@@ -336,7 +348,7 @@ public class HL7ServiceImpl extends BaseOpenmrsService implements HL7Service {
 	 * @deprecated
 	 */
 	public void deleteHL7InError(HL7InError hl7InError) {
-		purgeHL7InError(hl7InError);
+		Context.getHL7Service().purgeHL7InError(hl7InError);
 	}
 	
 	/**
@@ -389,9 +401,8 @@ public class HL7ServiceImpl extends BaseOpenmrsService implements HL7Service {
 				return user.getUserId();
 			}
 			catch (Exception e) {
-				log
-				        .error("Error resolving user with id '" + idNumber + "' family name '" + familyName + "' and given name '" + givenName
-				                + "'", e);
+				log.error("Error resolving user with id '" + idNumber + "' family name '" + familyName
+				        + "' and given name '" + givenName + "'", e);
 				return null;
 			}
 		}
@@ -412,7 +423,7 @@ public class HL7ServiceImpl extends BaseOpenmrsService implements HL7Service {
 		// Care" as an internal openmrs location_id
 		try {
 			Integer locationId = new Integer(pointOfCare);
-			Location l = Context.getEncounterService().getLocation(locationId);
+			Location l = Context.getLocationService().getLocation(locationId);
 			return l == null ? null : l.getLocationId();
 		}
 		catch (Exception ex) {
@@ -425,7 +436,7 @@ public class HL7ServiceImpl extends BaseOpenmrsService implements HL7Service {
 		
 		// Treat the 4th component "Facility" as location.name
 		try {
-			Location l = Context.getEncounterService().getLocationByName(facility);
+			Location l = Context.getLocationService().getLocation(facility);
 			if (l == null) {
 				log.debug("Couldn't find a location named '" + facility + "'");
 			}
@@ -473,13 +484,14 @@ public class HL7ServiceImpl extends BaseOpenmrsService implements HL7Service {
 			if (assigningAuthority != null && assigningAuthority.length() > 0) {
 				// Assigning authority defined
 				try {
-					PatientIdentifierType pit = Context.getPatientService().getPatientIdentifierType(assigningAuthority);
+					PatientIdentifierType pit = Context.getPatientService().getPatientIdentifierTypeByName(
+					    assigningAuthority);
 					if (pit == null) {
 						log.warn("Can't find PatientIdentifierType named '" + assigningAuthority + "'");
 						continue; // skip identifiers with unknown type
 					}
 					List<PatientIdentifier> matchingIds = Context.getPatientService().getPatientIdentifiers(hl7PatientId,
-					    pit);
+					    Collections.singletonList(pit), null, null, null);
 					if (matchingIds == null || matchingIds.size() < 1) {
 						// no matches
 						log.warn("NO matches found for " + hl7PatientId);
@@ -526,6 +538,9 @@ public class HL7ServiceImpl extends BaseOpenmrsService implements HL7Service {
 	
 	/**
 	 * @see org.openmrs.hl7.HL7Service#encounterCreated(org.openmrs.Encounter)
+	 * @deprecated This method is no longer needed. When an encounter is created in the ROUR01
+	 *             handler, it is created with all obs. Any AOP hooking should be done on the
+	 *             EncounterService.createEncounter(Encounter) method
 	 */
 	public void encounterCreated(Encounter encounter) {
 		// nothing is done here in core. Modules override/hook on this method

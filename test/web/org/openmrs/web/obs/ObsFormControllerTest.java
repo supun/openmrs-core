@@ -27,7 +27,6 @@ import org.openmrs.Obs;
 import org.openmrs.Person;
 import org.openmrs.api.ObsService;
 import org.openmrs.api.context.Context;
-import org.openmrs.test.TestUtil;
 import org.openmrs.web.controller.observation.ObsFormController;
 import org.openmrs.web.test.BaseWebContextSensitiveTest;
 import org.springframework.mock.web.MockHttpServletRequest;
@@ -45,7 +44,6 @@ public class ObsFormControllerTest extends BaseWebContextSensitiveTest {
 	 * 
 	 * @throws Exception
 	 */
-	@SuppressWarnings( { "unchecked" })
 	@Test
 	public void shouldGetObsFormWithEncounterFilledIn() throws Exception {
 		MockHttpServletRequest request = new MockHttpServletRequest("GET", "");
@@ -68,7 +66,6 @@ public class ObsFormControllerTest extends BaseWebContextSensitiveTest {
 	 * 
 	 * @throws Exception
 	 */
-	@SuppressWarnings( { "unchecked" })
 	@Test
 	public void shouldSaveObsFormNormally() throws Exception {
 		ObsService os = Context.getObsService();
@@ -100,9 +97,8 @@ public class ObsFormControllerTest extends BaseWebContextSensitiveTest {
 		request.addParameter("saveObs", "Save Obs"); // so that the form is processed
 		
 		// send the parameters to the controller
-		ModelAndView mav = controller.handleRequest(request, response);
+		controller.handleRequest(request, response);
 		
-		TestUtil.printOutTableContents(getConnection(), "obs");
 		// make sure an obs was created
 		List<Obs> obsForPatient = os.getObservationsByPerson(new Person(2));
 		assertEquals(1, obsForPatient.size());

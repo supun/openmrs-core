@@ -37,13 +37,18 @@ import org.simpleframework.xml.Root;
 
 /**
  * A Concept object can represent either a question or an answer to a data point. That data point is
- * usually an {@link Obs}. A Concept can have multiple names and multiple descriptions within one
- * locale and across multiple locales. To save a Concept to the database, first build up the Concept
- * object in java, then pass that object to the {@link ConceptService} To get a Concept that is
- * stored in the database, call a method in the {@link ConceptService} to fetch an object. To get
- * child objects off of that Concept, further calls to the {@link ConceptService} or the database
- * are not needed. e.g. To get the list of answers that are stored to a concept, get the concept,
- * then call {@link Concept#getAnswers()}
+ * usually an {@link Obs}. <br/>
+ * <br/>
+ * A Concept can have multiple names and multiple descriptions within one locale and across multiple
+ * locales.<br/>
+ * <br/>
+ * To save a Concept to the database, first build up the Concept object in java, then pass that
+ * object to the {@link ConceptService}.<br/>
+ * <br/>
+ * To get a Concept that is stored in the database, call a method in the {@link ConceptService} to
+ * fetch an object. To get child objects off of that Concept, further calls to the
+ * {@link ConceptService} or the database are not needed. e.g. To get the list of answers that are
+ * stored to a concept, get the concept, then call {@link Concept#getAnswers()}
  * 
  * @see ConceptName
  * @see ConceptNameTag
@@ -54,11 +59,11 @@ import org.simpleframework.xml.Root;
  * @see ConceptService
  */
 @Root
-public class Concept implements java.io.Serializable, Attributable<Concept> {
+public class Concept extends BaseOpenmrsObject implements Auditable, Retireable, java.io.Serializable, Attributable<Concept> {
 	
 	public static final long serialVersionUID = 57332L;
 	
-	public static final Log log = LogFactory.getLog(Concept.class);
+	private transient final Log log = LogFactory.getLog(Concept.class);
 	
 	// Fields
 	
@@ -130,6 +135,7 @@ public class Concept implements java.io.Serializable, Attributable<Concept> {
 	 * Possibly used for decapitating a ConceptNumeric (to remove the row in
 	 * 
 	 * @param cn
+	 * @deprecated
 	 */
 	public Concept(ConceptNumeric cn) {
 		conceptId = cn.getConceptId();
@@ -194,7 +200,7 @@ public class Concept implements java.io.Serializable, Attributable<Concept> {
 	 * TODO describe use cases
 	 * 
 	 * @param locale
-	 * @return
+	 * @return the answers for this concept sorted according to ConceptAnswerComparator
 	 */
 	public Collection<ConceptAnswer> getSortedAnswers(Locale locale) {
 		Vector<ConceptAnswer> sortedAnswers = new Vector<ConceptAnswer>(getAnswers());
@@ -396,21 +402,15 @@ public class Concept implements java.io.Serializable, Attributable<Concept> {
 	
 	/**
 	 * Sets the preferred name for a locale. This sets tags on the concept name to indicate that it
-	 * is preferred for the language and country. Also, the name is added to this Concept. If the
+	 * is preferred for the language and country. Also, the name is added to the concept. If the
 	 * country is specified in the locale, then the language is considered to be only implied as
 	 * preferred &mdash; it will only get set if there is not an existing preferred language name.
-	 * If the country is not specified in the locale, then the language is considered an explicit
-	 * designation and the call is the equivalent of calling {@link #setPreferredNameInLanguage()}.
 	 * 
 	 * @param locale the locale for which to set the preferred name
 	 * @param preferredName name which is preferred in the locale
+	 * @should only allow one preferred name
 	 */
 	public void setPreferredName(Locale locale, ConceptName preferredName) {
-		ConceptName existingName = getNameKnownAs(preferredName.getName(), locale);
-		if (existingName != null) {
-			preferredName = existingName;
-		}
-		
 		ConceptNameTag preferredLanguage = ConceptNameTag.preferredLanguageTagFor(locale);
 		ConceptNameTag preferredCountry = ConceptNameTag.preferredCountryTagFor(locale);
 		
@@ -433,28 +433,7 @@ public class Concept implements java.io.Serializable, Attributable<Concept> {
 			preferredName.addTag(preferredLanguage);
 		}
 		
-		if (!addName(preferredName)) {
-			// name must already exist in concept
-		}
-		
-	}
-	
-	/**
-	 * Gets the first concept-name in a locale whose name matches the given term.
-	 * 
-	 * @param term name of the concept-name
-	 * @param inLocale
-	 * @return matching concept-name, or null if none found
-	 */
-	public ConceptName getNameKnownAs(String term, Locale inLocale) {
-		ConceptName foundName = null;
-		for (ConceptName possibleName : getNames()) {
-			if (possibleName.getName().equals(term) && possibleName.getLocale().equals(inLocale)) {
-				foundName = possibleName;
-				break;
-			}
-		}
-		return foundName;
+		addName(preferredName);
 	}
 	
 	/**
@@ -496,6 +475,38 @@ public class Concept implements java.io.Serializable, Attributable<Concept> {
 	}
 	
 	/**
+	 * Returns a name in the given locale. If a name isn't found with an exact match, a compatible
+	 * locale match is returned. If no name is found matching either of those, the first name
+	 * defined for this concept is returned.
+	 * 
+	 * @param locale the locale to fetch for
+	 * @return ConceptName attributed to the Concept in the given locale
+	 * @since 1.5
+	 * @see Concept#getNames(Locale) to get all the names for a locale,
+	 * @see Concept#getPreferredName(Locale) for the preferred name (if any),
+	 * @see Concept#getBestName(Locale) to get the best match for a locale.
+	 * @should get preferred fully specified country
+	 */
+	public ConceptName getName(Locale locale) {
+		return getName(locale, false);
+	}
+	
+	/**
+	 * Returns a name in the current User's chosen locale via Context.getLocale(). If a name isn't
+	 * found with an exact match, a compatible locale match is returned. If no name is found
+	 * matching either of those, the first name defined for this concept is returned.
+	 * 
+	 * @return {@link ConceptName} in the current locale or any locale if none found
+	 * @since 1.5
+	 * @see Concept#getNames(Locale) to get all the names for a locale
+	 * @see Concept#getPreferredName(Locale) for the preferred name (if any)
+	 * @see Concept#getBestName(Locale) to get the best match for a locale
+	 */
+	public ConceptName getName() {
+		return getName(Context.getLocale());
+	}
+	
+	/**
 	 * Checks whether this concept has the given string in any of the names in the given locale
 	 * already.
 	 * 
@@ -522,46 +533,27 @@ public class Concept implements java.io.Serializable, Attributable<Concept> {
 	}
 	
 	/**
-	 * Finds the name of the concept in the given locale. Returns null if none found.
-	 * 
-	 * @param locale
-	 * @return ConceptName attributed to the Concept in the given locale
-	 * @deprecated use either {@link Concept#getNames(Locale)} to get all the names for a locale,
-	 *             {@link Concept#getPreferredName(Locale)} for the preferred name (if any), or
-	 *             {@link Concept#getBestName(Locale) to get the best match for a locale.
-	 */
-	public ConceptName getName(Locale locale) {
-		return getName(locale, false);
-	}
-	
-	/**
-	 * Finds the name of the concept using the current locale in Context.getLocale(). Returns null
-	 * if none found.
-	 * 
-	 * @param locale
-	 * @return ConceptName attributed to the Concept in the given locale
-	 * @deprecated use either {@link Concept#getNames(Locale)} to get all the names for a locale,
-	 *             {@link Concept#getPreferredName(Locale)} for the preferred name (if any), or
-	 *             {@link Concept#getBestName(Locale) to get the best match for a locale.
-	 */
-	public ConceptName getName() {
-		return getName(Context.getLocale());
-	}
-	
-	/**
-	 * Returns a name in a locale.
+	 * Returns a name in the given locale. If a name isn't found with an exact match, a compatible
+	 * locale match is returned. If no name is found matching either of those, the first name
+	 * defined for this concept is returned.
 	 * 
 	 * @param locale the language and country in which the name is used
 	 * @param exact true/false to return only exact locale (no default locale)
-	 * @return the appropriate name, or null if not found
-	 * @deprecated use either {@link Concept#getNames(Locale)} to get all the names for a locale,
-	 *             {@link Concept#getPreferredName(Locale)} for the preferred name (if any), or
-	 *             {@link Concept#getBestName(Locale) to get the best match for a locale.
+	 * @return the closest name in the given locale, or the first name
+	 * @see Concept#getNames(Locale) to get all the names for a locale,
+	 * @see Concept#getPreferredName(Locale) for the preferred name (if any),
+	 * @see Concept#getBestName(Locale) to get the best match for a locale.
+	 * @should return exact name locale match given exact equals true
+	 * @should return loose match given exact equals false
+	 * @should return any name if no locale match given exact equals false
+	 * @should not fail if no names are defined
+	 * @should return null if no locale match and exact equals true
+	 * @should support plain preferred
 	 */
 	public ConceptName getName(Locale locale, boolean exact) {
 		
 		// fail early if this concept has no names defined
-		if (getNames() == null || names.size() == 0) {
+		if (getNames().size() == 0) {
 			if (log.isDebugEnabled())
 				log.debug("there are no names defined for: " + conceptId);
 			return null;
@@ -570,72 +562,13 @@ public class Concept implements java.io.Serializable, Attributable<Concept> {
 		if (log.isDebugEnabled())
 			log.debug("Getting conceptName for locale: " + locale);
 		
-		ConceptName exactMatch = null; // name which exactly match the locale
-		// and is preferred
-		ConceptName bestMatch = null; // name from compatible locale, may not
-		// be preferred
+		// matches on any name in the current locale, or first name available
+		ConceptName bestName = getBestName(locale);
 		
-		if (locale == null)
-			locale = Context.getLocale(); // Don't presume en_US;
-			
-		ConceptNameTag desiredLanguageTag = ConceptNameTag.preferredLanguageTagFor(locale);
-		ConceptNameTag desiredCountryTag = ConceptNameTag.preferredCountryTagFor(locale);
-		
-		for (ConceptName possibleName : getCompatibleNames(locale)) {
-			if (locale.equals(possibleName.getLocale()) && possibleName.hasTag(ConceptNameTag.PREFERRED)) {
-				exactMatch = possibleName;
-				break;
-			}
-			if (desiredCountryTag != null) {
-				// country was specified, exact match must be preferred in country
-				if (possibleName.hasTag(desiredCountryTag)) {
-					exactMatch = possibleName;
-					break;
-				} else if (possibleName.hasTag(desiredLanguageTag)) {
-					bestMatch = possibleName;
-				} else if (possibleName.hasTag(ConceptNameTag.PREFERRED)) {
-					bestMatch = possibleName;
-				} else if (bestMatch == null) { // ABK: verbose, but clear
-					bestMatch = possibleName;
-				}
-			} else {
-				// no country specified, so only worry about matching language
-				if (possibleName.hasTag(desiredLanguageTag)) {
-					exactMatch = possibleName;
-					break;
-				} else if (possibleName.hasTag(ConceptNameTag.PREFERRED)) {
-					bestMatch = possibleName;
-				} else if (bestMatch == null) {
-					bestMatch = possibleName;
-				}
-			}
-		}
-		
-		if (exact) {
-			if (exactMatch == null)
-				log.warn("No concept name found for concept id " + conceptId + " for locale " + locale.toString());
-			return exactMatch;
-		}
-		
-		if (exactMatch != null)
-			return exactMatch;
-		
-		if (bestMatch != null)
-			return bestMatch;
-		
-		log.warn("No compatible concept name found for default locale for concept id " + conceptId);
-		
-		ConceptName defaultName = null; // any available name for the concept
-		
-		// populate defaultName with the first concept name
-		if (getNames() != null && getNames().size() > 0)
-			defaultName = (ConceptName) getNames().toArray()[0];
-		
-		if (defaultName == null) {
-			log.error("No concept names exist for concept id: " + conceptId);
-		}
-		
-		return defaultName;
+		if (exact && bestName.getLocale() != locale)
+			return null; // no exact match found
+		else
+			return bestName;
 	}
 	
 	/**
@@ -646,10 +579,12 @@ public class Concept implements java.io.Serializable, Attributable<Concept> {
 	 * 
 	 * @param forLocale locale for which to return a preferred name
 	 * @return preferred name for the locale, or null if none is tagged as such
+	 * @should support plain preferred
+	 * @should match to best name
 	 */
 	public ConceptName getPreferredName(Locale forLocale) {
 		// fail early if this concept has no names defined
-		if (getNames() == null || names.size() == 0) {
+		if (getNames().size() == 0) {
 			if (log.isDebugEnabled())
 				log.debug("there are no names defined for: " + conceptId);
 			return null;
@@ -708,15 +643,18 @@ public class Concept implements java.io.Serializable, Attributable<Concept> {
 	 * name in English)</li>
 	 * <li>any name in matching country (for example, matching Uganda)</li>
 	 * <li>any name in matching language (for example, matching English)</li>
+	 * <li>first name in any matching language</li>
 	 * </ol>
 	 * 
 	 * @param locale the language and country in which the name is used
-	 * @return best name
+	 * @return the best name possible {@link ConceptName}, never null
+	 * @should support plain preferred
+	 * @should always have a best name even if none match locale
 	 */
 	public ConceptName getBestName(Locale locale) {
 		
 		// fail early if this concept has no names defined
-		if (getNames() == null || names.size() == 0) {
+		if (getNames().size() == 0) {
 			if (log.isDebugEnabled())
 				log.debug("there are no names defined for: " + conceptId);
 			return null;
@@ -737,7 +675,7 @@ public class Concept implements java.io.Serializable, Attributable<Concept> {
 		
 		if (compatibleNames.size() == 0) {
 			// no compatible names, so return first available name
-			Iterator<ConceptName> nameIt = names.iterator();
+			Iterator<ConceptName> nameIt = getNames().iterator();
 			bestMatch = nameIt.next();
 		} else if (compatibleNames.size() == 1) {
 			bestMatch = compatibleNames.get(0);
@@ -783,8 +721,9 @@ public class Concept implements java.io.Serializable, Attributable<Concept> {
 	}
 	
 	/**
-	 * Returns all names available in a specific locale. This is recommended when managing the
-	 * concept dictionary.
+	 * Returns all names available in a specific locale. <br/>
+	 * <br/>
+	 * This is recommended when managing the concept dictionary.
 	 * 
 	 * @param locale locale for which names should be returned
 	 * @return Collection of ConceptNames with the given locale
@@ -801,8 +740,9 @@ public class Concept implements java.io.Serializable, Attributable<Concept> {
 	
 	/**
 	 * Returns all names from compatible locales. A locale is considered compatible if it is exactly
-	 * the same locale, or if either locale has no country specified and the language matches. This
-	 * is recommended when presenting possible names to the use.
+	 * the same locale, or if either locale has no country specified and the language matches. <br/>
+	 * <br/>
+	 * This is recommended when presenting possible names to the use.
 	 * 
 	 * @param desiredLocale locale with which the names should be compatible
 	 * @return Collection of compatible names
@@ -847,11 +787,12 @@ public class Concept implements java.io.Serializable, Attributable<Concept> {
 	 * 
 	 * @param locale the language and country in which the short name is used
 	 * @return the best short name
+	 * @should always return a short name even if no names are tagged as short
 	 */
 	public ConceptName getBestShortName(Locale locale) {
 		
 		// fail early if this concept has no names defined
-		if (getNames() == null || names.size() == 0) {
+		if (getNames().size() == 0) {
 			if (log.isDebugEnabled())
 				log.debug("there are no names defined for: " + conceptId);
 			return null;
@@ -872,7 +813,7 @@ public class Concept implements java.io.Serializable, Attributable<Concept> {
 		
 		if (compatibleNames.size() == 0) {
 			// no compatible names, so return first available name
-			Iterator<ConceptName> nameIt = names.iterator();
+			Iterator<ConceptName> nameIt = getNames().iterator();
 			bestMatch = nameIt.next();
 		} else if (compatibleNames.size() == 1) {
 			// only 1? it must be the best
@@ -906,7 +847,7 @@ public class Concept implements java.io.Serializable, Attributable<Concept> {
 		}
 		
 		if (bestMatch == null) {
-			log.warn("No compatible concept name found for default locale for concept id " + conceptId);
+			log.info("No compatible concept name found for default locale for concept id " + conceptId);
 		}
 		
 		return bestMatch;
@@ -915,20 +856,19 @@ public class Concept implements java.io.Serializable, Attributable<Concept> {
 	
 	/**
 	 * Sets the short name for a locale. This sets tags on the concept name to indicate that it is
-	 * short for the language and country. Also, the name is added to the concept (if needed). If
-	 * the country is specified in the locale, then the language is considered to be only implied
-	 * &mdash; it will only get set if there is not an existing short language name. If the country
-	 * is not specified in the locale, then the language is considered an explicit designation and
-	 * the call is the equivalent of calling {@link #setShortNameInLanguage()}.
+	 * short for the language and country. Also, the name is added to the concept (if needed). <br/>
+	 * <br/>
+	 * If the country is specified in the locale, then the language is considered to be only implied
+	 * &mdash; it will only get set if there is not an existing short language name. <br/>
+	 * <br/>
+	 * If the country is not specified in the locale, then the language is considered an explicit
+	 * designation and the call is the equivalent of calling {@link #getShortNameInLanguage(String)}
+	 * .
 	 * 
 	 * @param locale the locale for which to set the short name
 	 * @param shortName name which is preferred in the locale
 	 */
 	public void setShortName(Locale locale, ConceptName shortName) {
-		ConceptName existingName = getNameKnownAs(shortName.getName(), locale);
-		if (existingName != null) {
-			shortName = existingName;
-		}
 		ConceptNameTag shortLanguage = ConceptNameTag.shortLanguageTagFor(locale);
 		ConceptNameTag shortCountry = ConceptNameTag.shortCountryTagFor(locale);
 		
@@ -1017,7 +957,7 @@ public class Concept implements java.io.Serializable, Attributable<Concept> {
 		ConceptName shortestName = null;
 		
 		if (locale == null)
-			locale = Locale.US;
+			locale = LocaleUtility.getDefaultLocale();
 		
 		String desiredLanguage = locale.getLanguage();
 		if (desiredLanguage.length() > 2)
@@ -1064,7 +1004,29 @@ public class Concept implements java.io.Serializable, Attributable<Concept> {
 	 */
 	@ElementList
 	public Collection<ConceptName> getNames() {
-		return names;
+		return getNames(false);
+	}
+	
+	/**
+	 * @return Returns the names.
+	 * @param includeVoided Include voided ConceptNames if true.
+	 */
+	public Collection<ConceptName> getNames(boolean includeVoided) {
+		Collection<ConceptName> ret = new HashSet<ConceptName>();
+		if (includeVoided){
+			if (names != null)
+				return names;
+			else
+				return ret;
+		} else {
+			if (names != null){
+				for (ConceptName cn : names){
+					if (!cn.isVoided())
+						ret.add(cn);
+				}
+			}	
+			return ret;
+		}
 	}
 	
 	/**
@@ -1080,18 +1042,16 @@ public class Concept implements java.io.Serializable, Attributable<Concept> {
 	 * 
 	 * @param conceptName
 	 */
-	public boolean addName(ConceptName conceptName) {
-		boolean nameListWasModified = false;
+	public void addName(ConceptName conceptName) {
 		conceptName.setConcept(this);
-		if (getNames() == null)
+		if (names == null)
 			names = new HashSet<ConceptName>();
 		if (conceptName != null && !names.contains(conceptName)) {
-			nameListWasModified = names.add(conceptName);
+			names.add(conceptName);
 			if (compatibleCache != null) {
 				compatibleCache.clear(); // clear the locale cache, forcing it to be rebuilt
 			}
 		}
-		return nameListWasModified;
 	}
 	
 	/**
@@ -1101,7 +1061,7 @@ public class Concept implements java.io.Serializable, Attributable<Concept> {
 	 * @return true if the entity was removed, false otherwise
 	 */
 	public boolean removeName(ConceptName conceptName) {
-		if (getNames() != null)
+		if (names != null)
 			return names.remove(conceptName);
 		else
 			return false;
@@ -1111,7 +1071,6 @@ public class Concept implements java.io.Serializable, Attributable<Concept> {
 	 * Finds the description of the concept using the current locale in Context.getLocale(). Returns
 	 * null if none found.
 	 * 
-	 * @param locale
 	 * @return ConceptDescription attributed to the Concept in the given locale
 	 */
 	public ConceptDescription getDescription() {
@@ -1134,6 +1093,10 @@ public class Concept implements java.io.Serializable, Attributable<Concept> {
 	 * @param locale the language and country in which the description is used
 	 * @param exact true/false to return only exact locale (no default locale)
 	 * @return the appropriate description, or null if not found
+	 * @should return match on locale exactly
+	 * @should return match on language only
+	 * @should not return match on language only if exact match exists
+	 * @should not return language only match for exact matches
 	 */
 	public ConceptDescription getDescription(Locale locale, boolean exact) {
 		log.debug("Getting ConceptDescription for locale: " + locale);
@@ -1141,7 +1104,7 @@ public class Concept implements java.io.Serializable, Attributable<Concept> {
 		ConceptDescription foundDescription = null;
 		
 		if (locale == null)
-			locale = LocaleUtility.DEFAULT_LOCALE;
+			locale = LocaleUtility.getDefaultLocale();
 		
 		Locale desiredLocale = locale;
 		
@@ -1155,7 +1118,7 @@ public class Concept implements java.io.Serializable, Attributable<Concept> {
 			}
 			if (!exact && LocaleUtility.areCompatible(availableLocale, desiredLocale))
 				foundDescription = availableDescription;
-			if (availableLocale.equals(LocaleUtility.DEFAULT_LOCALE))
+			if (availableLocale.equals(LocaleUtility.getDefaultLocale()))
 				defaultDescription = availableDescription;
 		}
 		
@@ -1302,7 +1265,6 @@ public class Concept implements java.io.Serializable, Attributable<Concept> {
 	 * 
 	 * @param locale
 	 * @return Collection of ConceptNames which are synonyms for the Concept in the given locale
-	 * @deprecated
 	 */
 	public Collection<ConceptName> getSynonyms(Locale locale) {
 		String desiredLanguage = locale.getLanguage();
@@ -1392,6 +1354,17 @@ public class Concept implements java.io.Serializable, Attributable<Concept> {
 	}
 	
 	/**
+	 * Child Class ConceptComplex overrides this method and returns true. See
+	 * {@link org.openmrs.ConceptComplex#isComplex()}. Otherwise this method returns false.
+	 * 
+	 * @return false
+	 * @since 1.5
+	 */
+	public boolean isComplex() {
+		return false;
+	}
+	
+	/**
 	 * Remove the given ConceptMap from the list of mappings for this Concept
 	 * 
 	 * @param conceptMap
@@ -1441,7 +1414,9 @@ public class Concept implements java.io.Serializable, Attributable<Concept> {
 	public List<Concept> findPossibleValues(String searchText) {
 		List<Concept> concepts = new Vector<Concept>();
 		try {
-			for (ConceptWord word : Context.getConceptService().findConcepts(searchText, Context.getLocale(), false)) {
+			
+			for (ConceptWord word : Context.getConceptService().getConceptWords(searchText,
+			    Collections.singletonList(Context.getLocale()), false, null, null, null, null, null, null, null)) {
 				concepts.add(word.getConcept());
 			}
 		}
@@ -1499,4 +1474,19 @@ public class Concept implements java.io.Serializable, Attributable<Concept> {
 			return getName().getName();
 	}
 	
+	/**
+	 * @since 1.5
+	 * @see org.openmrs.OpenmrsObject#getId()
+	 */
+	public Integer getId() {
+		return getConceptId();
+	}
+	
+	/**
+	 * @since 1.5
+	 * @see org.openmrs.OpenmrsObject#setId(java.lang.Integer)
+	 */
+	public void setId(Integer id) {
+		setConceptId(id);
+	}
 }

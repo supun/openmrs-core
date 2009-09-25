@@ -60,7 +60,7 @@ public interface HL7Service extends OpenmrsService {
 	 * Auto generated method comment
 	 * 
 	 * @param hl7SourceId
-	 * @return
+	 * @return <code>HL7Source</code>object for given identifier
 	 */
 	@Transactional(readOnly = true)
 	@Authorized(HL7Constants.PRIV_VIEW_HL7_SOURCE)
@@ -135,6 +135,7 @@ public interface HL7Service extends OpenmrsService {
 	 * 
 	 * @param hl7InQueue the queue item to save
 	 * @return the saved queue item
+	 * @should add generated uuid if uuid is null
 	 */
 	@Authorized(value = { HL7Constants.PRIV_UPDATE_HL7_IN_QUEUE, HL7Constants.PRIV_ADD_HL7_IN_QUEUE }, requireAll = false)
 	public HL7InQueue saveHL7InQueue(HL7InQueue hl7InQueue) throws APIException;
@@ -223,6 +224,16 @@ public interface HL7Service extends OpenmrsService {
 	public HL7InArchive getHL7InArchive(Integer hl7InArchiveId);
 	
 	/**
+	 * Get the archive items given a state (deleted, error, pending, processing, processed).
+	 * 
+	 * @return list of archive item that actually were deleted
+	 * @since 1.5
+	 */
+	@Transactional(readOnly = true)
+	@Authorized(HL7Constants.PRIV_VIEW_HL7_IN_ARCHIVE)
+	public List<HL7InArchive> getHL7InArchiveByState(Integer state) throws APIException;;
+	
+	/**
 	 * Get all archive hl7 queue items from the database
 	 * 
 	 * @return list of archive items
@@ -286,9 +297,9 @@ public interface HL7Service extends OpenmrsService {
 	public HL7InError getHL7InError(Integer hl7InErrorId) throws APIException;
 	
 	/**
-	 * Get all hl7 in error items from the database
+	 * Get all <code>HL7InError</code> items from the database
 	 * 
-	 * @return
+	 * @return a List<HL7InError> object with all <code>HL7InError</code> items from the database
 	 * @throws APIException
 	 */
 	@Transactional(readOnly = true)

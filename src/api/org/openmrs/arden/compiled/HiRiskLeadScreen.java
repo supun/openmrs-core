@@ -29,12 +29,14 @@
 package org.openmrs.arden.compiled;
 
 import java.util.HashMap;
-import org.openmrs.api.context.Context;
+import java.util.Map;
+
 import org.openmrs.Concept;
 import org.openmrs.Patient;
-import org.openmrs.arden.*;
-import org.openmrs.arden.compiled.*;
-import java.util.Map;
+import org.openmrs.arden.ArdenClause;
+import org.openmrs.arden.ArdenDataSource;
+import org.openmrs.arden.ArdenRule;
+import org.openmrs.arden.ArdenValue;
 
 public class HiRiskLeadScreen implements ArdenRule {
 	

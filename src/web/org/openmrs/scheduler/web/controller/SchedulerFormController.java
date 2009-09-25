@@ -158,11 +158,12 @@ public class SchedulerFormController extends SimpleFormController {
 		return task;
 	}
 	
-	/* (non-Javadoc)
-	 * @see org.springframework.web.servlet.mvc.SimpleFormController#referenceData(javax.servlet.http.HttpServletRequest, java.lang.Object, org.springframework.validation.Errors)
+	/**
+	 * @see org.springframework.web.servlet.mvc.SimpleFormController#referenceData(javax.servlet.http.HttpServletRequest,
+	 *      java.lang.Object, org.springframework.validation.Errors)
 	 */
 	@Override
-	protected Map referenceData(HttpServletRequest request, Object command, Errors errors) throws Exception {
+	protected Map<String, String> referenceData(HttpServletRequest request, Object command, Errors errors) throws Exception {
 		
 		Map<String, String> map = new HashMap<String, String>();
 		

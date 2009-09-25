@@ -36,7 +36,13 @@ public interface MessageService {
 	
 	/* Send Message Methods */
 
-	//sends message
+	/**
+	 * TODO Auto generated method comment
+	 * 
+	 * @param message
+	 * @throws MessageException
+	 * @should send message
+	 */
 	public void sendMessage(Message message) throws MessageException;
 	
 	//sends message to everyone of a certain role
@@ -61,20 +67,34 @@ public interface MessageService {
 	
 	public Message createMessage(String sender, String subject, String message) throws MessageException;
 	
+	/**
+	 * TODO Auto generated method comment
+	 * 
+	 * @param recipients
+	 * @param sender
+	 * @param subject
+	 * @param message
+	 * @return Message the message that was created
+	 * @throws MessageException
+	 * @should create message
+	 */
 	public Message createMessage(String recipients, String sender, String subject, String message) throws MessageException;
 	
 	public Message createMessage(String recipients, String sender, String subject, String message, String attachment,
 	                             String attachmentContentType, String attachmentFileName) throws MessageException;
 	
+	@SuppressWarnings("unchecked")
 	public Message prepareMessage(String templateName, Map data) throws MessageException;
 	
 	public Message prepareMessage(Template template) throws MessageException;
 	
 	// Template methods
+	@SuppressWarnings("unchecked")
 	public List getAllTemplates() throws MessageException;
 	
 	public Template getTemplate(Integer id) throws MessageException;
 	
+	@SuppressWarnings("unchecked")
 	public List getTemplatesByName(String name) throws MessageException;
 	
 	/* Begin Deprecated methods */
@@ -112,6 +132,7 @@ public interface MessageService {
 	public Message create(String recipients, String sender, String subject, String message) throws MessageException;
 	
 	@Deprecated
+	@SuppressWarnings("unchecked")
 	public Message prepare(String templateName, Map data) throws MessageException;
 	
 	@Deprecated

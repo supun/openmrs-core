@@ -30,8 +30,6 @@ public class PatientListItem extends PersonListItem {
 	
 	private String otherIdentifiers = "";
 	
-	private String tribe = "";
-	
 	public PatientListItem() {
 	}
 	
@@ -56,8 +54,6 @@ public class PatientListItem extends PersonListItem {
 				}
 			}
 			
-			if (patient.getTribe() != null)
-				tribe = patient.getTribe().getName();
 		}
 	}
 	
@@ -99,16 +95,6 @@ public class PatientListItem extends PersonListItem {
 	
 	public void setPatientId(Integer patientId) {
 		this.patientId = patientId;
-	}
-	
-	public String getTribe() {
-		if (tribe == null)
-			tribe = "";
-		return tribe;
-	}
-	
-	public void setTribe(String tribe) {
-		this.tribe = tribe;
 	}
 	
 	/**

@@ -28,7 +28,10 @@ import org.openmrs.report.EvaluationContext;
 
 /**
  * Default implementation of the data set service.
+ * 
+ * @deprecated see reportingcompatibility module
  */
+@Deprecated
 public class DataSetServiceImpl implements DataSetService {
 	
 	public Log log = LogFactory.getLog(this.getClass());
@@ -36,7 +39,7 @@ public class DataSetServiceImpl implements DataSetService {
 	/**
 	 * Saved list of DataSetProviders allowed to be used by the dataset service
 	 */
-	private static List<DataSetProvider> providers;
+	private static List<DataSetProvider> providers = null;
 	
 	/**
 	 * Default no-arg constructor
@@ -45,7 +48,17 @@ public class DataSetServiceImpl implements DataSetService {
 	}
 	
 	/**
-	 * @see org.openmrs.api.DataSetService#setProviders(java.util.Collection)
+	 * Clean up after this class. Set the static var to null so that the classloader can reclaim the
+	 * space.
+	 * 
+	 * @see org.openmrs.api.impl.BaseOpenmrsService#onShutdown()
+	 */
+	public void onShutdown() {
+		providers = null;
+	}
+	
+	/**
+	 * @see org.openmrs.api.DataSetService#setProviders(List)
 	 */
 	public void setProviders(List<DataSetProvider> newProviders) {
 		for (DataSetProvider provider : newProviders) {
@@ -97,6 +110,7 @@ public class DataSetServiceImpl implements DataSetService {
 	 * @see org.openmrs.api.DataSetService#evaluate(org.openmrs.report.DataSetDefinition,
 	 *      org.openmrs.Cohort, org.openmrs.report.EvaluationContext)
 	 */
+	@SuppressWarnings("unchecked")
 	public DataSet evaluate(DataSetDefinition definition, Cohort inputCohort, EvaluationContext evalContext) {
 		DataSetProvider provider = getProvider(definition);
 		if (provider == null)

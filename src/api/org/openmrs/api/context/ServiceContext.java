@@ -13,6 +13,7 @@
  */
 package org.openmrs.api.context;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -35,6 +36,7 @@ import org.openmrs.api.PatientSetService;
 import org.openmrs.api.PersonService;
 import org.openmrs.api.ProgramWorkflowService;
 import org.openmrs.api.ReportService;
+import org.openmrs.api.SerializationService;
 import org.openmrs.api.UserService;
 import org.openmrs.arden.ArdenService;
 import org.openmrs.hl7.HL7Service;
@@ -47,23 +49,30 @@ import org.openmrs.scheduler.SchedulerService;
 import org.openmrs.util.OpenmrsClassLoader;
 import org.springframework.aop.Advisor;
 import org.springframework.aop.framework.ProxyFactory;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.ApplicationContextAware;
 
 /**
  * Represents an OpenMRS <code>Service Context</code>, which returns the services represented
- * throughout the system. This class should not be access directly, but rather used through the
- * <code>Context</code> class. This class is essentially static and only one instance is kept
- * because this is fairly heavy-weight. Spring takes care of filling in the actual service
- * implementations via dependency injection. See the
- * /metadata/api/spring/applicationContext-service.xml file. Module services are also accessed
- * through this class. See {@link #getService(Class)}
+ * throughout the system. <br/>
+ * <br/>
+ * This class should not be access directly, but rather used through the <code>Context</code> class. <br/>
+ * <br/>
+ * This class is essentially static and only one instance is kept because this is fairly
+ * heavy-weight. Spring takes care of filling in the actual service implementations via dependency
+ * injection. See the /metadata/api/spring/applicationContext-service.xml file. <br/>
+ * <br/>
+ * Module services are also accessed through this class. See {@link #getService(Class)}
  * 
  * @see org.openmrs.api.context.Context
  */
-public class ServiceContext {
+public class ServiceContext implements ApplicationContextAware {
 	
 	private static final Log log = LogFactory.getLog(ServiceContext.class);
 	
 	private static ServiceContext instance;
+	
+	private ApplicationContext applicationContext;
 	
 	private Boolean refreshingContext = new Boolean(false);
 	
@@ -162,7 +171,7 @@ public class ServiceContext {
 	}
 	
 	/**
-	 * @param cohort related service
+	 * @param cs cohort related service
 	 */
 	public void setCohortService(CohortService cs) {
 		setService(CohortService.class, cs);
@@ -184,14 +193,25 @@ public class ServiceContext {
 	
 	/**
 	 * @return report object service
+	 * @deprecated see reportingcompatibility module
 	 */
+	@Deprecated
 	public ReportObjectService getReportObjectService() {
 		return (ReportObjectService) getService(ReportObjectService.class);
 	}
 	
 	/**
-	 * @return report service
+	 * @return serialization service
 	 */
+	public SerializationService getSerializationService() {
+		return (SerializationService) getService(SerializationService.class);
+	}
+	
+	/**
+	 * @return report service
+	 * @deprecated see reportingcompatibility module
+	 */
+	@Deprecated
 	public ReportService getReportService() {
 		return (ReportService) getService(ReportService.class);
 	}
@@ -234,7 +254,7 @@ public class ServiceContext {
 	/**
 	 * Set the scheduler service.
 	 * 
-	 * @param service
+	 * @param schedulerService
 	 */
 	public void setSchedulerService(SchedulerService schedulerService) {
 		setService(SchedulerService.class, schedulerService);
@@ -285,7 +305,7 @@ public class ServiceContext {
 	/**
 	 * Sets the message service.
 	 * 
-	 * @param service
+	 * @param messageService
 	 */
 	public void setMessageService(MessageService messageService) {
 		setService(MessageService.class, messageService);
@@ -357,28 +377,43 @@ public class ServiceContext {
 	
 	/**
 	 * @param reportObjectService the reportObjectService to set
+	 * @deprecated see reportingcompatibility module
 	 */
+	@Deprecated
 	public void setReportObjectService(ReportObjectService reportObjectService) {
 		setService(ReportObjectService.class, reportObjectService);
 	}
 	
 	/**
 	 * @param reportService
+	 * @deprecated see reportingcompatibility module
 	 */
+	@Deprecated
 	public void setReportService(ReportService reportService) {
 		setService(ReportService.class, reportService);
 	}
 	
 	/**
-	 * @param dataSetService
+	 * @param serializationService
 	 */
+	public void setSerializationService(SerializationService serializationService) {
+		setService(SerializationService.class, serializationService);
+	}
+	
+	/**
+	 * @param dataSetService
+	 * @deprecated see reportingcompatibility module
+	 */
+	@Deprecated
 	public void setDataSetService(DataSetService dataSetService) {
 		setService(DataSetService.class, dataSetService);
 	}
 	
 	/**
-	 * @return
+	 * @return the DataSetService
+	 * @deprecated see reportingcompatibility module
 	 */
+	@Deprecated
 	public DataSetService getDataSetService() {
 		return (DataSetService) getService(DataSetService.class);
 	}
@@ -451,7 +486,7 @@ public class ServiceContext {
 	/**
 	 * Sets the MessageSourceService used in the context.
 	 * 
-	 * @param messageService the MessageSourceService to use
+	 * @param messageSourceService the MessageSourceService to use
 	 */
 	public void setMessageSourceService(MessageSourceService messageSourceService) {
 		setService(MessageSourceService.class, messageSourceService);
@@ -570,11 +605,14 @@ public class ServiceContext {
 	}
 	
 	/**
-	 * Allow other services to be added to our service layer Classes will be found/loaded with the
-	 * ModuleClassLoader <code>params</code>[0] = string representing the service interface
+	 * Allow other services to be added to our service layer <br/>
+	 * <br/>
+	 * Classes will be found/loaded with the ModuleClassLoader <br/>
+	 * <br/>
+	 * <code>params</code>[0] = string representing the service interface<br/>
 	 * <code>params</code>[1] = service instance
 	 * 
-	 * @param list list of parameters
+	 * @param params list of parameters
 	 */
 	@SuppressWarnings("unchecked")
 	public void setModuleService(List<Object> params) {
@@ -665,4 +703,53 @@ public class ServiceContext {
 		return refreshingContext.booleanValue();
 	}
 	
+	/**
+	 * Retrieves all Beans which have been registered in the Spring {@link ApplicationContext} that
+	 * match the given object type (including subclasses).
+	 * <p>
+	 * <b>NOTE: This method introspects top-level beans only.</b> It does <i>not</i> check nested
+	 * beans which might match the specified type as well.
+	 * 
+	 * @see ApplicationContext#getBeansOfType(Class)
+	 * @param type the type of Bean to retrieve from the Spring {@link ApplicationContext}
+	 * @return a List of all registered Beans that are valid instances of the passed type
+	 * @since 1.5
+	 * @should return a list of all registered beans of the passed type
+	 * @should return beans registered in a module
+	 * @should return an empty list if no beans have been registered of the passed type
+	 */
+	
+	public <T> List<T> getRegisteredComponents(Class<T> type) {
+		Map<String, T> m = getRegisteredComponents(applicationContext, type);
+		log.debug("getRegisteredComponents(" + type + ") = " + m);
+		return new ArrayList<T>(m.values());
+	}
+	
+	/**
+	 * Private method which returns all components registered in a Spring applicationContext of a given type
+	 * This method recurses through each parent ApplicationContext
+	 * @param context - The applicationContext to check
+	 * @param type - The type of component to retrieve
+	 * @return all components registered in a Spring applicationContext of a given type
+	 */
+	@SuppressWarnings("unchecked")
+	private <T> Map<String, T> getRegisteredComponents(ApplicationContext context, Class<T> type) {
+		Map<String, T> components = new HashMap<String, T>();
+		Map registeredComponents = context.getBeansOfType(type);
+		log.debug("getRegisteredComponents(" + context + ", " + type + ") = " + registeredComponents);
+		if (registeredComponents != null) {
+			components.putAll(registeredComponents);
+		}
+		if (context.getParent() != null) {
+			components.putAll(getRegisteredComponents(context.getParent(), type));
+		}
+		return components;
+	}
+	
+	/**
+	 * @param applicationContext the applicationContext to set
+	 */
+	public void setApplicationContext(ApplicationContext applicationContext) {
+		this.applicationContext = applicationContext;
+	}
 }

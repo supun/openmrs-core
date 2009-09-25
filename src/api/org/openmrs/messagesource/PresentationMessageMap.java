@@ -13,13 +13,11 @@
  */
 package org.openmrs.messagesource;
 
-import java.util.AbstractMap;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
-import java.util.Map.Entry;
 
 /**
  * A mapped collection of PresentationMessages, all of which are enforced to be in the same locale.
@@ -90,6 +88,7 @@ public class PresentationMessageMap implements Map<String, PresentationMessage> 
 	
 	/**
 	 * @see java.util.Map#put(java.lang.Object, java.lang.Object)
+	 * @should should ignore non matching locale messages
 	 */
 	public PresentationMessage put(String key, PresentationMessage value) {
 		PresentationMessage putValue = null;
@@ -103,9 +102,10 @@ public class PresentationMessageMap implements Map<String, PresentationMessage> 
 	 * Adds all entries from an input Map which have PresentationMessages from the same locale.
 	 * 
 	 * @see java.util.Map#putAll(java.util.Map)
+	 * @should filter out non matching locale messages from batch add
 	 */
 	public void putAll(Map<? extends String, ? extends PresentationMessage> t) {
-		Map<String, PresentationMessage> compatibleMap = new HashMap<String, PresentationMessage>();
+		//Map<String, PresentationMessage> compatibleMap = new HashMap<String, PresentationMessage>();
 		for (Entry<? extends String, ? extends PresentationMessage> entry : t.entrySet()) {
 			put(entry.getKey(), entry.getValue());
 		}

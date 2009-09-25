@@ -15,10 +15,14 @@ package org.openmrs.reporting;
 
 import java.util.Date;
 
+import org.openmrs.BaseOpenmrsObject;
 import org.openmrs.User;
 
-// TODO: this should be called BaseReportObject, because it doesn't need to be abstract. I expect Justin to refactor this class out of existence before I get to this though.
-public class AbstractReportObject implements ReportObject {
+/**
+ * @deprecated see reportingcompatibility module
+ */
+@Deprecated
+public class AbstractReportObject extends BaseOpenmrsObject implements ReportObject {
 	
 	private Integer reportObjectId; // database primary key
 	
@@ -81,7 +85,7 @@ public class AbstractReportObject implements ReportObject {
 	}
 	
 	/**
-	 * @param name The description to set.
+	 * @param description The description to set.
 	 */
 	public void setDescription(String description) {
 		this.description = description;
@@ -116,5 +120,21 @@ public class AbstractReportObject implements ReportObject {
 	public String toString() {
 		return this.getReportObjectId() + ", " + this.getName() + ", " + this.getDescription() + ", " + this.getType()
 		        + ", " + this.getSubType();
+	}
+	
+	/**
+	 * @since 1.5
+	 * @see org.openmrs.OpenmrsObject#getId()
+	 */
+	public Integer getId() {
+		return getReportObjectId();
+	}
+	
+	/**
+	 * @since 1.5
+	 * @see org.openmrs.OpenmrsObject#setId(java.lang.Integer)
+	 */
+	public void setId(Integer id) {
+		setReportObjectId(id);
 	}
 }

@@ -66,7 +66,7 @@ public class ConceptDatatypeFormController extends SimpleFormController {
 		
 		if (Context.isAuthenticated()) {
 			ConceptDatatype cd = (ConceptDatatype) obj;
-			Context.getAdministrationService().updateConceptDatatype(cd);
+			Context.getConceptService().saveConceptDatatype(cd);
 			view = getSuccessView();
 			httpSession.setAttribute(WebConstants.OPENMRS_MSG_ATTR, "ConceptDatatype.saved");
 		}

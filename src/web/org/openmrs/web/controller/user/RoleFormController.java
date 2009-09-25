@@ -13,6 +13,7 @@
  */
 package org.openmrs.web.controller.user;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -31,10 +32,10 @@ import org.openmrs.Role;
 import org.openmrs.api.APIException;
 import org.openmrs.api.UserService;
 import org.openmrs.api.context.Context;
-import org.openmrs.util.OpenmrsConstants;
-import org.openmrs.web.WebConstants;
 import org.openmrs.propertyeditor.PrivilegeEditor;
 import org.openmrs.propertyeditor.RoleEditor;
+import org.openmrs.util.OpenmrsConstants;
+import org.openmrs.web.WebConstants;
 import org.springframework.beans.propertyeditors.CustomNumberEditor;
 import org.springframework.validation.BindException;
 import org.springframework.validation.Errors;
@@ -61,7 +62,6 @@ public class RoleFormController extends SimpleFormController {
 		binder.registerCustomEditor(java.lang.Integer.class, new CustomNumberEditor(java.lang.Integer.class, true));
 		binder.registerCustomEditor(Privilege.class, new PrivilegeEditor());
 		binder.registerCustomEditor(Role.class, new RoleEditor());
-		
 	}
 	
 	/**
@@ -69,25 +69,19 @@ public class RoleFormController extends SimpleFormController {
 	 *      javax.servlet.http.HttpServletResponse, java.lang.Object,
 	 *      org.springframework.validation.BindException)
 	 */
+	@SuppressWarnings("unchecked")
 	protected ModelAndView processFormSubmission(HttpServletRequest request, HttpServletResponse response, Object obj,
 	                                             BindException errors) throws Exception {
+		
 		Role role = (Role) obj;
 		
-		if (Context.isAuthenticated()) {
-			log.debug("Editing Role: " + role.getRole());
-			
-			// retrieving the inheritedRoles from the request
-			String[] inheritedRoles = request.getParameterValues("inheritedRoles");
-			Set<Role> inheritedRoleObjs = new HashSet<Role>();
-			if (inheritedRoles != null) {
-				for (String r : inheritedRoles) {
-					Role tmprole = Context.getUserService().getRole(r);
-					inheritedRoleObjs.add(tmprole);
-				}
-			}
-			role.setInheritedRoles(inheritedRoleObjs);
-			
-		}
+		String[] inheritiedRoles = request.getParameterValues("inheritedRoles");
+		if (inheritiedRoles == null)
+			role.setInheritedRoles(Collections.EMPTY_SET);
+		
+		String[] privileges = request.getParameterValues("privileges");
+		if (privileges == null)
+			role.setPrivileges(Collections.EMPTY_SET);
 		
 		return super.processFormSubmission(request, response, role, errors);
 	}
@@ -110,7 +104,7 @@ public class RoleFormController extends SimpleFormController {
 		if (Context.isAuthenticated()) {
 			Role role = (Role) obj;
 			try {
-				Context.getAdministrationService().updateRole(role);
+				Context.getUserService().saveRole(role);
 				view = getSuccessView();
 				httpSession.setAttribute(WebConstants.OPENMRS_MSG_ATTR, "Role.saved");
 			}
@@ -134,7 +128,7 @@ public class RoleFormController extends SimpleFormController {
 		Role role = (Role) object;
 		
 		if (Context.isAuthenticated()) {
-			List<Role> allRoles = Context.getUserService().getRoles();
+			List<Role> allRoles = Context.getUserService().getAllRoles();
 			Set<Role> inheritingRoles = new HashSet<Role>();
 			allRoles.remove(role);
 			for (Role r : allRoles) {
@@ -149,7 +143,7 @@ public class RoleFormController extends SimpleFormController {
 			
 			map.put("allRoles", allRoles);
 			map.put("inheritingRoles", inheritingRoles);
-			map.put("privileges", Context.getUserService().getPrivileges());
+			map.put("privileges", Context.getUserService().getAllPrivileges());
 			map.put("superuser", OpenmrsConstants.SUPERUSER_ROLE);
 		}
 		

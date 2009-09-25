@@ -26,8 +26,11 @@
     </id>
 
     <discriminator column="order_id" insert="false" />
-		
-	<property
+
+		<property name="uuid" type="java.lang.String"
+			column="uuid" length="38" unique="true" />
+
+    <property
         name="instructions"
         type="java.lang.String"
         column="instructions"
@@ -100,7 +103,6 @@
     <many-to-one
         name="encounter"
         class="org.openmrs.Encounter"
-        not-null="true"
     >
         <column name="encounter_id" />
     </many-to-one>
@@ -127,7 +129,6 @@
     <many-to-one
         name="orderer"
         class="org.openmrs.User"
-        not-null="true"
     >
         <column name="orderer" />
     </many-to-one>
@@ -136,7 +137,6 @@
     <many-to-one
         name="voidedBy"
         class="org.openmrs.User"
-        not-null="true"
     >
         <column name="voided_by" />
     </many-to-one>
@@ -144,7 +144,6 @@
     <many-to-one
         name="discontinuedBy"
         class="org.openmrs.User"
-        not-null="true"
     >
         <column name="discontinued_by" />
     </many-to-one>

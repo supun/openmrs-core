@@ -14,7 +14,6 @@
 package org.openmrs.web.controller.order;
 
 import java.util.List;
-import java.util.Locale;
 import java.util.Vector;
 
 import javax.servlet.ServletException;
@@ -31,6 +30,7 @@ import org.openmrs.api.context.Context;
 import org.openmrs.web.WebConstants;
 import org.springframework.beans.propertyeditors.CustomNumberEditor;
 import org.springframework.context.support.MessageSourceAccessor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.validation.BindException;
 import org.springframework.web.bind.ServletRequestDataBinder;
 import org.springframework.web.servlet.ModelAndView;
@@ -67,32 +67,35 @@ public class OrderTypeListController extends SimpleFormController {
 		
 		HttpSession httpSession = request.getSession();
 		
-		Locale locale = request.getLocale();
 		String view = getFormView();
 		if (Context.isAuthenticated()) {
-			String[] orderTypeList = request.getParameterValues("orderTypeId");
-			OrderService os = Context.getOrderService();
-			
 			String success = "";
 			String error = "";
 			
 			MessageSourceAccessor msa = getMessageSourceAccessor();
-			String deleted = msa.getMessage("general.deleted");
-			String notDeleted = msa.getMessage("general.cannot.delete");
-			for (String p : orderTypeList) {
-				try {
-					os.deleteOrderType(os.getOrderType(Integer.valueOf(p)));
-					if (!success.equals(""))
-						success += "<br/>";
-					success += p + " " + deleted;
+			
+			String[] orderTypeList = request.getParameterValues("orderTypeId");
+			if (orderTypeList != null) {
+				OrderService os = Context.getOrderService();
+				
+				String deleted = msa.getMessage("general.deleted");
+				String notDeleted = msa.getMessage("OrderType.cannot.delete");
+				for (String p : orderTypeList) {
+					try {
+						os.purgeOrderType(os.getOrderType(Integer.valueOf(p)));
+						if (!success.equals(""))
+							success += "<br/>";
+						success += p + " " + deleted;
+					}
+					catch (DataIntegrityViolationException e) {
+						error = handleOrderTypeIntegrityException(e, error, notDeleted);
+					}
+					catch (APIException e) {
+						error = handleOrderTypeIntegrityException(e, error, notDeleted);
+					}
 				}
-				catch (APIException e) {
-					log.warn("Error deleting order type", e);
-					if (!error.equals(""))
-						error += "<br/>";
-					error += p + " " + notDeleted;
-				}
-			}
+			} else
+				error = msa.getMessage("OrderType.select");
 			
 			view = getSuccessView();
 			if (!success.equals(""))
@@ -105,6 +108,23 @@ public class OrderTypeListController extends SimpleFormController {
 	}
 	
 	/**
+	 * Logs an order type delete data integrity violation exception and returns a user friedly
+	 * message of the problem that occured.
+	 * 
+	 * @param e the exception.
+	 * @param error the error message.
+	 * @param notDeleted the not deleted error message.
+	 * @return the formatted error message.
+	 */
+	private String handleOrderTypeIntegrityException(Exception e, String error, String notDeleted) {
+		log.warn("Error deleting order type", e);
+		if (!error.equals(""))
+			error += "<br/>";
+		error += notDeleted;
+		return error;
+	}
+	
+	/**
 	 * This is called prior to displaying a form for the first time. It tells Spring the
 	 * form/command object to load into the request
 	 * 
@@ -112,15 +132,13 @@ public class OrderTypeListController extends SimpleFormController {
 	 */
 	protected Object formBackingObject(HttpServletRequest request) throws ServletException {
 		
-		HttpSession httpSession = request.getSession();
-		
 		//default empty Object
 		List<OrderType> orderTypeList = new Vector<OrderType>();
 		
 		//only fill the Object is the user has authenticated properly
 		if (Context.isAuthenticated()) {
 			OrderService os = Context.getOrderService();
-			orderTypeList = os.getOrderTypes();
+			orderTypeList = os.getAllOrderTypes();
 		}
 		
 		return orderTypeList;

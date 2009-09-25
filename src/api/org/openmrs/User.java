@@ -15,7 +15,6 @@ package org.openmrs;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -30,7 +29,6 @@ import org.openmrs.util.LocaleUtility;
 import org.openmrs.util.OpenmrsConstants;
 import org.openmrs.util.OpenmrsUtil;
 import org.simpleframework.xml.Attribute;
-import org.simpleframework.xml.Element;
 import org.simpleframework.xml.load.Replace;
 import org.simpleframework.xml.load.Validate;
 
@@ -46,7 +44,7 @@ public class User extends Person implements java.io.Serializable {
 	
 	public static final long serialVersionUID = 4489L;
 	
-	public Log log = LogFactory.getLog(getClass());
+	private transient Log log = LogFactory.getLog(getClass());
 	
 	// Fields
 	
@@ -61,22 +59,6 @@ public class User extends Person implements java.io.Serializable {
 	private Set<Role> roles;
 	
 	private Map<String, String> userProperties;
-	
-	private User creator;
-	
-	private Date dateCreated;
-	
-	private User changedBy;
-	
-	private Date dateChanged;
-	
-	private Boolean voided = false;
-	
-	private User voidedBy;
-	
-	private Date dateVoided;
-	
-	private String voidReason;
 	
 	private List<Locale> proficientLocales = null;
 	
@@ -109,7 +91,8 @@ public class User extends Person implements java.io.Serializable {
 	public boolean isSuperUser() {
 		Set<Role> tmproles = getAllRoles();
 		
-		Role role = new Role(OpenmrsConstants.SUPERUSER_ROLE); //default administrator with complete control
+		Role role = new Role(OpenmrsConstants.SUPERUSER_ROLE); // default administrator with
+		// complete control
 		
 		if (tmproles.contains(role))
 			return true;
@@ -149,18 +132,20 @@ public class User extends Person implements java.io.Serializable {
 	 * Check if this user has the given String role
 	 * 
 	 * @param r String name of a role to check
-	 * @return true/false if this user has the role
+	 * @return Returns true if this user has the specified role, false otherwise
 	 */
 	public boolean hasRole(String r) {
 		return hasRole(r, false);
 	}
 	
 	/**
-	 * Auto generated method comment
+	 * Checks if this user has the given String role
 	 * 
-	 * @param r
-	 * @param ignoreSuperUser
-	 * @return
+	 * @param r String name of a role to check
+	 * @param ignoreSuperUser If this is false, then this method will always return true for a
+	 *            superuser.
+	 * @return Returns true if the user has the given role, or if ignoreSuperUser is false and the
+	 *         user is a superUser
 	 */
 	public boolean hasRole(String r, boolean ignoreSuperUser) {
 		if (ignoreSuperUser == false) {
@@ -284,8 +269,8 @@ public class User extends Person implements java.io.Serializable {
 	/**
 	 * Add the given Role to the list of roles for this User
 	 * 
-	 * @param roleservation
-	 * @return this user with the given role attached
+	 * @param role
+	 * @return Returns this user with the given role attached
 	 */
 	public User addRole(Role role) {
 		if (roles == null)
@@ -299,7 +284,7 @@ public class User extends Person implements java.io.Serializable {
 	/**
 	 * Remove the given Role from the list of roles for this User
 	 * 
-	 * @param roleservation
+	 * @param role
 	 * @return this user with the given role removed
 	 */
 	public User removeRole(Role role) {
@@ -395,7 +380,7 @@ public class User extends Person implements java.io.Serializable {
 	}
 	
 	/**
-	 * @param properties The properties to set.
+	 * @param userProperties A Map<String,String> of the properties to set.
 	 */
 	public void setUserProperties(Map<String, String> userProperties) {
 		this.userProperties = userProperties;
@@ -440,145 +425,13 @@ public class User extends Person implements java.io.Serializable {
 	 * @param prop
 	 * @param defaultValue
 	 * @return property value
-	 * @see getUserProperty(java.lang.String)
+	 * @see #getUserProperty(java.lang.String)
 	 */
 	public String getUserProperty(String prop, String defaultValue) {
 		if (getUserProperties() != null && userProperties.containsKey(prop))
 			return userProperties.get(prop);
 		
 		return defaultValue;
-	}
-	
-	/**
-	 * @return Returns the creator.
-	 */
-	@Element(required = false)
-	public User getCreator() {
-		return creator;
-	}
-	
-	/**
-	 * @param creator The creator to set.
-	 */
-	@Element(required = false)
-	public void setCreator(User creator) {
-		this.creator = creator;
-	}
-	
-	/**
-	 * @return Returns the changedBy.
-	 */
-	@Element(required = false)
-	public User getChangedBy() {
-		return changedBy;
-	}
-	
-	/**
-	 * @param changedBy The changedBy to set.
-	 */
-	@Element(required = false)
-	public void setChangedBy(User changedBy) {
-		this.changedBy = changedBy;
-	}
-	
-	/**
-	 * @return Returns the dateChanged.
-	 */
-	@Element(required = false)
-	public Date getDateChanged() {
-		return dateChanged;
-	}
-	
-	/**
-	 * @param dateChanged The dateChanged to set.
-	 */
-	@Element(required = false)
-	public void setDateChanged(Date dateChanged) {
-		this.dateChanged = dateChanged;
-	}
-	
-	/**
-	 * @return Returns the dateCreated.
-	 */
-	@Element(required = false)
-	public Date getDateCreated() {
-		return dateCreated;
-	}
-	
-	/**
-	 * @param dateCreated The dateCreated to set.
-	 */
-	@Element(required = false)
-	public void setDateCreated(Date dateCreated) {
-		this.dateCreated = dateCreated;
-	}
-	
-	/**
-	 * @return Returns the dateVoided.
-	 */
-	@Element(required = false)
-	public Date getDateVoided() {
-		return dateVoided;
-	}
-	
-	/**
-	 * @param dateVoided The dateVoided to set.
-	 */
-	@Element(required = false)
-	public void setDateVoided(Date dateVoided) {
-		this.dateVoided = dateVoided;
-	}
-	
-	/**
-	 * @return Returns the void status.
-	 */
-	public Boolean isVoided() {
-		return voided;
-	}
-	
-	@Attribute(required = true)
-	public Boolean getVoided() {
-		return isVoided();
-	}
-	
-	/**
-	 * @param voided The void status to set.
-	 */
-	@Attribute(required = true)
-	public void setVoided(Boolean voided) {
-		this.voided = voided;
-	}
-	
-	/**
-	 * @return Returns the voidedBy.
-	 */
-	@Element(required = false)
-	public User getVoidedBy() {
-		return voidedBy;
-	}
-	
-	/**
-	 * @param voidedBy The voidedBy to set.
-	 */
-	@Element(required = false)
-	public void setVoidedBy(User voidedBy) {
-		this.voidedBy = voidedBy;
-	}
-	
-	/**
-	 * @return Returns the voidReason.
-	 */
-	@Element(data = true, required = false)
-	public String getVoidReason() {
-		return voidReason;
-	}
-	
-	/**
-	 * @param voidReason The voidReason to set.
-	 */
-	@Element(data = true, required = false)
-	public void setVoidReason(String voidReason) {
-		this.voidReason = voidReason;
 	}
 	
 	/**
@@ -654,7 +507,25 @@ public class User extends Person implements java.io.Serializable {
 				}
 			}
 		}
+		
 		// return a copy so that the list isn't changed by other processes
 		return new ArrayList<Locale>(proficientLocales);
 	}
+	
+	/**
+	 * @since 1.5
+	 * @see org.openmrs.OpenmrsObject#getId()
+	 */
+	public Integer getId() {
+		return getUserId();
+	}
+	
+	/**
+	 * @since 1.5
+	 * @see org.openmrs.OpenmrsObject#setId(java.lang.Integer)
+	 */
+	public void setId(Integer id) {
+		setUserId(id);
+	}
+	
 }

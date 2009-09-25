@@ -28,6 +28,7 @@ import java.util.Vector;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.openmrs.Cohort;
+import org.openmrs.GlobalProperty;
 import org.openmrs.api.APIException;
 import org.openmrs.api.DataSetService;
 import org.openmrs.api.ReportService;
@@ -52,7 +53,9 @@ import org.simpleframework.xml.Serializer;
  * 
  * @see org.openmrs.api.ReportService
  * @see org.openmrs.api.context.Context
+ * @deprecated see reportingcompatibility module
  */
+@Deprecated
 public class ReportServiceImpl implements ReportService {
 	
 	public Log log = LogFactory.getLog(this.getClass());
@@ -76,9 +79,18 @@ public class ReportServiceImpl implements ReportService {
 	 * 
 	 * @param dao The ReportDAO to use in this service
 	 */
-	@SuppressWarnings("unused")
 	public void setReportDAO(ReportDAO dao) {
 		this.dao = dao;
+	}
+	
+	/**
+	 * Clean up after this class. Set the static var to null so that the classloader can reclaim the
+	 * space.
+	 * 
+	 * @see org.openmrs.api.impl.BaseOpenmrsService#onShutdown()
+	 */
+	public void onShutdown() {
+		renderers = null;
 	}
 	
 	/**
@@ -92,6 +104,7 @@ public class ReportServiceImpl implements ReportService {
 	 * @see org.openmrs.api.ReportService#evaluate(org.openmrs.report.ReportSchema,
 	 *      org.openmrs.Cohort, org.openmrs.report.EvaluationContext)
 	 */
+	@SuppressWarnings("unchecked")
 	public ReportData evaluate(ReportSchema reportSchema, Cohort inputCohort, EvaluationContext evalContext) {
 		ReportData ret = new ReportData();
 		Map<String, DataSet> data = new HashMap<String, DataSet>();
@@ -238,7 +251,7 @@ public class ReportServiceImpl implements ReportService {
 	}
 	
 	/**
-	 * @see org.openmrs.api.ReportService#removeReportRenderer(org.openmrs.report.ReportRenderer)
+	 * @see org.openmrs.api.ReportService#removeRenderer(Class)
 	 */
 	public void removeRenderer(Class<? extends ReportRenderer> renderingClass) {
 		renderers.remove(renderingClass);
@@ -259,17 +272,26 @@ public class ReportServiceImpl implements ReportService {
 	}
 	
 	/**
-	 * @see org.openmrs.api.ReportService#createReportSchemaXml(org.openmrs.report.ReportSchemaXml)
+	 * @see org.openmrs.api.ReportService#saveReportSchemaXml(org.openmrs.report.ReportSchemaXml)
 	 */
-	public void createReportSchemaXml(ReportSchemaXml reportSchemaXml) {
+	public void saveReportSchemaXml(ReportSchemaXml reportSchemaXml) {
 		dao.saveReportSchemaXml(reportSchemaXml);
 	}
 	
 	/**
+	 * @see org.openmrs.api.ReportService#createReportSchemaXml(org.openmrs.report.ReportSchemaXml)
+	 * @deprecated use saveReportSchemaXml(reportSchemaXml)
+	 */
+	public void createReportSchemaXml(ReportSchemaXml reportSchemaXml) {
+		Context.getReportService().saveReportSchemaXml(reportSchemaXml);
+	}
+	
+	/**
 	 * @see org.openmrs.api.ReportService#updateReportSchemaXml(org.openmrs.report.ReportSchemaXml)
+	 * @deprecated use saveReportSchemaXml(reportSchemaXml)
 	 */
 	public void updateReportSchemaXml(ReportSchemaXml reportSchemaXml) {
-		dao.saveReportSchemaXml(reportSchemaXml);
+		Context.getReportService().saveReportSchemaXml(reportSchemaXml);
 	}
 	
 	/**
@@ -311,8 +333,8 @@ public class ReportServiceImpl implements ReportService {
 		try {
 			ByteArrayOutputStream out = new ByteArrayOutputStream();
 			OpenmrsUtil.storeProperties(macros, out, null);
-			Context.getAdministrationService().setGlobalProperty(OpenmrsConstants.GLOBAL_PROPERTY_REPORT_XML_MACROS,
-			    out.toString());
+			GlobalProperty prop = new GlobalProperty(OpenmrsConstants.GLOBAL_PROPERTY_REPORT_XML_MACROS, out.toString());
+			Context.getAdministrationService().saveGlobalProperty(prop);
 		}
 		catch (Exception ex) {
 			throw new APIException(ex);

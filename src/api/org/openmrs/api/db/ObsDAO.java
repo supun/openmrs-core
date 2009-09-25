@@ -32,7 +32,7 @@ import org.openmrs.util.OpenmrsConstants.PERSON_TYPE;
 public interface ObsDAO {
 	
 	/**
-	 * @see org.openmrs.api.ObsService#saveObs(org.openmrs.Obs)
+	 * @see org.openmrs.api.ObsService#saveObs(org.openmrs.Obs, String)
 	 */
 	public Obs saveObs(Obs obs) throws DAOException;
 	
@@ -48,21 +48,25 @@ public interface ObsDAO {
 	
 	/**
 	 * @see org.openmrs.api.ObsService#getAllMimeTypes(boolean)
+	 * @deprecated
 	 */
 	public List<MimeType> getAllMimeTypes(boolean includeRetired) throws DAOException;
 	
 	/**
 	 * @see org.openmrs.api.ObsService#getMimeType(java.lang.Integer)
+	 * @deprecated
 	 */
 	public MimeType getMimeType(Integer mimeTypeId) throws DAOException;
 	
 	/**
 	 * @see org.openmrs.api.ObsService#saveMimeType(MimeType)
+	 * @deprecated
 	 */
 	public MimeType saveMimeType(MimeType mimeType) throws DAOException;
 	
 	/**
 	 * @see org.openmrs.api.ObsService#purgeMimeType(MimeType)
+	 * @deprecated
 	 */
 	public void deleteMimeType(MimeType mimeType) throws DAOException;
 	
@@ -82,7 +86,9 @@ public interface ObsDAO {
 	/**
 	 * Auto generated method comment
 	 * 
-	 * @see org.openmrs.api.ObsService#getObservations(String)
+	 * @param uuid
+	 * @return
 	 */
-	//public List<Obs> getObservations(String searchString) throws DAOException;
+	public Obs getObsByUuid(String uuid);
+	
 }

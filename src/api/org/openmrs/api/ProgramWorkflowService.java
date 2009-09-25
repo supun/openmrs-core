@@ -28,10 +28,10 @@ import org.openmrs.Program;
 import org.openmrs.ProgramWorkflow;
 import org.openmrs.ProgramWorkflowState;
 import org.openmrs.User;
-import org.openmrs.api.db.ProgramWorkflowDAO;
-import org.springframework.transaction.annotation.Transactional;
 import org.openmrs.annotation.Authorized;
+import org.openmrs.api.db.ProgramWorkflowDAO;
 import org.openmrs.util.OpenmrsConstants;
+import org.springframework.transaction.annotation.Transactional;
 
 /**
  * Contains methods pertaining to management of Programs, ProgramWorkflows, ProgramWorkflowStates,
@@ -65,6 +65,7 @@ public interface ProgramWorkflowService extends OpenmrsService {
 	 * @param program is the Program to be saved to the database
 	 * @return The Program that was saved
 	 * @throws APIException
+	 * @should create program workflows
 	 */
 	@Authorized( { OpenmrsConstants.PRIV_MANAGE_PROGRAMS })
 	public Program saveProgram(Program program) throws APIException;
@@ -74,7 +75,7 @@ public interface ProgramWorkflowService extends OpenmrsService {
 	 * returned if no program exists with this programId.
 	 * 
 	 * @param programId integer primary key of the program to find
-	 * @returns Program object that has program.programId = <code>programId</code> passed in.
+	 * @return Program object that has program.programId = <code>programId</code> passed in.
 	 * @throws APIException
 	 */
 	@Authorized( { OpenmrsConstants.PRIV_VIEW_PROGRAMS })
@@ -92,7 +93,7 @@ public interface ProgramWorkflowService extends OpenmrsService {
 	 * there is no program with this name
 	 * 
 	 * @param name the exact name of the program to match on
-	 * @returns Program matching the <code>name</code> to Program.name
+	 * @return Program matching the <code>name</code> to Program.name
 	 * @throws APIException
 	 */
 	@Authorized( { OpenmrsConstants.PRIV_VIEW_PROGRAMS })
@@ -103,7 +104,7 @@ public interface ProgramWorkflowService extends OpenmrsService {
 	 * Returns all programs, includes retired programs. This method delegates to the
 	 * #getAllPrograms(boolean) method
 	 * 
-	 * @returns List<Program> of all existing programs, including retired programs
+	 * @return List<Program> of all existing programs, including retired programs
 	 * @throws APIException
 	 */
 	@Authorized( { OpenmrsConstants.PRIV_VIEW_PROGRAMS })
@@ -155,8 +156,8 @@ public interface ProgramWorkflowService extends OpenmrsService {
 	/**
 	 * Retires the given program
 	 * 
-	 * @param program program to be retired
-	 * @Program the Program which has been retired
+	 * @param program Program to be retired
+	 * @return the Program which has been retired
 	 * @throws APIException
 	 */
 	@Authorized( { OpenmrsConstants.PRIV_MANAGE_PROGRAMS })
@@ -165,8 +166,8 @@ public interface ProgramWorkflowService extends OpenmrsService {
 	/**
 	 * Unretires the given program
 	 * 
-	 * @param program program to be unretired
-	 * @Program the Program which has been unretired
+	 * @param program Program to be unretired
+	 * @return the Program which has been unretired
 	 * @throws APIException
 	 */
 	@Authorized( { OpenmrsConstants.PRIV_MANAGE_PROGRAMS })
@@ -176,12 +177,19 @@ public interface ProgramWorkflowService extends OpenmrsService {
 	// PATIENT PROGRAM 
 	// **************************
 	
+	@Transactional(readOnly = true)
+	public Program getProgramByUuid(String uuid);
+	
+	@Transactional(readOnly = true)
+	public PatientState getPatientStateByUuid(String uuid);
+	
 	/**
 	 * Save patientProgram to database (create if new or update if changed)
 	 * 
 	 * @param patientProgram is the PatientProgram to be saved to the database
 	 * @return PatientProgram - the saved PatientProgram
 	 * @throws APIException
+	 * @should update patient program
 	 */
 	@Authorized( { OpenmrsConstants.PRIV_ADD_PATIENT_PROGRAMS, OpenmrsConstants.PRIV_EDIT_PATIENT_PROGRAMS })
 	public PatientProgram savePatientProgram(PatientProgram patientProgram) throws APIException;
@@ -191,8 +199,8 @@ public interface ProgramWorkflowService extends OpenmrsService {
 	 * A null value is returned if no PatientProgram exists with this patientProgramId.
 	 * 
 	 * @param patientProgramId integer primary key of the PatientProgram to find
-	 * @returns PatientProgram object that has patientProgram.patientProgramId =
-	 *          <code>patientProgramId</code> passed in.
+	 * @return PatientProgram object that has patientProgram.patientProgramId =
+	 *         <code>patientProgramId</code> passed in.
 	 * @throws APIException
 	 */
 	@Authorized( { OpenmrsConstants.PRIV_VIEW_PATIENT_PROGRAMS })
@@ -270,6 +278,9 @@ public interface ProgramWorkflowService extends OpenmrsService {
 	// CONCEPT STATE CONVERSION
 	// **************************
 	
+	@Transactional(readOnly = true)
+	public ProgramWorkflow getWorkflowByUuid(String uuid);
+	
 	/**
 	 * Save ConceptStateConversion to database (create if new or update if changed)
 	 * 
@@ -287,9 +298,9 @@ public interface ProgramWorkflowService extends OpenmrsService {
 	 * exists with this conceptStateConversionId.
 	 * 
 	 * @param conceptStateConversionId integer primary key of the conceptStateConversion to find
-	 * @returns ConceptStateConversion object that has
-	 *          conceptStateConversion.conceptStateConversionId =
-	 *          <code>conceptStateConversionId</code> passed in.
+	 * @return ConceptStateConversion object that has
+	 *         conceptStateConversion.conceptStateConversionId =
+	 *         <code>conceptStateConversionId</code> passed in.
 	 * @throws APIException
 	 */
 	@Authorized( { OpenmrsConstants.PRIV_VIEW_PROGRAMS })
@@ -358,7 +369,7 @@ public interface ProgramWorkflowService extends OpenmrsService {
 	/**
 	 * Create a new program
 	 * 
-	 * @param Program to create
+	 * @param program Program to create
 	 * @throws APIException
 	 * @deprecated use {@link #saveProgram(Program)}
 	 */
@@ -406,10 +417,10 @@ public interface ProgramWorkflowService extends OpenmrsService {
 	 * Returns a programWorkflow given that programWorkflows primary key
 	 * <code>programWorkflowId</code>
 	 * 
-	 * @param Id integer primary key of the ProgramWorkflow to find
-	 * @returns ProgramWorkflow object that has an id that matches the input parameter
+	 * @param id integer primary key of the ProgramWorkflow to find
+	 * @return ProgramWorkflow object that has an id that matches the input parameter
 	 * @deprecated ProgramWorkflows should not be retrieved directly, but rather through the
-	 *             programs they belong to: use {@link Program#getWorkflow(Integer)}
+	 *             programs they belong to: use {@link org.openmrs.Program#getWorkflows()}
 	 * @throws APIException
 	 */
 	@Authorized( { OpenmrsConstants.PRIV_VIEW_PROGRAMS })
@@ -441,9 +452,8 @@ public interface ProgramWorkflowService extends OpenmrsService {
 	@Authorized( { OpenmrsConstants.PRIV_MANAGE_PROGRAMS })
 	public void voidWorkflow(ProgramWorkflow programWorkflow, String reason) throws APIException;
 	
-	// **************************
-	// DEPRECATED PROGRAM WORKFLOW STATE
-	// **************************
+	@Transactional(readOnly = true)
+	public ProgramWorkflowState getStateByUuid(String uuid);
 	
 	/**
 	 * Returns all ProgramWorkflowStates
@@ -451,7 +461,7 @@ public interface ProgramWorkflowService extends OpenmrsService {
 	 * @return List<ProgramWorkflowState> - all ProgramWorkflowStates that exist
 	 * @deprecated ProgramWorkflowStates should be retrieved from the {@link ProgramWorkflow} they
 	 *             belong to
-	 * @see {@link ProgramWorkflow#getStates()}
+	 * @see ProgramWorkflow#getStates()
 	 * @throws APIException
 	 */
 	@Authorized( { OpenmrsConstants.PRIV_VIEW_PROGRAMS })
@@ -466,7 +476,7 @@ public interface ProgramWorkflowService extends OpenmrsService {
 	 *         based on the input parameter
 	 * @deprecated ProgramWorkflowStates should be retrieved from the {@link ProgramWorkflow} they
 	 *             belong to
-	 * @see {@link ProgramWorkflow#getStates(boolean)}
+	 * @see ProgramWorkflow#getStates(boolean)
 	 * @throws APIException
 	 */
 	@Authorized( { OpenmrsConstants.PRIV_VIEW_PROGRAMS })
@@ -481,7 +491,7 @@ public interface ProgramWorkflowService extends OpenmrsService {
 	 *         passed id
 	 * @deprecated ProgramWorkflowStates should be retrieved from the {@link ProgramWorkflow} they
 	 *             belong to
-	 * @see {@link ProgramWorkflow#getState(Integer)}
+	 * @see ProgramWorkflow#getState(Integer)
 	 * @throws APIException
 	 */
 	@Authorized( { OpenmrsConstants.PRIV_VIEW_PROGRAMS })
@@ -498,7 +508,7 @@ public interface ProgramWorkflowService extends OpenmrsService {
 	 *         the passed <code>programWorkflow</code>
 	 * @deprecated ProgramWorkflowStates should be retrieved from the {@link ProgramWorkflow} they
 	 *             belong to
-	 * @see {@link ProgramWorkflow#getStateByName(String)}
+	 * @see ProgramWorkflow#getStateByName(String)
 	 * @throws APIException
 	 */
 	@Authorized( { OpenmrsConstants.PRIV_VIEW_PROGRAMS })
@@ -510,7 +520,7 @@ public interface ProgramWorkflowService extends OpenmrsService {
 	 * their current program
 	 * 
 	 * @param patientProgram - the PatientProgram to retrieve possible next transitions from
-	 * @param programWorkflow - the ProgramWorkflow to retrieve possible next transitions from
+	 * @param workflow - the ProgramWorkflow to retrieve possible next transitions from
 	 * @return List<ProgramWorkflowState> - returns List<ProgramWorkflowState> that a patient with
 	 *         the given PatientProgram and ProgramWorkflow is allowed to transition into
 	 * @deprecated use {@link ProgramWorkflow#getPossibleNextStates(PatientProgram)}
@@ -586,7 +596,8 @@ public interface ProgramWorkflowService extends OpenmrsService {
 	 * 
 	 * @param patient - The Patient to retrieve all PatientPrograms for
 	 * @return Collection<PatientProgram> of all PatientPrograms for the passed <code>patient</code>
-	 * @deprecated use {@link #getPatientPrograms(Patient, Program, Date, Date, Date, Date)}
+	 * @deprecated use
+	 *             {@link #getPatientPrograms(Patient, Program, Date, Date, Date, Date, boolean)}
 	 * @throws APIException
 	 */
 	@Authorized( { OpenmrsConstants.PRIV_VIEW_PATIENT_PROGRAMS })
@@ -604,8 +615,9 @@ public interface ProgramWorkflowService extends OpenmrsService {
 	 *            or before this Date
 	 * @return Collection<Integer> containing all patientIds for patients who were enrolled in the
 	 *         <code>program</code> between <code>fromDate</code> and <code>toDate</code>
-	 * @deprecated use {@link getPatientPrograms(Patient, Program, Date, Date, Date, Date)} which
-	 *             can be Iterated across to return collection of patient ids
+	 * @deprecated use
+	 *             {@link #getPatientPrograms(Patient, Program, Date, Date, Date, Date, boolean)}
+	 *             which can be Iterated across to return collection of patient ids
 	 * @throws APIException
 	 */
 	@Authorized( { OpenmrsConstants.PRIV_VIEW_PATIENT_PROGRAMS })
@@ -619,7 +631,8 @@ public interface ProgramWorkflowService extends OpenmrsService {
 	 * @param onDate - Specifies only to return programs that the patient is in as of this Date
 	 * @return Collection<PatientProgram> that contains all PatientPrograms are current for the
 	 *         <code>patient</code> as of <code>onDate</code>
-	 * @deprecated use {@link getPatientPrograms(Patient, Program, Date, Date, Date, Date)}
+	 * @deprecated use
+	 *             {@link #getPatientPrograms(Patient, Program, Date, Date, Date, Date, boolean)}
 	 * @throws APIException
 	 */
 	@Authorized( { OpenmrsConstants.PRIV_VIEW_PATIENT_PROGRAMS })
@@ -637,7 +650,8 @@ public interface ProgramWorkflowService extends OpenmrsService {
 	 *            or before this Date
 	 * @return boolean - Returns true if the <code>patient</code> was enrolled in the
 	 *         <code>program</code> between <code>fromDate</code> and <code>toDate</code>
-	 * @deprecated use {@link getPatientPrograms(Patient, Program, Date, Date, Date, Date)}
+	 * @deprecated use
+	 *             {@link #getPatientPrograms(Patient, Program, Date, Date, Date, Date, boolean)}
 	 * @throws APIException
 	 */
 	@Authorized( { OpenmrsConstants.PRIV_VIEW_PATIENT_PROGRAMS })
@@ -720,12 +734,16 @@ public interface ProgramWorkflowService extends OpenmrsService {
 	public void changeToState(PatientProgram patientProgram, ProgramWorkflow workflow, ProgramWorkflowState state,
 	                          Date onDate) throws APIException;
 	
+	@Transactional(readOnly = true)
+	public PatientProgram getPatientProgramByUuid(String uuid);
+	
 	/**
 	 * TODO: refactor?
 	 * 
 	 * @param cohort
 	 * @param programs
-	 * @return
+	 * @return List<PatientProgram> for all Patients in the given Cohort that are in the given
+	 *         programs
 	 */
 	@Transactional(readOnly = true)
 	@Authorized( { OpenmrsConstants.PRIV_VIEW_PATIENT_PROGRAMS })
@@ -736,8 +754,8 @@ public interface ProgramWorkflowService extends OpenmrsService {
 	 * the passed Date
 	 * 
 	 * @param patientProgram - The PatientProgram whose state you wish to change
-	 * @param state - The ProgramWorkflowState you wish to change the ProgramWorkflow to
-	 * @param onDate - The Date that you wish the State change to take place
+	 * @param finalState - The ProgramWorkflowState you wish to change the ProgramWorkflow to
+	 * @param terminatedOn - The Date that you wish the State change to take place
 	 * @deprecated use {@link PatientProgram#transitionToState(ProgramWorkflowState, Date)}
 	 * @throws APIException
 	 */
@@ -802,4 +820,7 @@ public interface ProgramWorkflowService extends OpenmrsService {
 	 * @throws APIException
 	 */
 	public void deleteConceptStateConversion(ConceptStateConversion csc) throws APIException;
+	
+	@Transactional(readOnly = true)
+	public ConceptStateConversion getConceptStateConversionByUuid(String uuid);
 }

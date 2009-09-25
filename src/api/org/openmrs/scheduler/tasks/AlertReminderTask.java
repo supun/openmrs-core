@@ -67,13 +67,13 @@ public class AlertReminderTask extends AbstractTask {
 		try {
 			
 			// Create a new message
-			Message message = Context.getMessageService().create("Alert Reminder", "You have unread alerts.");
+			Message message = Context.getMessageService().createMessage("Alert Reminder", "You have unread alerts.");
 			
 			// Get all recipients
 			Collection<User> users = getRecipients(alerts);
 			
 			// Send a message to each person only once
-			Context.getMessageService().send(message, users);
+			Context.getMessageService().sendMessage(message, users);
 			
 		}
 		catch (MessageException e) {

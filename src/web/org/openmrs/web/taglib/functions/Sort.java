@@ -13,18 +13,28 @@
  */
 package org.openmrs.web.taglib.functions;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.List;
 
 import org.apache.commons.beanutils.BeanComparator;
 import org.apache.commons.collections.comparators.ComparableComparator;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 
+/**
+ * Functions used within taglibs in a webapp jsp page. <br/>
+ * <br/>
+ * Example:
+ * 
+ * <pre>
+ * &lt;c:forEach items="${openmrs:sort(someListObject)}" var="o" end="0">
+ *   ....
+ *   ....
+ * &lt;/c:forEach>
+ * </pre>
+ */
 public class Sort {
-	
-	public static final long serialVersionUID = 1333333L;
-	
-	private final Log log = LogFactory.getLog(getClass());
 	
 	/**
 	 * This method will sort a collection based on the natural order of it's elements

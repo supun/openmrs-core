@@ -38,8 +38,6 @@ public class ShortPatientModel {
 	
 	private String gender;
 	
-	private String tribe = "";
-	
 	private Date birthdate;
 	
 	private Boolean birthdateEstimated = false;
@@ -104,8 +102,6 @@ public class ShortPatientModel {
 			}
 			
 			gender = patient.getGender();
-			if (patient.getTribe() != null)
-				tribe = patient.getTribe().getName();
 			
 			birthdate = patient.getBirthdate();
 			birthdateEstimated = patient.isBirthdateEstimated();
@@ -187,14 +183,6 @@ public class ShortPatientModel {
 	
 	public void setPatientId(Integer patientId) {
 		this.patientId = patientId;
-	}
-	
-	public String getTribe() {
-		return tribe;
-	}
-	
-	public void setTribe(String tribe) {
-		this.tribe = tribe;
 	}
 	
 	public Boolean getVoided() {

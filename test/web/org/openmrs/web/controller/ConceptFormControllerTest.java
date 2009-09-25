@@ -27,6 +27,7 @@ import javax.servlet.http.HttpServletResponse;
 import org.junit.Assert;
 import org.junit.Test;
 import org.openmrs.Concept;
+import org.openmrs.ConceptComplex;
 import org.openmrs.ConceptDescription;
 import org.openmrs.ConceptName;
 import org.openmrs.ConceptNumeric;
@@ -510,7 +511,7 @@ public class ConceptFormControllerTest extends BaseWebContextSensitiveTest {
 		assertNotNull(mav);
 		assertTrue(mav.getModel().isEmpty());
 		
-		ConceptNumeric concept = (ConceptNumeric)cs.getConcept(5089);
+		ConceptNumeric concept = (ConceptNumeric) cs.getConcept(5089);
 		Assert.assertEquals(EXPECTED_LOW_NORMAL, concept.getLowNormal());
 		Assert.assertEquals(EXPECTED_HI_NORMAL, concept.getHiNormal());
 		Assert.assertEquals(EXPECTED_LOW_ABSOLUTE, concept.getLowAbsolute());
@@ -518,15 +519,14 @@ public class ConceptFormControllerTest extends BaseWebContextSensitiveTest {
 		Assert.assertEquals(EXPECTED_LOW_CRITICAL, concept.getLowCritical());
 		Assert.assertEquals(EXPECTED_HI_CRITICAL, concept.getHiCritical());
 	}
-
+	
 	/**
-     * @see {@link ConceptFormController#onSubmit(HttpServletRequest,HttpServletResponse,Object,BindException)}
-     * 
-     */
-    @Test
-    @Verifies(value = "should display numeric values from table", method = "onSubmit(HttpServletRequest,HttpServletResponse,Object,BindException)")
-    public void onSubmit_shouldDisplayNumericValuesFromTable() throws Exception {
-    	final Double EXPECTED_LOW_ABSOLUTE = 0.0;
+	 * @see {@link ConceptFormController#onSubmit(HttpServletRequest,HttpServletResponse,Object,BindException)}
+	 */
+	@Test
+	@Verifies(value = "should display numeric values from table", method = "onSubmit(HttpServletRequest,HttpServletResponse,Object,BindException)")
+	public void onSubmit_shouldDisplayNumericValuesFromTable() throws Exception {
+		final Double EXPECTED_LOW_ABSOLUTE = 0.0;
 		final Double EXPECTED_LOW_CRITICAL = 99.0;
 		final Double EXPECTED_LOW_NORMAL = 445.0;
 		final Double EXPECTED_HI_NORMAL = 1497.0;
@@ -540,16 +540,106 @@ public class ConceptFormControllerTest extends BaseWebContextSensitiveTest {
 		mockRequest.setMethod("GET");
 		mockRequest.setParameter("conceptId", "5497");
 		ModelAndView mav = conceptFormController.handleRequest(mockRequest, new MockHttpServletResponse());
-
+		
 		assertNotNull(mav);
-		ConceptFormBackingObject formBackingObject = (ConceptFormBackingObject)mav.getModel().get("command");
-
+		ConceptFormBackingObject formBackingObject = (ConceptFormBackingObject) mav.getModel().get("command");
+		
 		Assert.assertEquals(EXPECTED_LOW_NORMAL, formBackingObject.getLowNormal());
 		Assert.assertEquals(EXPECTED_HI_NORMAL, formBackingObject.getHiNormal());
 		Assert.assertEquals(EXPECTED_LOW_ABSOLUTE, formBackingObject.getLowAbsolute());
 		Assert.assertEquals(EXPECTED_HI_ABSOLUTE, formBackingObject.getHiAbsolute());
 		Assert.assertEquals(EXPECTED_LOW_CRITICAL, formBackingObject.getLowCritical());
 		Assert.assertEquals(EXPECTED_HI_CRITICAL, formBackingObject.getHiCritical());
-    }
+	}
+	
+	/**
+	 * This tests removing a concept set
+	 * 
+	 * @throws Exception
+	 */
+	@Test
+	public void shouldRemoveConceptSet() throws Exception {
+		ConceptService cs = Context.getConceptService();
+		
+		ConceptFormController conceptFormController = (ConceptFormController) applicationContext.getBean("conceptForm");
+		MockHttpServletRequest mockRequest = new MockHttpServletRequest();
+		
+		mockRequest.setMethod("POST");
+		mockRequest.setParameter("action", "");
+		mockRequest.setParameter("conceptId", "23");
+		mockRequest.setParameter("namesByLocale[en].name", "FOOD CONSTRUCT");
+		mockRequest.setParameter("concept.datatype", "4");
+		mockRequest.setParameter("concept.class", "10");
+		mockRequest.setParameter("concept.conceptSets", "18 19");
+		
+		ModelAndView mav = conceptFormController.handleRequest(mockRequest, new MockHttpServletResponse());
+		assertNotNull(mav);
+		assertTrue(mav.getModel().isEmpty());
+		
+		Concept concept = cs.getConcept(23);
+		assertNotNull(concept);
+		assertEquals(2, concept.getConceptSets().size());
+	}
+	
+	/**
+	 * This tests removing an answer
+	 * 
+	 * @throws Exception
+	 */
+	@Test
+	public void shouldRemoveConceptAnswer() throws Exception {
+		ConceptService cs = Context.getConceptService();
+		
+		ConceptFormController conceptFormController = (ConceptFormController) applicationContext.getBean("conceptForm");
+		MockHttpServletRequest mockRequest = new MockHttpServletRequest();
+		
+		mockRequest.setMethod("POST");
+		mockRequest.setParameter("action", "");
+		mockRequest.setParameter("conceptId", "21");
+		mockRequest.setParameter("namesByLocale[en].name", "FOOD ASSISTANCE FOR ENTIRE FAMILY");
+		mockRequest.setParameter("concept.datatype", "2");
+		mockRequest.setParameter("concept.class", "7");
+		mockRequest.setParameter("concept.answers", "7 8");
+		
+		ModelAndView mav = conceptFormController.handleRequest(mockRequest, new MockHttpServletResponse());
+		assertNotNull(mav);
+		assertTrue(mav.getModel().isEmpty());
+		
+		Concept concept = cs.getConcept(21);
+		assertNotNull(concept);
+		assertEquals(2, concept.getAnswers().size());
+	}
+	
+	/**
+	 * This test makes sure that ConceptComplex objects can be edited
+	 * 
+	 * @throws Exception
+	 */
+	@Test
+	public void shouldEditConceptComplex() throws Exception {
+		executeDataSet("org/openmrs/api/include/ObsServiceTest-complex.xml");
+		
+		ConceptService cs = Context.getConceptService();
+		
+		ConceptFormController conceptFormController = (ConceptFormController) applicationContext.getBean("conceptForm");
+		MockHttpServletRequest mockRequest = new MockHttpServletRequest();
+		
+		mockRequest.setMethod("POST");
+		mockRequest.setParameter("action", "");
+		mockRequest.setParameter("conceptId", "8473");
+		mockRequest.setParameter("namesByLocale[en].name", "A complex concept");
+		mockRequest.setParameter("concept.datatype", "13");
+		mockRequest.setParameter("concept.class", "5");
+		mockRequest.setParameter("handlerKey", "TextHandler"); // switching it from an ImageHandler to a TextHandler
+		
+		ModelAndView mav = conceptFormController.handleRequest(mockRequest, new MockHttpServletResponse());
+		assertNotNull(mav);
+		assertTrue(mav.getModel().isEmpty());
+		
+		Concept concept = cs.getConcept(8473);
+		assertEquals(ConceptComplex.class, concept.getClass());
+		ConceptComplex complex = (ConceptComplex) concept;
+		assertEquals("TextHandler", complex.getHandler());
+	}
 	
 }

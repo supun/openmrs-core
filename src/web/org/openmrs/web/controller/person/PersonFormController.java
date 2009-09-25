@@ -17,7 +17,6 @@ import java.text.DateFormat;
 import java.text.ParseException;
 import java.util.Calendar;
 import java.util.Date;
-import java.util.GregorianCalendar;
 import java.util.List;
 import java.util.Map;
 
@@ -195,16 +194,17 @@ public class PersonFormController extends SimpleFormController {
 		String causeOfDeathOther = "";
 		
 		if (Context.isAuthenticated()) {
-
+			
 			String propCause = Context.getAdministrationService().getGlobalProperty("concept.causeOfDeath");
 			Concept conceptCause = Context.getConceptService().getConcept(propCause);
 			
-			if ( conceptCause != null ) {
+			if (conceptCause != null) {
+				// TODO add back in for persons
 				List<Obs> obssDeath = Context.getObsService().getObservationsByPersonAndConcept(person, conceptCause);
-				if ( obssDeath.size() == 1 ) {
+				if (obssDeath.size() == 1) {
 					Obs obsDeath = obssDeath.iterator().next();
 					causeOfDeathOther = obsDeath.getValueText();
-					if ( causeOfDeathOther == null ) {
+					if (causeOfDeathOther == null) {
 						log.debug("cod is null, so setting to empty string");
 						causeOfDeathOther = "";
 					} else {
@@ -245,7 +245,7 @@ public class PersonFormController extends SimpleFormController {
 			try {
 				// only a year was passed as parameter
 				if (date.length() < 5) {
-					Calendar c = new GregorianCalendar();
+					Calendar c = Calendar.getInstance();
 					c.set(Calendar.YEAR, Integer.valueOf(date));
 					c.set(Calendar.MONTH, 0);
 					c.set(Calendar.DATE, 1);

@@ -21,8 +21,10 @@ import static org.junit.Assert.fail;
 
 import java.util.Date;
 
+import org.junit.Assert;
 import org.junit.Test;
 import org.openmrs.api.APIException;
+import org.openmrs.test.Verifies;
 
 /**
  * This class tests all methods that are not getter or setters in the Obs java object TODO: finish
@@ -31,20 +33,6 @@ import org.openmrs.api.APIException;
  * @see Obs
  */
 public class ObsTest {
-	
-	/**
-	 * Tests the get/setValueAsString methods
-	 * 
-	 * @throws Exception
-	 */
-	@Test
-	public void shouldValueAsString() throws Exception {
-		
-		// TODO: finish this test method
-		
-		// TODO: test obs group recursive get value as string
-		
-	}
 	
 	/**
 	 * Tests the addToGroup method in ObsGroup
@@ -200,6 +188,25 @@ public class ObsTest {
 		assertNotNull(o2.getRelatedObservations());
 		assertEquals(o2.getRelatedObservations().size(), 0);
 		
+	}
+	
+	/**
+	 * @see {@link Obs#isComplex()}
+	 */
+	@Test
+	@Verifies(value = "should return true if the concept is complex", method = "isComplex()")
+	public void isComplex_shouldReturnTrueIfTheConceptIsComplex() throws Exception {
+		ConceptDatatype cd = new ConceptDatatype();
+		cd.setName("Complex");
+		cd.setHl7Abbreviation("ED");
+		
+		ConceptComplex complexConcept = new ConceptComplex();
+		complexConcept.setDatatype(cd);
+		
+		Obs obs = new Obs();
+		obs.setConcept(complexConcept);
+		
+		Assert.assertTrue(obs.isComplex());
 	}
 	
 }

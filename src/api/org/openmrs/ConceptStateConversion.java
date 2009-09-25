@@ -19,11 +19,11 @@ import org.apache.commons.logging.LogFactory;
 /**
  * ConceptStateConversion
  */
-public class ConceptStateConversion implements java.io.Serializable {
+public class ConceptStateConversion extends BaseOpenmrsObject implements java.io.Serializable {
 	
 	public static final long serialVersionUID = 3214511L;
 	
-	protected final Log log = LogFactory.getLog(getClass());
+	private transient final Log log = LogFactory.getLog(getClass());
 	
 	// ******************
 	// Properties
@@ -58,12 +58,11 @@ public class ConceptStateConversion implements java.io.Serializable {
 	public boolean equals(Object obj) {
 		if (obj != null && obj instanceof ConceptStateConversion) {
 			ConceptStateConversion p = (ConceptStateConversion) obj;
-			if (this.getConceptStateConversionId() == null) {
-				return p.getConceptStateConversionId() == null;
+			if (this.getConceptStateConversionId() != null) {
+				return (this.getConceptStateConversionId().equals(p.getConceptStateConversionId()));
 			}
-			return (this.getConceptStateConversionId().equals(p.getConceptStateConversionId()));
 		}
-		return false;
+		return this == obj;
 	}
 	
 	/** @see Object#toString() */
@@ -130,5 +129,21 @@ public class ConceptStateConversion implements java.io.Serializable {
 	 */
 	public void setProgramWorkflowState(ProgramWorkflowState programWorkflowState) {
 		this.programWorkflowState = programWorkflowState;
+	}
+	
+	/**
+	 * @since 1.5
+	 * @see org.openmrs.OpenmrsObject#getId()
+	 */
+	public Integer getId() {
+		return getConceptStateConversionId();
+	}
+	
+	/**
+	 * @since 1.5
+	 * @see org.openmrs.OpenmrsObject#setId(java.lang.Integer)
+	 */
+	public void setId(Integer id) {
+		setConceptStateConversionId(id);
 	}
 }

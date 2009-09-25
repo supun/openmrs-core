@@ -14,15 +14,6 @@
 package org.openmrs.arden;
 
 import java.io.Writer;
-import java.util.HashMap;
-import java.util.ListIterator;
-import java.util.Iterator;
-import java.util.Set;
-import java.util.LinkedList;
-
-import org.openmrs.Concept;
-import org.openmrs.api.ConceptService;
-import org.openmrs.api.context.Context;
 
 /*
  * @@ This class represents a statement in Data slot - read 

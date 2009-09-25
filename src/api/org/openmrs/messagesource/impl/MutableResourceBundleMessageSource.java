@@ -16,7 +16,9 @@ package org.openmrs.messagesource.impl;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -47,7 +49,7 @@ public class MutableResourceBundleMessageSource extends ReloadableResourceBundle
 	
 	private static final String PROPERTIES_FILE_COMMENT = "OpenMRS Application Messages";
 	
-	private static Log log = LogFactory.getLog(MutableResourceBundleMessageSource.class);
+	private Log log = LogFactory.getLog(getClass());
 	
 	private ApplicationContext applicationContext;
 	
@@ -60,7 +62,7 @@ public class MutableResourceBundleMessageSource extends ReloadableResourceBundle
 	private Collection<Locale> locales;
 	
 	/**
-	 * @see org.openmrs.message.MessageSourceService#getLocalesOfConceptNames()
+	 * @see org.openmrs.messagesource.MessageSourceService#getLocales()
 	 */
 	public Collection<Locale> getLocales() {
 		if (locales == null)
@@ -79,14 +81,6 @@ public class MutableResourceBundleMessageSource extends ReloadableResourceBundle
 	private Collection<Locale> findLocales() {
 		Collection<Locale> foundLocales = new HashSet<Locale>();
 		
-		/* ABK: deprecated
-		locales.add(Locale.US);
-		locales.add(Locale.UK);
-		locales.add(Locale.FRENCH);
-		locales.add(new Locale("es")); // Spanish
-		locales.add(new Locale("pt")); // Portugese
-		 */
-
 		for (File propertiesFile : findPropertiesFiles()) {
 			String filename = propertiesFile.getName();
 			
@@ -143,13 +137,15 @@ public class MutableResourceBundleMessageSource extends ReloadableResourceBundle
 	 * Presumes to append the messages to a message.properties file which is already being monitored
 	 * by the super ReloadableResourceBundleMessageSource. This is a blind, trusting hack.
 	 * 
-	 * @see org.openmrs.message.MessageSourceService#publishProperties(java.util.Properties,
-	 *      java.lang.String, java.lang.String, java.lang.String)
+	 * @see org.openmrs.messagesource.MutableMessageSource#publishProperties(java.util.Properties,
+	 *      java.lang.String, java.lang.String, java.lang.String, java.lang.String)
+	 * @deprecated use {@linkplain #merge(MutableMessageSource, boolean)}
 	 */
 	public void publishProperties(Properties props, String locale, String namespace, String name, String version) {
 		
 		String filePrefix = (namespace.length() > 0) ? (namespace + "_") : "";
 		String propertiesPath = "/WEB-INF/" + filePrefix + "messages" + locale + ".properties";
+		
 		Resource propertiesResource = applicationContext.getResource(propertiesPath);
 		try {
 		File propertiesFile = propertiesResource.getFile();
@@ -157,7 +153,8 @@ public class MutableResourceBundleMessageSource extends ReloadableResourceBundle
 		if (!propertiesFile.exists())
 			propertiesFile.createNewFile();
 			// append the properties to the appropriate messages file
-			OpenmrsUtil.storeProperties(props, propertiesFile, namespace + ": " + name + " v" + version);
+		OpenmrsUtil.storeProperties(props, propertiesFile, namespace + ": " + name + " v" + version);
+		
 		} catch (Exception ex){
 			log.error("Error creating new properties file");
 		}
@@ -174,7 +171,7 @@ public class MutableResourceBundleMessageSource extends ReloadableResourceBundle
 	/**
 	 * Returns all available messages.
 	 * 
-	 * @see org.openmrs.message.MessageSourceService#getPresentations()
+	 * @see org.openmrs.messagesource.MessageSourceService#getPresentations()
 	 */
 	public Collection<PresentationMessage> getPresentations() {
 		Collection<PresentationMessage> presentations = new Vector<PresentationMessage>();
@@ -220,7 +217,7 @@ public class MutableResourceBundleMessageSource extends ReloadableResourceBundle
 	}
 	
 	/**
-	 * @see org.openmrs.message.MutableMessageSource#addPresentation(org.openmrs.messagesource.PresentationMessage)
+	 * @see org.openmrs.messagesource.MutableMessageSource#addPresentation(org.openmrs.messagesource.PresentationMessage)
 	 */
 	public void addPresentation(PresentationMessage message) {
 		File propertyFile = findPropertiesFileFor(message.getCode());
@@ -243,7 +240,7 @@ public class MutableResourceBundleMessageSource extends ReloadableResourceBundle
 	}
 	
 	/**
-	 * @see org.openmrs.message.MutableMessageSource#removePresentation(org.openmrs.messagesource.PresentationMessage)
+	 * @see org.openmrs.messagesource.MutableMessageSource#removePresentation(org.openmrs.messagesource.PresentationMessage)
 	 */
 	public void removePresentation(PresentationMessage message) {
 		File propertyFile = findPropertiesFileFor(message.getCode());
@@ -251,7 +248,7 @@ public class MutableResourceBundleMessageSource extends ReloadableResourceBundle
 			Properties props = new Properties();
 			try {
 				FileInputStream fis = new FileInputStream(propertyFile);
-				OpenmrsUtil.loadProperties(props, fis);
+				OpenmrsUtil.loadProperties(props, new FileInputStream(propertyFile));
 				fis.close();
 				props.remove(message.getCode());
 				OpenmrsUtil.storeProperties(props, propertyFile, PROPERTIES_FILE_COMMENT);
@@ -331,7 +328,7 @@ public class MutableResourceBundleMessageSource extends ReloadableResourceBundle
 	}
 	
 	/**
-	 * @see org.openmrs.message.MutableMessageSource#merge(org.openmrs.message.MutableMessageSource)
+	 * @see org.openmrs.messagesource.MutableMessageSource#merge(MutableMessageSource, boolean)
 	 */
 	public void merge(MutableMessageSource fromSource, boolean overwrite) {
 		

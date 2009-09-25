@@ -14,6 +14,7 @@
 package org.openmrs.module;
 
 import java.io.File;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.IdentityHashMap;
 import java.util.List;
@@ -62,7 +63,7 @@ public final class Module {
 	
 	private String requireDatabaseVersion;
 	
-	private List<String> requiredModules;
+	private Map<String, String> requiredModulesMap;
 	
 	private List<AdvicePoint> advicePoints = new Vector<AdvicePoint>();
 	
@@ -230,17 +231,60 @@ public final class Module {
 	}
 	
 	/**
-	 * @return the requiredModules
+	 * This list of strings is just what is included in the config.xml file, the full package names:
+	 * e.g. org.openmrs.module.formentry
+	 * 
+	 * @return the list of requiredModules
 	 */
 	public List<String> getRequiredModules() {
-		return requiredModules;
+		return requiredModulesMap == null ? null : new ArrayList<String>(requiredModulesMap.keySet());
 	}
 	
 	/**
-	 * @param requireModules the requiredModules to set
+	 * Convenience method to get the version of this given module that is required
+	 * 
+	 * @return the version of the given required module, or null if there are no version constraints
+	 * @since 1.5
+	 * @should return null if no required modules exist
+	 * @should return null if no required module by given name exists
+	 */
+	public String getRequiredModuleVersion(String moduleName) {
+		return requiredModulesMap == null ? null : requiredModulesMap.get(moduleName);
+	}
+	
+	/**
+	 * This is a convenience method to set all the required modules without any version requirements
+	 * 
+	 * @param requiredModules the requiredModules to set for this module
+	 * @should set modules when there is a null required modules map
 	 */
 	public void setRequiredModules(List<String> requiredModules) {
-		this.requiredModules = requiredModules;
+		if (requiredModulesMap == null)
+			requiredModulesMap = new HashMap<String, String>();
+		
+		for (String module : requiredModules) {
+			requiredModulesMap.put(module, null);
+		}
+	}
+	
+	/**
+	 * @param requiredModulesMap <code>Map<String,String></code> of the <code>requiredModule</code>s
+	 *            to set
+	 * @since 1.5
+	 */
+	public void setRequiredModulesMap(Map<String, String> requiredModulesMap) {
+		this.requiredModulesMap = requiredModulesMap;
+	}
+	
+	/**
+	 * Get the modules that are required for this module. The keys in this map are the module
+	 * package names. The values in the map are the required version. If no specific version is
+	 * required, it will be null.
+	 * 
+	 * @return a map from required module to the version that is required
+	 */
+	public Map<String, String> setRequiredModulesMap() {
+		return requiredModulesMap;
 	}
 	
 	/**
@@ -358,6 +402,16 @@ public final class Module {
 		this.extensions = extensions;
 	}
 	
+	/**
+	 * A map of pointid to classname. The classname is expected to be a class that extends the
+	 * {@link Extension} object. <br/>
+	 * <br/>
+	 * This map will be expanded into full Extension objects the first time {@link #getExtensions()}
+	 * is called
+	 * 
+	 * @param map from pointid to classname
+	 * @see ModuleFileParser
+	 */
 	public void setExtensionNames(IdentityHashMap<String, String> map) {
 		if (log.isDebugEnabled())
 			for (Map.Entry<String, String> entry : extensionNames.entrySet()) {
@@ -366,6 +420,14 @@ public final class Module {
 		this.extensionNames = map;
 	}
 	
+	/**
+	 * Expand the temporary extensionNames map of pointid-classname to full pointid-classobject. <br>
+	 * This has to be done after the fact because when the pointid-classnames are parsed, the
+	 * module's objects aren't fully realized yet and so not all classes can be loaded. <br/>
+	 * <br/>
+	 * 
+	 * @return a list of full Extension objects
+	 */
 	private List<Extension> expandExtensionNames() {
 		if (extensions.size() != extensionNames.size()) {
 			for (Map.Entry<String, String> entry : extensionNames.entrySet()) {

@@ -13,13 +13,9 @@
  */
 package org.openmrs.validator;
 
-import java.util.Arrays;
-import java.util.List;
-
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.openmrs.Patient;
 import org.openmrs.PatientIdentifier;
 import org.openmrs.PatientIdentifierType;
 import org.openmrs.api.BlankIdentifierException;
@@ -87,7 +83,7 @@ public class PatientIdentifierValidator implements Validator {
 			// Check is already in use by another patient
 			if (Context.getPatientService().isIdentifierInUseByAnotherPatient(pi)) {
 				throw new IdentifierNotUniqueException("Identifier " + pi.getIdentifier()
-			        + " already in use by another patient");
+				        + " already in use by another patient");
 			}
 			
 			// Check that this is a identifier is valid
@@ -164,10 +160,10 @@ public class PatientIdentifierValidator implements Validator {
 	}
 	
 	/**
-	 * Validates that a given identifier string is valid for a given regular expression format
+	 * Validates that a given identifier string is valid for a given IdentifierValidator
 	 * 
-	 * @param format - the regular expression format to validate against
-	 * @param identifier - the identifier to check against the passed {@link PatientIdentifierType}
+	 * @param identifier the identifier to check against the passed {@link PatientIdentifierType}
+	 * @param validator the IdentifierValidator to use to check the identifier
 	 * @throws PatientIdentifierException if the identifier is does not match the format
 	 * @should fail validation if identifier is blank
 	 * @should fail validation if identifier is invalid

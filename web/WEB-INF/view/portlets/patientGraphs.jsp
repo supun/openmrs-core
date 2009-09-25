@@ -38,8 +38,6 @@ table#labTestTable th {
 }
 </style>
 
-<openmrs:globalProperty key="concept.weight" defaultValue="" var="weight" />
-<openmrs:globalProperty key="concept.cd4_count" defaultValue="" var="cd4" />
 <openmrs:userProperty key="patientGraphConcepts" defaultValue="" var="userConcepts" />
 
 <%
@@ -63,26 +61,28 @@ table#labTestTable th {
 	}
 %>
 
-<c:set var="graphConceptString" value="${weight}-${cd4}-${userConcepts}" />
+<c:set var="graphConceptString" value="${userConcepts}" />
 	
 	<div class="boxHeader${model.patientVariation}"><spring:message code="patientDashboard.graphs"/></div>
 	<div class="box${model.patientVariation}">
 		<table width="100%">
 			<tr>
 				<td align="center">
-					<openmrs:obsTable
-						observations="${model.patientObs}"
-						concepts="name:CD4 COUNT|name:WEIGHT (KG)|set:name:LABORATORY EXAMINATIONS CONSTRUCT"
-						conceptLink="admin/observations/personObs.form?personId=${model.patientId}&"
-						id="labTestTable"
-						showEmptyConcepts="false"
-						showConceptHeader="true"
-						showDateHeader="true"
-						orientation="horizontal"
-						sort="asc"
-						combineEqualResults="true"
-						limit="-1"
-					/>
+					<c:if test="${fn:length(userConcepts) > 0}">
+						<openmrs:obsTable
+							observations="${model.patientObs}"
+							concepts="${fn:replace(userConcepts, '-', '|')}"
+							conceptLink="admin/observations/personObs.form?personId=${model.patientId}&"
+							id="labTestTable"
+							showEmptyConcepts="false"
+							showConceptHeader="true"
+							showDateHeader="true"
+							orientation="horizontal"
+							sort="asc"
+							combineEqualResults="true"
+							limit="-1"
+						/>
+					</c:if>
 				</td>
 			</tr>
 			<c:forEach items="${fn:split(graphConceptString, '-')}" var="conceptId">

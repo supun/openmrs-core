@@ -25,18 +25,19 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 
-import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.openmrs.Person;
 import org.openmrs.Role;
 import org.openmrs.User;
+import org.openmrs.api.PasswordException;
 import org.openmrs.api.UserService;
 import org.openmrs.api.context.Context;
+import org.openmrs.propertyeditor.ConceptEditor;
 import org.openmrs.util.OpenmrsConstants;
+import org.openmrs.util.OpenmrsUtil;
 import org.openmrs.web.WebConstants;
 import org.openmrs.web.controller.person.PersonFormController;
-import org.openmrs.propertyeditor.ConceptEditor;
 import org.springframework.beans.propertyeditors.CustomDateEditor;
 import org.springframework.beans.propertyeditors.CustomNumberEditor;
 import org.springframework.context.support.MessageSourceAccessor;
@@ -95,7 +96,7 @@ public class UserFormController extends PersonFormController {
 			httpSession.setAttribute(WebConstants.OPENMRS_MSG_ARGS, user.getPersonName());
 			return new ModelAndView(new RedirectView(request.getContextPath() + "/index.htm"));
 		} else if (msa.getMessage("User.delete").equals(action)) {
-			us.deleteUser(user);
+			us.purgeUser(user);
 			return new ModelAndView(new RedirectView(getSuccessView()));
 		} else {
 			// check if username is already in the database
@@ -118,12 +119,12 @@ public class UserFormController extends PersonFormController {
 			
 			//check password strength
 			if (password.length() > 0) {
-				if (password.length() < 6)
-					errors.reject("error.password.length");
-				if (StringUtils.isAlpha(password))
-					errors.reject("error.password.characters");
-				if (password.equals(user.getUsername()) || password.equals(user.getSystemId()))
-					errors.reject("error.password.weak");
+				try {
+					OpenmrsUtil.validatePassword(user.getUsername(), password, user.getSystemId());
+				}
+				catch (PasswordException e) {
+					errors.reject(e.getMessage());
+				}
 			}
 			
 			// add Roles to user (because spring can't handle lists as properties...)
@@ -210,12 +211,23 @@ public class UserFormController extends PersonFormController {
 				properties.put(OpenmrsConstants.USER_PROPERTY_CHANGE_PASSWORD, newChangePassword.toString());
 			}
 			
+			String[] keys = request.getParameterValues("property");
+			String[] values = request.getParameterValues("value");
+			
+			if (keys != null && values != null) {
+				for (int x = 0; x < keys.length; x++) {
+					String key = keys[x];
+					String val = values[x];
+					properties.put(key, val);
+				}
+			}
+			
 			user.setUserProperties(properties);
 			
 			if (isNewUser(user))
-				us.createUser(user, password);
+				us.saveUser(user, password);
 			else {
-				us.updateUser(user);
+				us.saveUser(user, null);
 				
 				if (!password.equals("") && Context.hasPrivilege(OpenmrsConstants.PRIV_EDIT_USER_PASSWORDS)) {
 					if (log.isDebugEnabled())
@@ -237,6 +249,7 @@ public class UserFormController extends PersonFormController {
 	 * form/command object to load into the request
 	 * 
 	 * @see org.springframework.web.servlet.mvc.AbstractFormController#formBackingObject(javax.servlet.http.HttpServletRequest)
+	 * @should get empty form with valid user
 	 */
 	protected Object formBackingObject(HttpServletRequest request) throws ServletException {
 		
@@ -300,7 +313,7 @@ public class UserFormController extends PersonFormController {
 		
 		User user = (User) obj;
 		
-		List<Role> roles = Context.getUserService().getRoles();
+		List<Role> roles = Context.getUserService().getAllRoles();
 		if (roles == null)
 			roles = new Vector<Role>();
 		

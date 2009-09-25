@@ -21,33 +21,37 @@ import org.simpleframework.xml.Root;
 
 /**
  * Report Data obtained from evaluating a ReportSchema with a given EvaluationContext.
+ * 
+ * @deprecated see reportingcompatibility module
  */
 @Root
+@Deprecated
 public class ReportData {
 	
 	private ReportSchema reportSchema;
 	
 	private EvaluationContext evaluationContext;
 	
+	@SuppressWarnings("unchecked")
 	private Map<String, DataSet> dataSets;
 	
 	public ReportData() {
 	}
 	
+	@SuppressWarnings("unchecked")
 	@ElementMap(required = false)
 	public Map<String, DataSet> getDataSets() {
 		return dataSets;
 	}
 	
+	@SuppressWarnings("unchecked")
 	@ElementMap(required = false)
 	public void setDataSets(Map<String, DataSet> dataSets) {
 		this.dataSets = dataSets;
 	}
 	
 	/**
-	 * Returns the EvaluationContext that was used to obtain this ReportData.
-	 * 
-	 * @return
+	 * @return Returns the EvaluationContext that was used to obtain this ReportData.
 	 */
 	//@Element(required=false)
 	public EvaluationContext getEvaluationContext() {

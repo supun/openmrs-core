@@ -24,12 +24,11 @@ import javax.servlet.http.HttpServletRequest;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.directwebremoting.WebContextFactory;
 import org.openmrs.Role;
 import org.openmrs.User;
 import org.openmrs.api.UserService;
 import org.openmrs.api.context.Context;
-
-import uk.ltd.getahead.dwr.WebContextFactory;
 
 /**
  * A collection of methods used by DWR for access users. These methods are similar to the
@@ -155,8 +154,6 @@ public class DWRUserService {
 	
 	/**
 	 * Determines the order of the user's in the user list
-	 * 
-	 * @author bwolfe
 	 */
 	private class UserComparator implements Comparator<User> {
 		

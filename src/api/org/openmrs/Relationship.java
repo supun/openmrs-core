@@ -13,12 +13,10 @@
  */
 package org.openmrs;
 
-import java.util.Date;
-
 /**
  * Relationship
  */
-public class Relationship implements java.io.Serializable {
+public class Relationship extends BaseOpenmrsData implements java.io.Serializable {
 	
 	public static final long serialVersionUID = 323423L;
 	
@@ -31,18 +29,6 @@ public class Relationship implements java.io.Serializable {
 	private RelationshipType relationshipType;
 	
 	private Person personB;
-	
-	private User creator;
-	
-	private Date dateCreated;
-	
-	private Boolean voided = false;
-	
-	private User voidedBy;
-	
-	private Date dateVoided;
-	
-	private String voidReason;
 	
 	// Constructors
 	
@@ -81,12 +67,12 @@ public class Relationship implements java.io.Serializable {
 		target.personA = getPersonA();
 		target.relationshipType = getRelationshipType();
 		target.personB = getPersonB();
-		target.creator = getCreator();
-		target.dateCreated = getDateCreated();
-		target.voided = isVoided();
-		target.voidedBy = getVoidedBy();
-		target.dateVoided = getDateVoided();
-		target.voidReason = getVoidReason();
+		target.setCreator(getCreator());
+		target.setDateCreated(getDateCreated());
+		target.setVoided(isVoided());
+		target.setVoidedBy(getVoidedBy());
+		target.setDateVoided(getDateVoided());
+		target.setVoidReason(getVoidReason());
 		return target;
 	}
 	
@@ -113,48 +99,6 @@ public class Relationship implements java.io.Serializable {
 	// Property accessors
 	
 	/**
-	 * @return Returns the creator.
-	 */
-	public User getCreator() {
-		return creator;
-	}
-	
-	/**
-	 * @param creator The creator to set.
-	 */
-	public void setCreator(User creator) {
-		this.creator = creator;
-	}
-	
-	/**
-	 * @return Returns the dateCreated.
-	 */
-	public Date getDateCreated() {
-		return dateCreated;
-	}
-	
-	/**
-	 * @param dateCreated The dateCreated to set.
-	 */
-	public void setDateCreated(Date dateCreated) {
-		this.dateCreated = dateCreated;
-	}
-	
-	/**
-	 * @return Returns the dateVoided.
-	 */
-	public Date getDateVoided() {
-		return dateVoided;
-	}
-	
-	/**
-	 * @param dateVoided The dateVoided to set.
-	 */
-	public void setDateVoided(Date dateVoided) {
-		this.dateVoided = dateVoided;
-	}
-	
-	/**
 	 * @return Returns the personA.
 	 */
 	public Person getPersonA() {
@@ -162,7 +106,7 @@ public class Relationship implements java.io.Serializable {
 	}
 	
 	/**
-	 * @param person The person to set.
+	 * @param personA The person to set.
 	 */
 	public void setPersonA(Person personA) {
 		this.personA = personA;
@@ -176,7 +120,7 @@ public class Relationship implements java.io.Serializable {
 	}
 	
 	/**
-	 * @param relationship The relationship type to set.
+	 * @param type The relationship type to set.
 	 */
 	public void setRelationshipType(RelationshipType type) {
 		this.relationshipType = type;
@@ -212,58 +156,34 @@ public class Relationship implements java.io.Serializable {
 	
 	/**
 	 * @deprecated Use isVoided()
-	 * @see isVoided()
+	 * @see #isVoided()
 	 * @return Returns the voided.
 	 */
 	public Boolean getVoided() {
 		return isVoided();
 	}
 	
-	/**
-	 * @return returns the voided status
-	 */
-	public Boolean isVoided() {
-		return voided;
-	}
-	
-	/**
-	 * @param voided The voided to set.
-	 */
-	public void setVoided(Boolean voided) {
-		this.voided = voided;
-	}
-	
-	/**
-	 * @return Returns the voidedBy.
-	 */
-	public User getVoidedBy() {
-		return voidedBy;
-	}
-	
-	/**
-	 * @param voidedBy The voidedBy to set.
-	 */
-	public void setVoidedBy(User voidedBy) {
-		this.voidedBy = voidedBy;
-	}
-	
-	/**
-	 * @return Returns the voidReason.
-	 */
-	public String getVoidReason() {
-		return voidReason;
-	}
-	
-	/**
-	 * @param voidReason The voidReason to set.
-	 */
-	public void setVoidReason(String voidReason) {
-		this.voidReason = voidReason;
-	}
-	
 	public String toString() {
 		String relType = getRelationshipType() == null ? "NULL" : getRelationshipType().getaIsToB();
 		return personA + " is the " + relType + " of " + personB;
+	}
+	
+	/**
+	 * @since 1.5
+	 * @see org.openmrs.OpenmrsObject#getId()
+	 */
+	public Integer getId() {
+		
+		return getRelationshipId();
+	}
+	
+	/**
+	 * @since 1.5
+	 * @see org.openmrs.OpenmrsObject#setId(java.lang.Integer)
+	 */
+	public void setId(Integer id) {
+		setRelationshipId(id);
+		
 	}
 	
 }

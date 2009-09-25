@@ -14,13 +14,9 @@
 package org.openmrs.api.db;
 
 import java.util.Collection;
-import java.util.Date;
 import java.util.List;
 
-import org.openmrs.DataEntryStatistic;
 import org.openmrs.GlobalProperty;
-import org.openmrs.ImplementationId;
-import org.openmrs.Tribe;
 import org.openmrs.reporting.AbstractReportObject;
 import org.openmrs.reporting.Report;
 
@@ -33,91 +29,63 @@ import org.openmrs.reporting.Report;
 public interface AdministrationDAO {
 	
 	/**
-	 * Create a new Tribe
-	 * 
-	 * @param Tribe to create
-	 * @throws DAOException
-	 */
-	public void createTribe(Tribe tribe) throws DAOException;
-	
-	/**
-	 * Update Tribe
-	 * 
-	 * @param Tribe to update
-	 * @throws DAOException
-	 */
-	public void updateTribe(Tribe tribe) throws DAOException;
-	
-	/**
-	 * Delete Tribe
-	 * 
-	 * @param Tribe to delete
-	 * @throws DAOException
-	 */
-	public void deleteTribe(Tribe tribe) throws DAOException;
-	
-	/**
-	 * Retire Tribe
-	 * 
-	 * @param Tribe to retire
-	 * @throws DAOException
-	 */
-	public void retireTribe(Tribe tribe) throws DAOException;
-	
-	/**
-	 * Unretire Tribe
-	 * 
-	 * @param Tribe to unretire
-	 * @throws DAOException
-	 */
-	public void unretireTribe(Tribe tribe) throws DAOException;
-	
-	/**
 	 * Create a new Report
 	 * 
-	 * @param Report to create
+	 * @param r Report to create
+	 * @deprecated see reportingcompatibility module
 	 * @throws DAOException
 	 */
+	@Deprecated
 	public void createReport(Report r) throws DAOException;
 	
 	/**
 	 * Update Report
 	 * 
-	 * @param Report to update
+	 * @param r Report to update
+	 * @deprecated see reportingcompatibility module
 	 * @throws DAOException
 	 */
+	@Deprecated
 	public void updateReport(Report r) throws DAOException;
 	
 	/**
 	 * Delete Report
 	 * 
-	 * @param Report to delete
+	 * @param r Report to delete
+	 * @deprecated see reportingcompatibility module
 	 * @throws DAOException
 	 */
+	@Deprecated
 	public void deleteReport(Report r) throws DAOException;
 	
 	/**
 	 * Create a new Report Object
 	 * 
-	 * @param Report Object to create
+	 * @param ro AbstractReportObject to create
+	 * @deprecated see reportingcompatibility module
 	 * @throws DAOException
 	 */
+	@Deprecated
 	public void createReportObject(AbstractReportObject ro) throws DAOException;
 	
 	/**
 	 * Update Report Object
 	 * 
-	 * @param Report Object to update
+	 * @param ro AbstractReportObject to update
+	 * @deprecated see reportingcompatibility module
 	 * @throws DAOException
 	 */
+	@Deprecated
 	public void updateReportObject(AbstractReportObject ro) throws DAOException;
 	
 	/**
 	 * Delete Report Object
 	 * 
-	 * @param Report Objectto delete
+	 * @deprecated see reportingcompatibility module
+	 * @param reportObjectId Internal identifier for report object to delete
 	 * @throws DAOException
 	 */
+	@Deprecated
 	public void deleteReportObject(Integer reportObjectId) throws DAOException;
 	
 	/**
@@ -146,6 +114,13 @@ public interface AdministrationDAO {
 	 */
 	public List<GlobalProperty> getAllGlobalProperties() throws DAOException;
 	
+	public GlobalProperty getGlobalPropertyByUuid(String uuid) throws DAOException;
+	
+	/**
+	 * @see org.openmrs.api.AdministrationService#getGlobalPropertiesByPrefix(java.lang.String)
+	 */
+	public List<GlobalProperty> getGlobalPropertiesByPrefix(String prefix);
+	
 	/**
 	 * @see org.openmrs.api.AdministrationService#purgeGlobalProperty(org.openmrs.GlobalProperty)
 	 */
@@ -157,19 +132,8 @@ public interface AdministrationDAO {
 	public GlobalProperty saveGlobalProperty(GlobalProperty gp) throws DAOException;
 	
 	/**
-	 * @see org.openmrs.api.db.AdministrationDAO#getDataEntryStatistics(java.util.Date,
-	 *      java.util.Date, java.lang.String, java.lang.String, java.lang.String)
-	 */
-	public List<DataEntryStatistic> getDataEntryStatistics(Date fromDate, Date toDate, String encounterUserColumn,
-	                                                       String orderUserColumn, String groupBy) throws DAOException;
-	
-	/**
 	 * @see org.openmrs.api.db.AdministrationDAO#executeSQL(java.lang.String, boolean)
 	 */
 	public List<List<Object>> executeSQL(String sql, boolean selectOnly) throws DAOException;
 	
-	/**
-	 * @see org.openmrs.api.AdministrationService#getImplementation()
-	 */
-	public ImplementationId getImplementationId();
 }

@@ -26,11 +26,11 @@ import org.openmrs.util.OpenmrsConstants;
  * encounter that prompted this proposal is updated with a new observation pointing at the new (or
  * edited) concept.
  */
-public class ConceptProposal implements java.io.Serializable {
+public class ConceptProposal extends BaseOpenmrsObject implements java.io.Serializable {
 	
 	public static final long serialVersionUID = 57344L;
 	
-	private Log log = LogFactory.getLog(this.getClass());
+	private transient Log log = LogFactory.getLog(this.getClass());
 	
 	// Fields
 	
@@ -186,7 +186,7 @@ public class ConceptProposal implements java.io.Serializable {
 	}
 	
 	/**
-	 * @param text The final text to set.
+	 * @param t The final text to set.
 	 */
 	public void setFinalText(String t) {
 		this.finalText = t;
@@ -291,4 +291,19 @@ public class ConceptProposal implements java.io.Serializable {
 		setFinalText("");
 	}
 	
+	/**
+	 * @since 1.5
+	 * @see org.openmrs.OpenmrsObject#getId()
+	 */
+	public Integer getId() {
+		return getConceptProposalId();
+	}
+	
+	/**
+	 * @since 1.5
+	 * @see org.openmrs.OpenmrsObject#setId(java.lang.Integer)
+	 */
+	public void setId(Integer id) {
+		setConceptProposalId(id);
+	}
 }

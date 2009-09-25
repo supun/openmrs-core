@@ -33,30 +33,30 @@ import org.openmrs.util.OpenmrsUtil;
 
 /**
  * Extension point tag. Loops over all extensions defined for point "pointId". Makes the variable
- * "extension"
- * 
- * @see org.openmrs.module.Extension available in the loop. Usage:
+ * "extension" Usage:
  * 
  * <pre>
  *  &lt;openmrs:extensionPoint pointId=&quot;org.openmrs.cohortbuilder.links&quot; type=&quot;html&quot; varStatus=&quot;stat&quot;&gt;
  *     &lt;c:if test=&quot;${stat.first}&quot;&gt;
  *       &lt;br/&gt;
- *  &lt;b&gt;Module Links:&lt;/b&gt;
- * <ul>
- *  &lt;/c:if&gt;
- *     &lt;openmrs:hasPrivilege privilege=&quot;${extension.requiredPrivilege}&quot;&gt;
- *         &lt;form method=&quot;post&quot; action=&quot;${pageContext.request.contextPath}/${extension.url}&quot;&gt;
- *            &lt;input type=&quot;hidden&quot; name=&quot;patientIds&quot; value=&quot;&quot;/&gt;
- * <li>
- *               &lt;a href=&quot;#&quot; onClick=&quot;javascript:submitLink(this)&quot;&gt;&lt;spring:message code=&quot;${extension.label}&quot;/&gt;&lt;/a&gt;
- * </li>
- *         &lt;/form&gt;
- *     &lt;/openmrs:hasPrivilege&gt;
- *     &lt;c:if test=&quot;${stat.last}&quot;&gt;
- * </ul>
+ *       &lt;b&gt;Module Links:&lt;/b&gt;
  *     &lt;/c:if&gt;
+ *  &lt;ul>
+ *    &lt;openmrs:hasPrivilege privilege=&quot;${extension.requiredPrivilege}&quot;&gt;
+ *        &lt;form method=&quot;post&quot; action=&quot;${pageContext.request.contextPath}/${extension.url}&quot;&gt;
+ *           &lt;input type=&quot;hidden&quot; name=&quot;patientIds&quot; value=&quot;&quot;/&gt;
+ *           &lt;li>
+ *              &lt;a href=&quot;#&quot; onClick=&quot;javascript:submitLink(this)&quot;&gt;&lt;spring:message code=&quot;${extension.label}&quot;/&gt;&lt;/a&gt;
+ *           &lt;/li>
+ *        &lt;/form&gt;
+ *    &lt;/openmrs:hasPrivilege&gt;
+ *    &lt;c:if test=&quot;${stat.last}&quot;&gt;
+ *      &lt;/ul>
+ *    &lt;/c:if&gt;
  *  &lt;/openmrs:extensionPoint&gt;
  * </pre>
+ * 
+ * @see org.openmrs.module.Extension available in the loop.
  */
 public class ExtensionPointTag extends TagSupport implements BodyTag {
 	
@@ -97,9 +97,6 @@ public class ExtensionPointTag extends TagSupport implements BodyTag {
 	/** actual map containing the status variables */
 	private Map<String, Object> status = new HashMap<String, Object>();
 	
-	// tag helpers
-	private Boolean firstIteration = true;
-	
 	// methods
 	public int doStartTag() {
 		log.debug("Starting tag for extension point: " + pointId);
@@ -129,7 +126,7 @@ public class ExtensionPointTag extends TagSupport implements BodyTag {
 			log.debug("Found " + extensionList.size() + " extensions");
 			if (requiredClass != null) {
 				try {
-					Class clazz = Class.forName(requiredClass);
+					Class<?> clazz = Class.forName(requiredClass);
 					for (Extension ext : extensionList) {
 						if (!clazz.isAssignableFrom(ext.getClass())) {
 							throw new ClassCastException("Extensions at this point (" + pointId + ") are "
@@ -148,7 +145,6 @@ public class ExtensionPointTag extends TagSupport implements BodyTag {
 			extensions = null;
 			return SKIP_BODY;
 		} else {
-			firstIteration = true;
 			return EVAL_BODY_BUFFERED;
 		}
 		
@@ -160,7 +156,9 @@ public class ExtensionPointTag extends TagSupport implements BodyTag {
 	public void doInitBody() throws JspException {
 		getBodyContent().clearBody();
 		pageContext.removeAttribute("extension");
-		return;
+		if (extensions.hasNext()) {
+			iterate();
+		}
 	}
 	
 	/**
@@ -168,37 +166,24 @@ public class ExtensionPointTag extends TagSupport implements BodyTag {
 	 */
 	public int doAfterBody() throws JspException {
 		if (extensions.hasNext()) {
-			if (firstIteration) {
-				// for some reason the body is getting evaluated after the
-				// doInitBody() call
-				// and before this. Instead of hacking in duplicated logic, I
-				// use this hack
-				bodyContent.clearBody();
-				firstIteration = false;
-			}
-			Extension ext = extensions.next();
-			String overrideContent = ext.getOverrideContent(getBodyContentString());
-			if (overrideContent == null) {
-				iterate(ext);
-			} else {
-				try {
-					bodyContent.getEnclosingWriter().write(overrideContent);
-				}
-				catch (IOException io) {
-					log.warn("Cannot write override content of extension: " + ext.toString(), io);
-				}
-				if (!extensions.hasNext())
-					return SKIP_BODY;
-			}
-			return EVAL_BODY_BUFFERED;
+			// put the next extension in the request and reevaluate the body content
+			iterate();
+			return EVAL_BODY_AGAIN;
+		} else {
+			// no more extensions, do the end tag now
+			return SKIP_BODY;
 		}
-		
-		return SKIP_BODY;
 	}
 	
-	private void iterate(Extension ext) {
-		if (ext != null) {
-			ext.initialize(parameterMap);
+	/**
+	 * Put the next extension into the request from the <code>extensions</code> iterator. If the
+	 * current ext returns a non-null getBodyContentString(), print that to the request instead.
+	 */
+	private void iterate() {
+		Extension ext = extensions.next();
+		ext.initialize(parameterMap);
+		String overrideContent = ext.getOverrideContent(getBodyContentString());
+		if (overrideContent == null) {
 			log.debug("Adding ext: " + ext.getExtensionId() + " to pageContext class: " + ext.getClass());
 			pageContext.setAttribute("extension", ext);
 			
@@ -208,7 +193,12 @@ public class ExtensionPointTag extends TagSupport implements BodyTag {
 			status.put(STATUS_INDEX, index++);
 			pageContext.setAttribute(varStatus, status);
 		} else {
-			pageContext.removeAttribute("extension");
+			try {
+				bodyContent.getEnclosingWriter().write(overrideContent);
+			}
+			catch (IOException io) {
+				log.warn("Cannot write override content of extension: " + ext.toString(), io);
+			}
 		}
 	}
 	

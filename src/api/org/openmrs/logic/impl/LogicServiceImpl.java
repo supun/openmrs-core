@@ -49,7 +49,7 @@ import antlr.BaseAST;
  * </code>
  * 
  * @see org.openmrs.api.context.Context
- * @see org.openmrs.api.LogicService
+ * @see org.openmrs.logic.LogicService
  */
 public class LogicServiceImpl implements LogicService {
 	
@@ -64,6 +64,16 @@ public class LogicServiceImpl implements LogicService {
 	 */
 	public LogicServiceImpl() {
 		ruleFactory = new RuleFactory();
+	}
+	
+	/**
+	 * Clean up after this class. Set the static var to null so that the classloader can reclaim the
+	 * space.
+	 * 
+	 * @see org.openmrs.api.impl.BaseOpenmrsService#onShutdown()
+	 */
+	public void onShutdown() {
+		dataSources = null;
 	}
 	
 	/**
@@ -116,24 +126,21 @@ public class LogicServiceImpl implements LogicService {
 	}
 	
 	/**
-	 * @see org.openmrs.logic.LogicService#eval(org.openmrs.Patient, java.lang.String,
-	 *      java.lang.Object[])
+	 * @see org.openmrs.logic.LogicService#eval(Patient, String, Map)
 	 */
 	public Result eval(Patient who, String token, Map<String, Object> parameters) throws LogicException {
 		return eval(who, new LogicCriteria(token, parameters));
 	}
 	
 	/**
-	 * @see org.openmrs.logic.LogicService#eval(org.openmrs.Patient, java.lang.String,
-	 *      org.openmrs.logic.LogicCriteria)
+	 * @see org.openmrs.logic.LogicService#eval(Patient, LogicCriteria)
 	 */
 	public Result eval(Patient who, LogicCriteria criteria) throws LogicException {
 		return eval(who, criteria, criteria.getLogicParameters());
 	}
 	
 	/**
-	 * @see org.openmrs.logic.LogicService#eval(org.openmrs.Patient,
-	 *      org.openmrs.logic.LogicCriteria, java.lang.Object[])
+	 * @see org.openmrs.logic.LogicService#eval(Patient, LogicCriteria, Map)
 	 */
 	public Result eval(Patient who, LogicCriteria criteria, Map<String, Object> parameters) throws LogicException {
 		LogicContext context = new LogicContext(who);
@@ -192,8 +199,7 @@ public class LogicServiceImpl implements LogicService {
 	}
 	
 	/**
-	 * @see org.openmrs.logic.LogicService#addRule(java.lang.String, java.lang.String[],
-	 *      org.openmrs.logic.rule.Rule)
+	 * @see org.openmrs.logic.LogicService#addRule(String, String[], Rule)
 	 */
 	public void addRule(String token, String[] tags, Rule rule) throws LogicException {
 		ruleFactory.addRule(token, tags, rule);
@@ -235,7 +241,7 @@ public class LogicServiceImpl implements LogicService {
 	}
 	
 	/**
-	 * @see org.openmrs.logic.LogicService#getDatatype(java.lang.String)
+	 * @see org.openmrs.logic.LogicService#getDefaultDatatype(String)
 	 */
 	public Datatype getDefaultDatatype(String token) {
 		return ruleFactory.getDefaultDatatype(token);
@@ -254,7 +260,7 @@ public class LogicServiceImpl implements LogicService {
 	}
 	
 	/**
-	 * @see org.openmrs.logic.LogicService#getDataService()
+	 * @see org.openmrs.logic.LogicService#getLogicDataSource(String)
 	 */
 	public LogicDataSource getLogicDataSource(String name) {
 		return getLogicDataSources().get(name);

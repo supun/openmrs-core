@@ -14,7 +14,6 @@
 package org.openmrs;
 
 import java.util.Collection;
-import java.util.Date;
 import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
@@ -22,6 +21,7 @@ import java.util.Vector;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.openmrs.api.APIException;
 import org.openmrs.util.OpenmrsUtil;
 
 /**
@@ -34,39 +34,31 @@ public class Patient extends Person implements java.io.Serializable {
 	
 	public static final long serialVersionUID = 93123L;
 	
-	protected static final Log log = LogFactory.getLog(Patient.class);
+	private transient static final Log log = LogFactory.getLog(Patient.class);
 	
 	// Fields
 	
-	//private Person person;
+	// private Person person;
 	
 	private Integer patientId;
 	
-	private Tribe tribe;
-	
 	private Set<PatientIdentifier> identifiers;
-	
-	private User creator;
-	
-	private Date dateCreated;
-	
-	private User changedBy;
-	
-	private Date dateChanged;
-	
-	private Boolean voided = false;
-	
-	private User voidedBy;
-	
-	private Date dateVoided;
-	
-	private String voidReason;
 	
 	// Constructors
 	/** default constructor */
 	public Patient() {
 	}
 	
+	/**
+	 * This constructor creates a new Patient object from the given {@link Person} object. All
+	 * attributes are copied over to the new object. NOTE! All child collection objects are copied
+	 * as pointers, each individual element is not copied. <br/>
+	 * <br/>
+	 * TODO Should the patient specific attributes be copied? (like identifiers)
+	 * 
+	 * @param person the person object to copy onto a new Patient
+	 * @see Person#Person(Person)
+	 */
 	public Patient(Person person) {
 		super(person);
 		if (person != null)
@@ -139,16 +131,18 @@ public class Patient extends Person implements java.io.Serializable {
 	
 	/**
 	 * @return patient's tribe
+	 * @deprecated Tribe is not long a value on Patient. Install the Tribe module
 	 */
 	public Tribe getTribe() {
-		return tribe;
+		throw new APIException("The Patient.getTribe method is no longer supported.  Install the Tribe module");
 	}
 	
 	/**
 	 * @param tribe patient's tribe
+	 * @deprecated Tribe is not long a value on Patient. Install the Tribe module
 	 */
 	public void setTribe(Tribe tribe) {
-		this.tribe = tribe;
+		throw new APIException("The Patient.setTribe(Tribe) method is no longer supported.  Install the Tribe module");
 	}
 	
 	/**
@@ -158,6 +152,7 @@ public class Patient extends Person implements java.io.Serializable {
 	 * @return Set of all known identifiers for this patient
 	 * @see org.openmrs.PatientIdentifier
 	 * @see #getActiveIdentifiers()
+	 * @should not return null
 	 */
 	public Set<PatientIdentifier> getIdentifiers() {
 		if (identifiers == null)
@@ -166,7 +161,9 @@ public class Patient extends Person implements java.io.Serializable {
 	}
 	
 	/**
-	 * @param patientIdentifiers update all known identifiers for patient
+	 * Update all identifiers for patient
+	 * 
+	 * @param identifiers Set<PatientIdentifier> to set as update all known identifiers for patient
 	 * @see org.openmrs.PatientIdentifier
 	 */
 	public void setIdentifiers(Set<PatientIdentifier> identifiers) {
@@ -174,7 +171,7 @@ public class Patient extends Person implements java.io.Serializable {
 	}
 	
 	/**
-	 * Will add this PatientIdentifier if the patient doesn't contain it already
+	 * Adds this PatientIdentifier if the patient doesn't contain it already
 	 * 
 	 * @param patientIdentifier
 	 */
@@ -192,6 +189,9 @@ public class Patient extends Person implements java.io.Serializable {
 	 * Will add this PatientIdentifier if the patient doesn't contain it already
 	 * 
 	 * @param patientIdentifier
+	 * @should not fail with null identifiers list
+	 * @should add identifier to current list
+	 * @should not add identifier that is in list already
 	 */
 	public void addIdentifier(PatientIdentifier patientIdentifier) {
 		patientIdentifier.setPatient(this);
@@ -206,6 +206,7 @@ public class Patient extends Person implements java.io.Serializable {
 	 * <code>patientIdentifier</code> is null, nothing is done.
 	 * 
 	 * @param patientIdentifier the identifier to remove
+	 * @should remove identifier if exists
 	 */
 	public void removeIdentifier(PatientIdentifier patientIdentifier) {
 		if (getIdentifiers() != null && patientIdentifier != null)
@@ -219,6 +220,8 @@ public class Patient extends Person implements java.io.Serializable {
 	 * @return Returns the "preferred" patient identifier.
 	 */
 	public PatientIdentifier getPatientIdentifier() {
+		// normally the DAO layer returns these in the correct order, i.e. preferred and non-voided first, but it's possible that someone
+		// has fetched a Patient, changed their identifiers around, and then calls this method, so we have to be careful.
 		if (getIdentifiers() != null && getIdentifiers().size() > 0) {
 			for (PatientIdentifier id : getIdentifiers()) {
 				if (id.isPreferred() && !id.isVoided())
@@ -231,7 +234,6 @@ public class Patient extends Person implements java.io.Serializable {
 			return null;
 		}
 		return null;
-		
 	}
 	
 	/**
@@ -239,8 +241,8 @@ public class Patient extends Person implements java.io.Serializable {
 	 * <code>PatientIdentifierType</code> Otherwise, returns the first non-voided identifier
 	 * Otherwise, null
 	 * 
-	 * @param identifierType
-	 * @return
+	 * @param pit The PatientIdentifierType of which to return the PatientIdentifier
+	 * @return Returns a PatientIdentifier of the specified type.
 	 */
 	public PatientIdentifier getPatientIdentifier(PatientIdentifierType pit) {
 		if (getIdentifiers() != null && getIdentifiers().size() > 0) {
@@ -324,7 +326,7 @@ public class Patient extends Person implements java.io.Serializable {
 	 * use {@link #getIdentifiers()}
 	 * 
 	 * @return list of non-voided identifiers for this patient
-	 * @param identifierType
+	 * @param pit PatientIdentifierType
 	 * @see #getIdentifiers()
 	 */
 	public List<PatientIdentifier> getPatientIdentifiers(PatientIdentifierType pit) {
@@ -342,71 +344,21 @@ public class Patient extends Person implements java.io.Serializable {
 		return "Patient#" + patientId;
 	}
 	
-	public User getChangedBy() {
-		return changedBy;
+	/**
+	 * @since 1.5
+	 * @see org.openmrs.OpenmrsObject#getId()
+	 */
+	public Integer getId() {
+		return getPatientId();
 	}
 	
-	public void setChangedBy(User changedBy) {
-		this.changedBy = changedBy;
+	/**
+	 * @since 1.5
+	 * @see org.openmrs.OpenmrsObject#setId(java.lang.Integer)
+	 */
+	public void setId(Integer id) {
+		setPatientId(id);
+		
 	}
 	
-	public User getCreator() {
-		return creator;
-	}
-	
-	public void setCreator(User creator) {
-		this.creator = creator;
-	}
-	
-	public Date getDateChanged() {
-		return dateChanged;
-	}
-	
-	public void setDateChanged(Date dateChanged) {
-		this.dateChanged = dateChanged;
-	}
-	
-	public Date getDateCreated() {
-		return dateCreated;
-	}
-	
-	public void setDateCreated(Date dateCreated) {
-		this.dateCreated = dateCreated;
-	}
-	
-	public Date getDateVoided() {
-		return dateVoided;
-	}
-	
-	public void setDateVoided(Date dateVoided) {
-		this.dateVoided = dateVoided;
-	}
-	
-	public Boolean getVoided() {
-		return isVoided();
-	}
-	
-	public Boolean isVoided() {
-		return voided;
-	}
-	
-	public void setVoided(Boolean voided) {
-		this.voided = voided;
-	}
-	
-	public User getVoidedBy() {
-		return voidedBy;
-	}
-	
-	public void setVoidedBy(User voidedBy) {
-		this.voidedBy = voidedBy;
-	}
-	
-	public String getVoidReason() {
-		return voidReason;
-	}
-	
-	public void setVoidReason(String voidReason) {
-		this.voidReason = voidReason;
-	}
 }

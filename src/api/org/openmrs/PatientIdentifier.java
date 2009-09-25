@@ -15,7 +15,6 @@ package org.openmrs;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.util.Date;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -29,13 +28,18 @@ import org.openmrs.util.OpenmrsUtil;
  * 
  * @see org.openmrs.PatientIdentifierType
  */
-public class PatientIdentifier implements java.io.Serializable, Comparable<PatientIdentifier> {
+public class PatientIdentifier extends BaseOpenmrsData implements java.io.Serializable, Comparable<PatientIdentifier> {
 	
 	public static final long serialVersionUID = 1123121L;
 	
-	private static Log log = LogFactory.getLog(PatientIdentifier.class);
+	private transient static Log log = LogFactory.getLog(PatientIdentifier.class);
 	
 	// Fields
+	
+	/**
+	 * @since 1.5
+	 */
+	private Integer patientIdentifierId;
 	
 	private Patient patient;
 	
@@ -45,19 +49,7 @@ public class PatientIdentifier implements java.io.Serializable, Comparable<Patie
 	
 	private Location location;
 	
-	private User creator;
-	
-	private Date dateCreated;
-	
 	private Boolean preferred = false;
-	
-	private Boolean voided = false;
-	
-	private User voidedBy;
-	
-	private Date dateVoided;
-	
-	private String voidReason;
 	
 	/** default constructor */
 	public PatientIdentifier() {
@@ -163,48 +155,6 @@ public class PatientIdentifier implements java.io.Serializable, Comparable<Patie
 	//property accessors
 	
 	/**
-	 * @return Returns the creator.
-	 */
-	public User getCreator() {
-		return creator;
-	}
-	
-	/**
-	 * @param creator The creator to set.
-	 */
-	public void setCreator(User creator) {
-		this.creator = creator;
-	}
-	
-	/**
-	 * @return Returns the dateCreated.
-	 */
-	public Date getDateCreated() {
-		return dateCreated;
-	}
-	
-	/**
-	 * @param dateCreated The dateCreated to set.
-	 */
-	public void setDateCreated(Date dateCreated) {
-		this.dateCreated = dateCreated;
-	}
-	
-	/**
-	 * @return Returns the dateVoided.
-	 */
-	public Date getDateVoided() {
-		return dateVoided;
-	}
-	
-	/**
-	 * @param dateVoided The dateVoided to set.
-	 */
-	public void setDateVoided(Date dateVoided) {
-		this.dateVoided = dateVoided;
-	}
-	
-	/**
 	 * @return Returns the identifier.
 	 */
 	public String getIdentifier() {
@@ -260,52 +210,6 @@ public class PatientIdentifier implements java.io.Serializable, Comparable<Patie
 		this.patient = patient;
 	}
 	
-	/**
-	 * @return Returns the voided.
-	 */
-	public Boolean isVoided() {
-		return voided;
-	}
-	
-	public Boolean getVoided() {
-		return isVoided();
-	}
-	
-	/**
-	 * @param voided The voided to set.
-	 */
-	public void setVoided(Boolean voided) {
-		this.voided = voided;
-	}
-	
-	/**
-	 * @return Returns the voidedBy.
-	 */
-	public User getVoidedBy() {
-		return voidedBy;
-	}
-	
-	/**
-	 * @param voidedBy The voidedBy to set.
-	 */
-	public void setVoidedBy(User voidedBy) {
-		this.voidedBy = voidedBy;
-	}
-	
-	/**
-	 * @return Returns the voidReason.
-	 */
-	public String getVoidReason() {
-		return voidReason;
-	}
-	
-	/**
-	 * @param voidReason The voidReason to set.
-	 */
-	public void setVoidReason(String voidReason) {
-		this.voidReason = voidReason;
-	}
-	
 	public String toString() {
 		return this.identifier;
 	}
@@ -356,5 +260,37 @@ public class PatientIdentifier implements java.io.Serializable, Comparable<Patie
 		}
 		
 		return retValue;
+	}
+	
+	/**
+	 * @since 1.5
+	 * @see org.openmrs.OpenmrsObject#getId()
+	 */
+	public Integer getId() {
+		return getPatientIdentifierId();
+	}
+	
+	/**
+	 * @since 1.5
+	 * @see org.openmrs.OpenmrsObject#setId(java.lang.Integer)
+	 */
+	public void setId(Integer id) {
+		setPatientIdentifierId(id);
+	}
+	
+	/**
+	 * @since 1.5
+	 * @return the patientIdentifierId
+	 */
+	public Integer getPatientIdentifierId() {
+		return patientIdentifierId;
+	}
+	
+	/**
+	 * @since 1.5
+	 * @param patientIdentifierId the patientIdentifierId to set
+	 */
+	public void setPatientIdentifierId(Integer patientIdentifierId) {
+		this.patientIdentifierId = patientIdentifierId;
 	}
 }

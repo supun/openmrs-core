@@ -96,7 +96,7 @@ public class ReportSchemaXmlTest extends BaseContextSensitiveTest {
 		assertEquals(xml.toString(), reportSchemaXml.getXml());
 		
 		ReportService rs = (ReportService) Context.getService(ReportService.class);
-		rs.createReportSchemaXml(reportSchemaXml);
+		rs.saveReportSchemaXml(reportSchemaXml);
 		
 		Context.clearSession();
 		
@@ -168,7 +168,7 @@ public class ReportSchemaXmlTest extends BaseContextSensitiveTest {
 		assertEquals(xml.toString(), reportSchemaXml.getXml());
 		
 		ReportService rs = (ReportService) Context.getService(ReportService.class);
-		rs.updateReportSchemaXml(reportSchemaXml);
+		rs.saveReportSchemaXml(reportSchemaXml);
 		
 		ReportSchemaXml reportSchemaXmlFromDB = rs.getReportSchemaXml(2);
 		// Get an extra object with the same id just to mess things up.
@@ -227,7 +227,7 @@ public class ReportSchemaXmlTest extends BaseContextSensitiveTest {
 		String newDescription = "Sample monthly PEPFAR report changed again";
 		reportSchemaXmlFromDB.setName(newName);
 		reportSchemaXmlFromDB.setDescription(newDescription);
-		rs.updateReportSchemaXml(reportSchemaXmlFromDB);
+		rs.saveReportSchemaXml(reportSchemaXmlFromDB);
 		
 		// Retrieve the updated ReportSchemaXml from database.
 		ReportSchemaXml reportSchemaXmlUpdateFromDB = rs.getReportSchemaXml(reportSchemaXmlFromDB.getReportSchemaId());

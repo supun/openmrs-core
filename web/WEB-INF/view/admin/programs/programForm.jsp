@@ -74,15 +74,15 @@
 		var value = $('workflowsValue').value;
 		value = value.substring(value.indexOf(":") + 1);
 		values = helper(value);
-		DWRUtil.removeAllRows(tableId);
-		DWRUtil.addRows(tableId, values, [
+		dwr.util.removeAllRows(tableId);
+		dwr.util.addRows(tableId, values, [
 				function(id) { return idToNameMap[id]; },
 				function(id) { return '<a href="javascript:removeWorkflow(' + id + ')">[x]</a>';},
-			]);
+			], {escapeHtml: false});
 	}
 </script>
 
-<h2><spring:message code="Program.manage.title"/></h2>
+<h2><spring:message code="Program.addEdit.title"/></h2>
 
 <spring:hasBindErrors name="program">
 	<spring:message code="fix.error"/>

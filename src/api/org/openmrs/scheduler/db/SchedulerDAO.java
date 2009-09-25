@@ -22,7 +22,6 @@ import org.openmrs.scheduler.TaskDefinition;
 /**
  * Scheduler-related database methods.
  * 
- * @author Justin Miranda
  * @version 1.0
  */
 public interface SchedulerDAO {
@@ -30,7 +29,7 @@ public interface SchedulerDAO {
 	/**
 	 * Creates a new task.
 	 * 
-	 * @param task to be created
+	 * @param taskDefinition task to be created
 	 * @throws DAOException
 	 */
 	public void createTask(TaskDefinition taskDefinition) throws DAOException;
@@ -53,10 +52,9 @@ public interface SchedulerDAO {
 	public void updateTask(TaskDefinition task) throws DAOException;
 	
 	/**
-	 * Find all tasks with a given identifier
+	 * Find all tasks in the database
 	 * 
-	 * @param identifier
-	 * @return set of tasks matching identifier
+	 * @return <code>List<TaskDefinition></code> of all tasks
 	 * @throws DAOException
 	 */
 	public List<TaskDefinition> getTasks() throws DAOException;

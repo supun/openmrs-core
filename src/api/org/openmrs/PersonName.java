@@ -32,11 +32,11 @@ import org.springframework.util.StringUtils;
  * A Person can have zero to n PersonName(s).
  */
 @Root(strict = false)
-public class PersonName implements java.io.Serializable, Cloneable, Comparable<PersonName> {
+public class PersonName extends BaseOpenmrsData implements java.io.Serializable, Cloneable, Comparable<PersonName> {
 	
 	public static final long serialVersionUID = 4353L;
 	
-	private static Log log = LogFactory.getLog(PersonName.class);
+	private transient static Log log = LogFactory.getLog(PersonName.class);
 	
 	// Fields
 	
@@ -61,22 +61,6 @@ public class PersonName implements java.io.Serializable, Cloneable, Comparable<P
 	private String familyNameSuffix;
 	
 	private String degree;
-	
-	private Date dateCreated;
-	
-	private User creator;
-	
-	private Boolean voided = false;
-	
-	private User voidedBy;
-	
-	private Date dateVoided;
-	
-	private String voidReason;
-	
-	private User changedBy;
-	
-	private Date dateChanged;
 	
 	// Constructors
 	
@@ -108,6 +92,10 @@ public class PersonName implements java.io.Serializable, Cloneable, Comparable<P
 	 * @param obj PersonName to compare to
 	 * @return boolean true/false whether or not they are the same objects
 	 * @see java.lang.Object#equals(java.lang.Object)
+	 * @should not fail if either has a null person property
+	 * @should return false if this has a missing person property
+	 * @should return false if obj has a missing person property
+	 * @should return true if properties are equal and have null person
 	 */
 	public boolean equals(Object obj) {
 		if (obj instanceof PersonName) {
@@ -229,43 +217,13 @@ public class PersonName implements java.io.Serializable, Cloneable, Comparable<P
 	// Property accessors
 	
 	/**
-	 * @return Returns the creator.
-	 */
-	@Element(required = true)
-	public User getCreator() {
-		return creator;
-	}
-	
-	/**
-	 * @param creator The creator to set.
-	 */
-	@Element(required = true)
-	public void setCreator(User creator) {
-		this.creator = creator;
-	}
-	
-	/**
-	 * @return Returns the dateCreated.
-	 */
-	@Element(required = true)
-	public Date getDateCreated() {
-		return dateCreated;
-	}
-	
-	/**
-	 * @param dateCreated The dateCreated to set.
-	 */
-	@Element(required = true)
-	public void setDateCreated(Date dateCreated) {
-		this.dateCreated = dateCreated;
-	}
-	
-	/**
+	 * This still exists on PersonName for the SimpleFramework annotation
+	 * 
 	 * @return Returns the dateVoided.
 	 */
 	@Element(required = false)
 	public Date getDateVoided() {
-		return dateVoided;
+		return super.getDateVoided();
 	}
 	
 	/**
@@ -273,7 +231,7 @@ public class PersonName implements java.io.Serializable, Cloneable, Comparable<P
 	 */
 	@Element(required = false)
 	public void setDateVoided(Date dateVoided) {
-		this.dateVoided = dateVoided;
+		super.setDateVoided(dateVoided);
 	}
 	
 	/**
@@ -473,13 +431,6 @@ public class PersonName implements java.io.Serializable, Cloneable, Comparable<P
 	}
 	
 	/**
-	 * @return Returns the voided.
-	 */
-	public Boolean isVoided() {
-		return voided;
-	}
-	
-	/**
 	 * @see #isVoided()
 	 */
 	@Attribute(required = true)
@@ -488,75 +439,53 @@ public class PersonName implements java.io.Serializable, Cloneable, Comparable<P
 	}
 	
 	/**
+	 * This still exists on PersonName for the SimpleFramework annotation
+	 * 
 	 * @param voided The voided to set.
 	 */
 	@Attribute(required = true)
 	public void setVoided(Boolean voided) {
-		this.voided = voided;
+		super.setVoided(voided);
 	}
 	
 	/**
+	 * This still exists on PersonName for the SimpleFramework annotation
+	 * 
 	 * @return Returns the voidedBy.
 	 */
 	@Element(required = false)
 	public User getVoidedBy() {
-		return voidedBy;
+		return super.getVoidedBy();
 	}
 	
 	/**
+	 * This still exists on PersonName for the SimpleFramework annotation
+	 * 
 	 * @param voidedBy The voidedBy to set.
 	 */
 	@Element(required = false)
 	public void setVoidedBy(User voidedBy) {
-		this.voidedBy = voidedBy;
+		super.setVoidedBy(voidedBy);
 	}
 	
 	/**
+	 * This still exists on PersonName for the SimpleFramework annotation
+	 * 
 	 * @return Returns the voidReason.
 	 */
 	@Element(data = true, required = false)
 	public String getVoidReason() {
-		return voidReason;
+		return super.getVoidReason();
 	}
 	
 	/**
+	 * This still exists on PersonName for the SimpleFramework annotation
+	 * 
 	 * @param voidReason The voidReason to set.
 	 */
 	@Element(data = true, required = false)
 	public void setVoidReason(String voidReason) {
-		this.voidReason = voidReason;
-	}
-	
-	/**
-	 * @return Returns the changedBy.
-	 */
-	@Element(required = false)
-	public User getChangedBy() {
-		return changedBy;
-	}
-	
-	/**
-	 * @param changedBy The changedBy to set.
-	 */
-	@Element(required = false)
-	public void setChangedBy(User changedBy) {
-		this.changedBy = changedBy;
-	}
-	
-	/**
-	 * @return Returns the dateChanged.
-	 */
-	@Element(required = false)
-	public Date getDateChanged() {
-		return dateChanged;
-	}
-	
-	/**
-	 * @param dateChanged The dateChanged to set.
-	 */
-	@Element(required = false)
-	public void setDateChanged(Date dateChanged) {
-		this.dateChanged = dateChanged;
+		super.setVoidReason(voidReason);
 	}
 	
 	/**
@@ -612,12 +541,29 @@ public class PersonName implements java.io.Serializable, Cloneable, Comparable<P
 		if (ret == 0 && getDateCreated() != null)
 			ret = OpenmrsUtil.compareWithNullAsLatest(getDateCreated(), other.getDateCreated());
 		
-		// if we've gotten this far, just check all name values.  If they are
-		// equal, leave the objects at 0.  If not, arbitrarily pick retValue=1 
+		// if we've gotten this far, just check all name values. If they are
+		// equal, leave the objects at 0. If not, arbitrarily pick retValue=1
 		// and return that (they are not equal).
 		if (ret == 0 && !equalsContent(other))
 			ret = 1;
 		
 		return ret;
+	}
+	
+	/**
+	 * @since 1.5
+	 * @see org.openmrs.OpenmrsObject#getId()
+	 */
+	public Integer getId() {
+		return getPersonNameId();
+	}
+	
+	/**
+	 * @since 1.5
+	 * @see org.openmrs.OpenmrsObject#setId(java.lang.Integer)
+	 */
+	public void setId(Integer id) {
+		setPersonNameId(id);
+		
 	}
 }

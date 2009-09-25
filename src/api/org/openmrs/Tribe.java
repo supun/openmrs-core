@@ -13,11 +13,15 @@
  */
 package org.openmrs;
 
+import org.openmrs.api.APIException;
+
 /**
- * Tribe
- * 
- * @version 1.0
+ * @deprecated This object is no longer supported. This functionality has been replaced by the Tribe
+ *             module. The installation of that module converts this tribe patient attribute to a
+ *             PersonAttribute and all values are copied over
  */
+@Deprecated
+// duplicate this tag so the module can know if this class is deprecated
 public class Tribe implements java.io.Serializable {
 	
 	public static final long serialVersionUID = 113232L;
@@ -32,13 +36,22 @@ public class Tribe implements java.io.Serializable {
 	
 	// Constructors
 	
-	/** default constructor */
+	/**
+	 * default constructor
+	 * 
+	 * @deprecated use the Tribe module
+	 */
 	public Tribe() {
+		throw new APIException("The Tribe object is no longer supported.  Install the Tribe module");
 	}
 	
-	/** constructor with id */
+	/**
+	 * constructor with id
+	 * 
+	 * @deprecated use the Tribe module
+	 */
 	public Tribe(Integer tribeId) {
-		this.tribeId = tribeId;
+		throw new APIException("The Tribe object is no longer supported.  Install the Tribe module");
 	}
 	
 	public boolean equals(Object obj) {

@@ -18,15 +18,13 @@ package org.openmrs;
  * 
  * @version 1.0
  */
-public class Privilege implements java.io.Serializable {
+public class Privilege extends BaseOpenmrsMetadata implements java.io.Serializable {
 	
 	public static final long serialVersionUID = 312L;
 	
 	// Fields
 	
 	private String privilege;
-	
-	private String description;
 	
 	// Constructors
 	
@@ -41,7 +39,7 @@ public class Privilege implements java.io.Serializable {
 	
 	public Privilege(String privilege, String description) {
 		this.privilege = privilege;
-		this.description = description;
+		setDescription(description);
 	}
 	
 	public boolean equals(Object obj) {
@@ -57,20 +55,6 @@ public class Privilege implements java.io.Serializable {
 	}
 	
 	// Property accessors
-	
-	/**
-	 * @return Returns the description.
-	 */
-	public String getDescription() {
-		return description;
-	}
-	
-	/**
-	 * @param description The description to set.
-	 */
-	public void setDescription(String description) {
-		this.description = description;
-	}
 	
 	/**
 	 * @return Returns the privilege.
@@ -91,5 +75,23 @@ public class Privilege implements java.io.Serializable {
 	 */
 	public String toString() {
 		return this.privilege;
+	}
+	
+	/**
+	 * @since 1.5
+	 * @see org.openmrs.OpenmrsObject#getId()
+	 */
+	public Integer getId() {
+		throw new UnsupportedOperationException();
+		
+	}
+	
+	/**
+	 * @since 1.5
+	 * @see org.openmrs.OpenmrsObject#setId(java.lang.Integer)
+	 */
+	public void setId(Integer id) {
+		throw new UnsupportedOperationException();
+		
 	}
 }

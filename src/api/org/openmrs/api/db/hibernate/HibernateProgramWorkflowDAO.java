@@ -30,14 +30,18 @@ import org.openmrs.Concept;
 import org.openmrs.ConceptStateConversion;
 import org.openmrs.Patient;
 import org.openmrs.PatientProgram;
+import org.openmrs.PatientState;
 import org.openmrs.Program;
 import org.openmrs.ProgramWorkflow;
+import org.openmrs.ProgramWorkflowState;
 import org.openmrs.api.db.DAOException;
 import org.openmrs.api.db.ProgramWorkflowDAO;
 
 /**
- * Hibernate specific ProgramWorkflow related functions This class should not be used directly. All
- * calls should go through the {@link org.openmrs.api.ProgramWorkflowService} methods.
+ * Hibernate specific ProgramWorkflow related functions.<br/>
+ * <br/>
+ * This class should not be used directly. All calls should go through the
+ * {@link org.openmrs.api.ProgramWorkflowService} methods.
  * 
  * @see org.openmrs.api.db.ProgramWorkflowDAO
  * @see org.openmrs.api.ProgramWorkflowService
@@ -133,8 +137,8 @@ public class HibernateProgramWorkflowDAO implements ProgramWorkflowDAO {
 	}
 	
 	/**
-	 * @see org.openmrs.api.db.ProgramWorkflowDAO#getPatientPrograms(org.openmrs.Patient,
-	 *      org.openmrs.Program, java.util.Date, java.util.Date, java.util.Date, java.util.Date)
+	 * @see org.openmrs.api.db.ProgramWorkflowDAO#getPatientPrograms(Patient, Program, Date, Date,
+	 *      Date, Date, boolean)
 	 */
 	@SuppressWarnings("unchecked")
 	public List<PatientProgram> getPatientPrograms(Patient patient, Program program, Date minEnrollmentDate,
@@ -212,7 +216,7 @@ public class HibernateProgramWorkflowDAO implements ProgramWorkflowDAO {
 	}
 	
 	/**
-	 * @see org.openmrs.api.db.ProgramWorkflowDAO#getAllConceptStateConversions(boolean)
+	 * @see org.openmrs.api.db.ProgramWorkflowDAO#getAllConceptStateConversions()
 	 */
 	@SuppressWarnings("unchecked")
 	public List<ConceptStateConversion> getAllConceptStateConversions() throws DAOException {
@@ -249,5 +253,50 @@ public class HibernateProgramWorkflowDAO implements ProgramWorkflowDAO {
 		}
 		
 		return csc;
+	}
+	
+	/**
+	 * @see org.openmrs.api.db.ProgramWorkflowDAO#getConceptStateConversionByUuid(java.lang.String)
+	 */
+	public ConceptStateConversion getConceptStateConversionByUuid(String uuid) {
+		return (ConceptStateConversion) sessionFactory.getCurrentSession().createQuery(
+		    "from ConceptStateConversion csc where csc.uuid = :uuid").setString("uuid", uuid).uniqueResult();
+	}
+	
+	/**
+	 * @see org.openmrs.api.db.ProgramWorkflowDAO#getPatientProgramByUuid(java.lang.String)
+	 */
+	public PatientProgram getPatientProgramByUuid(String uuid) {
+		return (PatientProgram) sessionFactory.getCurrentSession().createQuery(
+		    "from PatientProgram pp where pp.uuid = :uuid").setString("uuid", uuid).uniqueResult();
+	}
+	
+	/**
+	 * @see org.openmrs.api.db.ProgramWorkflowDAO#getProgramByUuid(java.lang.String)
+	 */
+	public Program getProgramByUuid(String uuid) {
+		return (Program) sessionFactory.getCurrentSession().createQuery("from Program p where p.uuid = :uuid").setString(
+		    "uuid", uuid).uniqueResult();
+	}
+	
+	/**
+	 * @see org.openmrs.api.db.ProgramWorkflowDAO#getStateByUuid(java.lang.String)
+	 */
+	public ProgramWorkflowState getStateByUuid(String uuid) {
+		return (ProgramWorkflowState) sessionFactory.getCurrentSession().createQuery(
+		    "from ProgramWorkflowState pws where pws.uuid = :uuid").setString("uuid", uuid).uniqueResult();
+	}
+	
+	public PatientState getPatientStateByUuid(String uuid) {
+		return (PatientState) sessionFactory.getCurrentSession().createQuery("from PatientState pws where pws.uuid = :uuid")
+		        .setString("uuid", uuid).uniqueResult();
+	}
+	
+	/**
+	 * @see org.openmrs.api.db.ProgramWorkflowDAO#getWorkflowByUuid(java.lang.String)
+	 */
+	public ProgramWorkflow getWorkflowByUuid(String uuid) {
+		return (ProgramWorkflow) sessionFactory.getCurrentSession().createQuery(
+		    "from ProgramWorkflow pw where pw.uuid = :uuid").setString("uuid", uuid).uniqueResult();
 	}
 }

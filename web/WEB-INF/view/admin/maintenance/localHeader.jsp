@@ -2,7 +2,7 @@
 	<li class="first">
 		<a href="${pageContext.request.contextPath}/admin"><spring:message code="admin.title.short"/></a>
 	</li>
-	<openmrs:hasPrivilege privilege="Manage Concept Sources">
+	<openmrs:hasPrivilege privilege="Manage Implementation Id">
 		<li <c:if test='<%= request.getRequestURI().contains("implementationid") %>'>class="active"</c:if>>
 			<a href="${pageContext.request.contextPath}/admin/maintenance/implementationid.form">
 				<spring:message code="ImplementationId.set"/>
@@ -44,10 +44,17 @@
 			</a>
 		</li>
 	</openmrs:hasPrivilege>
-	<openmrs:hasPrivilege privilege="View Data Entry Statistics">
-		<li <c:if test='<%= request.getRequestURI().contains("dataEntryStat") %>'>class="active"</c:if>>
-			<a href="${pageContext.request.contextPath}/admin/maintenance/dataEntryStats.list">
-				<spring:message code="DataEntryStatistics.title"/>
+	<openmrs:hasPrivilege privilege="View Database Changes">
+		<li <c:if test='<%= request.getRequestURI().contains("databaseChangesInfo") %>'>class="active"</c:if>>
+			<a href="${pageContext.request.contextPath}/admin/maintenance/databaseChangesInfo.list">
+				<spring:message code="DatabaseChangesInfo.overview"/>
+			</a>
+		</li>
+	</openmrs:hasPrivilege>
+	<openmrs:hasPrivilege privilege="View Patients">
+		<li <c:if test='<%= request.getRequestURI().contains("patientsWhoAreUsers") %>'>class="active"</c:if>>
+			<a href="${pageContext.request.contextPath}/admin/maintenance/patientsWhoAreUsers.list">
+				<spring:message code="PatientsWhoAreUsers.overview"/>
 			</a>
 		</li>
 	</openmrs:hasPrivilege>

@@ -13,111 +13,162 @@
  */
 package org.openmrs.api.context;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
+import java.util.List;
 
+import org.junit.AfterClass;
+import org.junit.Assert;
 import org.junit.Test;
+import org.openmrs.Location;
 import org.openmrs.User;
-import org.openmrs.api.UserService;
+import org.openmrs.api.APIException;
 import org.openmrs.test.BaseContextSensitiveTest;
-import org.springframework.test.AssertThrows;
+import org.openmrs.test.Verifies;
+import org.openmrs.util.LocaleUtility;
+import org.springframework.validation.Validator;
 
 /**
  * TODO add methods for all context tests
  * 
- * @See {@link Context}
+ * @see Context
  */
 public class ContextTest extends BaseContextSensitiveTest {
 	
 	/**
-	 * Null parameters to the authenticate method should not cause errors to be thrown and should
-	 * not ever show the Context to be authenticated
-	 * 
-	 * @throws Exception
+	 * Methods in this class might authenticate with a different user, so log that user out after
+	 * this whole junit class is done.
 	 */
-	@Test
-	public void shouldNotAuthenticateWithNullParameters() throws Exception {
-		
+	@AfterClass
+	public static void logOutAfterThisTestClass() {
 		Context.logout();
-		assertFalse("This test needs to start with an unauthenticated context", Context.isAuthenticated());
-		
-		// check null username and null password
-		new AssertThrows(
-		                 ContextAuthenticationException.class) {
-			
-			public void test() throws Exception {
-				Context.authenticate(null, null);
-			}
-		}.runTest();
-		assertFalse("No one should ever be authenticated with null parameters", Context.isAuthenticated());
-		
-		// check non-null username and null password
-		new AssertThrows(
-		                 ContextAuthenticationException.class) {
-			
-			public void test() throws Exception {
-				Context.authenticate("some username", null);
-			}
-		}.runTest();
-		assertFalse("No one should ever be authenticated with null parameters", Context.isAuthenticated());
-		
-		// check null username and non-null password
-		new AssertThrows(
-		                 ContextAuthenticationException.class) {
-			
-			public void test() throws Exception {
-				Context.authenticate(null, "some password");
-			}
-		}.runTest();
-		assertFalse("No one should ever be authenticated with null parameters", Context.isAuthenticated());
-		
-		// check proper username and null pw
-		new AssertThrows(
-		                 ContextAuthenticationException.class) {
-			
-			public void test() throws Exception {
-				Context.authenticate("admin", null);
-			}
-		}.runTest();
-		assertFalse("No one should ever be authenticated with null password and proper username", Context.isAuthenticated());
-		
-		// check proper system id and null pw
-		new AssertThrows(
-		                 ContextAuthenticationException.class) {
-			
-			public void test() throws Exception {
-				Context.authenticate("1-8", null);
-			}
-		}.runTest();
-		assertFalse("No one should ever be authenticated with null password and proper system id", Context.isAuthenticated());
-		
 	}
 	
 	/**
-	 * 
+	 * @see {@link Context#authenticate(String,String)}
 	 */
-	@Test
-	public void shouldGetUserByUsername() throws Exception {
-		UserService us = Context.getUserService();
-		String username = "admin";
-		User user = us.getUserByUsername(username);
-		assertNotNull("user " + username, user);
+	@Test(expected = ContextAuthenticationException.class)
+	@Verifies(value = "should not authenticate with null password", method = "authenticate(String,String)")
+	public void authenticate_shouldNotAuthenticateWithNullPassword() throws Exception {
+		Context.authenticate("some username", null);
 	}
 	
 	/**
-	 * TODO create method
+	 * @see {@link Context#authenticate(String,String)}
 	 */
-	@Test
-	public void shouldProxyPrivilege() throws Exception {
-		
-		// create a non-admin user using dbunit xml 
-		
-		// make sure they can't do High Level Task X
-		
-		// give them proxy privileges to do High Level Task X
-		
-		// now make sure they can do High Level Task X
-		
+	@Test(expected = ContextAuthenticationException.class)
+	@Verifies(value = "should not authenticate with null password and proper system id", method = "authenticate(String,String)")
+	public void authenticate_shouldNotAuthenticateWithNullPasswordAndProperSystemId() throws Exception {
+		Context.authenticate("1-8", null);
 	}
 	
+	/**
+	 * @see {@link Context#authenticate(String,String)}
+	 */
+	@Test(expected = ContextAuthenticationException.class)
+	@Verifies(value = "should not authenticate with null password and proper username", method = "authenticate(String,String)")
+	public void authenticate_shouldNotAuthenticateWithNullPasswordAndProperUsername() throws Exception {
+		Context.authenticate("admin", null);
+	}
+	
+	/**
+	 * @see {@link Context#authenticate(String,String)}
+	 */
+	@Test(expected = ContextAuthenticationException.class)
+	@Verifies(value = "should not authenticate with null username", method = "authenticate(String,String)")
+	public void authenticate_shouldNotAuthenticateWithNullUsername() throws Exception {
+		Context.authenticate(null, "some password");
+	}
+	
+	/**
+	 * @see {@link Context#authenticate(String,String)}
+	 */
+	@Test(expected = ContextAuthenticationException.class)
+	@Verifies(value = "should not authenticate with null username and password", method = "authenticate(String,String)")
+	public void authenticate_shouldNotAuthenticateWithNullUsernameAndPassword() throws Exception {
+		Context.authenticate(null, null);
+	}
+	
+	/**
+	 * @see {@link Context#getLocale()}
+	 */
+	@Test
+	@Verifies(value = "should not fail if session hasnt been opened", method = "getLocale()")
+	public void getLocale_shouldNotFailIfSessionHasntBeenOpened() throws Exception {
+		Context.closeSession();
+		Assert.assertEquals(LocaleUtility.getDefaultLocale(), Context.getLocale());
+	}
+	
+	/**
+	 * @see {@link Context#getUserContext()}
+	 */
+	@Test(expected = APIException.class)
+	@Verifies(value = "should fail if session hasnt been opened", method = "getUserContext()")
+	public void getUserContext_shouldFailIfSessionHasntBeenOpened() throws Exception {
+		Context.closeSession();
+		Context.getUserContext(); // trigger the api exception
+	}
+	
+	/**
+	 * @see {@link Context#logout()}
+	 */
+	@Test
+	@Verifies(value = "should not fail if session hasnt been opened yet", method = "logout()")
+	public void logout_shouldNotFailIfSessionHasntBeenOpenedYet() throws Exception {
+		Context.closeSession();
+		Context.logout();
+	}
+	
+	/**
+	 * @see {@link Context#isSessionOpen()}
+	 */
+	@Test
+	@Verifies(value = "should return true if session is closed", method = "isSessionOpen()")
+	public void isSessionOpen_shouldReturnTrueIfSessionIsClosed() throws Exception {
+		Assert.assertTrue(Context.isSessionOpen());
+		Context.closeSession();
+		Assert.assertFalse(Context.isSessionOpen());
+	}
+	
+	/**
+	 * @see {@link Context#refreshAuthenticatedUser()}
+	 */
+	@Test
+	@Verifies(value = "should get fresh values from the database", method = "refreshAuthenticatedUser()")
+	public void refreshAuthenticatedUser_shouldGetFreshValuesFromTheDatabase() throws Exception {
+		User evictedUser = Context.getAuthenticatedUser();
+		Context.evictFromSession(evictedUser);
+		
+		User fetchedUser = Context.getUserService().getUser(evictedUser.getUserId());
+		fetchedUser.getPersonName().setGivenName("new username");
+		
+		Context.getUserService().saveUser(fetchedUser, null);
+		
+		// sanity check to make sure the cached object wasn't updated already
+		Assert.assertNotSame(Context.getAuthenticatedUser().getGivenName(), fetchedUser.getGivenName());
+		
+		Context.refreshAuthenticatedUser();
+		
+		Assert.assertEquals("new username", Context.getAuthenticatedUser().getGivenName());
+	}
+	
+	/**
+	 * @see {@link Context#getRegisteredComponents(Class)}
+	 */
+	@Test
+	@Verifies(value = "should return a list of all registered beans of the passed type", method = "getRegisteredComponents(Class)")
+	public void getRegisteredComponents_shouldReturnAListOfAllRegisteredBeansOfThePassedType() throws Exception {
+		List<Validator> validators = Context.getRegisteredComponents(Validator.class);
+		Assert.assertTrue(validators.size() > 0);
+		Assert.assertTrue(Validator.class.isAssignableFrom(validators.iterator().next().getClass()));
+	}
+	
+	/**
+	 * @see {@link Context#getRegisteredComponents(Class)}
+	 */
+	@Test
+	@Verifies(value = "should return an empty list if no beans have been registered of the passed type", method = "getRegisteredComponents(Class)")
+	public void getRegisteredComponents_shouldReturnAnEmptyListIfNoBeansHaveBeenRegisteredOfThePassedType() throws Exception {
+		List<Location> l = Context.getRegisteredComponents(Location.class);
+		Assert.assertNotNull(l);
+		Assert.assertEquals(0, l.size());
+	}
 }

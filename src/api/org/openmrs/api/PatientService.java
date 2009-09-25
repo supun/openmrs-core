@@ -23,11 +23,11 @@ import org.openmrs.Location;
 import org.openmrs.Patient;
 import org.openmrs.PatientIdentifier;
 import org.openmrs.PatientIdentifierType;
-import org.openmrs.Tribe;
 import org.openmrs.annotation.Authorized;
 import org.openmrs.api.db.PatientDAO;
 import org.openmrs.patient.IdentifierValidator;
 import org.openmrs.util.OpenmrsConstants;
+import org.openmrs.validator.PatientIdentifierValidator;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
@@ -65,7 +65,8 @@ public interface PatientService extends OpenmrsService {
 	 * @return patient who was created or updated
 	 * @throws APIException
 	 * @should create new patient from existing person plus user object
-	 * @should not throw a NonUniqueObjectException when called with a hand constructed patient regression 1375
+	 * @should not throw a NonUniqueObjectException when called with a hand constructed patient
+	 *         regression 1375
 	 */
 	@Authorized( { OpenmrsConstants.PRIV_ADD_PATIENTS, OpenmrsConstants.PRIV_EDIT_PATIENTS })
 	public Patient savePatient(Patient patient) throws APIException;
@@ -76,10 +77,17 @@ public interface PatientService extends OpenmrsService {
 	 * @param patientId internal patient identifier
 	 * @return patient with given internal identifier
 	 * @throws APIException
+	 * @should return null object if patient id doesnt exist
 	 */
 	@Authorized( { OpenmrsConstants.PRIV_VIEW_PATIENTS })
 	@Transactional(readOnly = true)
 	public Patient getPatient(Integer patientId) throws APIException;
+	
+	@Transactional(readOnly = true)
+	public Patient getPatientByUuid(String uuid) throws APIException;
+	
+	@Transactional(readOnly = true)
+	public PatientIdentifier getPatientIdentifierByUuid(String uuid) throws APIException;
 	
 	/**
 	 * @see #savePatient(Patient)
@@ -116,8 +124,7 @@ public interface PatientService extends OpenmrsService {
 	public Patient identifierInUse(String identifier, PatientIdentifierType type, Patient ignorePatient);
 	
 	/**
-	 * @deprecated replaced by {@link #getPatients(String, String, List)
-
+	 * @deprecated replaced by {@link #getPatients(String, String, List)}
 	 */
 	@Transactional(readOnly = true)
 	public List<Patient> getPatientsByIdentifier(String identifier, boolean includeVoided) throws APIException;
@@ -211,8 +218,7 @@ public interface PatientService extends OpenmrsService {
 	public void purgePatient(Patient patient) throws APIException;
 	
 	/**
-	 * @deprecated replaced by
-	 *             {@link #getPatientIdentifiers(String, List, List, List, Boolean, Boolean, boolean)}
+	 * @deprecated replaced by {@link #getPatientIdentifiers(String, List, List, List, Boolean)}
 	 */
 	@Transactional(readOnly = true)
 	@Authorized( { OpenmrsConstants.PRIV_VIEW_PATIENT_IDENTIFIERS })
@@ -229,6 +235,7 @@ public interface PatientService extends OpenmrsService {
 	 * @param isPreferred if true, limits to only preferred identifiers if false, only non
 	 *            preferred. if null, ignores preferred status
 	 * @return PatientIdentifiers matching these criteria
+	 * @should return only non voided patients and patient identifiers
 	 * @throws APIException
 	 */
 	@Transactional(readOnly = true)
@@ -239,8 +246,7 @@ public interface PatientService extends OpenmrsService {
 	                                                     Boolean isPreferred) throws APIException;
 	
 	/**
-	 * @deprecated replaced by
-	 *             {@link #getPatientIdentifiers(String, List, List, List, Boolean, Boolean, boolean)}
+	 * @deprecated replaced by {@link #getPatientIdentifiers(String, List, List, List, Boolean)}
 	 */
 	@Transactional(readOnly = true)
 	@Authorized( { OpenmrsConstants.PRIV_VIEW_PATIENT_IDENTIFIERS })
@@ -261,7 +267,7 @@ public interface PatientService extends OpenmrsService {
 	/**
 	 * Create or update a PatientIdentifierType
 	 * 
-	 * @param PatientIdentifierType identifier type to create or update
+	 * @param patientIdentifierType PatientIdentifierType to create or update
 	 * @return the saved type
 	 * @throws APIException
 	 * @should create new type
@@ -319,13 +325,16 @@ public interface PatientService extends OpenmrsService {
 	/**
 	 * Get patientIdentifierType by internal identifier
 	 * 
-	 * @param patientIdentifierType id
-	 * @return patientIdentifierType with given internal identifier
+	 * @param patientIdentifierTypeId
+	 * @return patientIdentifierType with specified internal identifier
 	 * @throws APIException
 	 */
 	@Transactional(readOnly = true)
 	@Authorized( { OpenmrsConstants.PRIV_VIEW_IDENTIFIER_TYPES })
 	public PatientIdentifierType getPatientIdentifierType(Integer patientIdentifierTypeId) throws APIException;
+	
+	@Transactional(readOnly = true)
+	public PatientIdentifierType getPatientIdentifierTypeByUuid(String uuid) throws APIException;
 	
 	/**
 	 * @deprecated use {@link #getPatientIdentifierTypeByName(String)}
@@ -371,7 +380,7 @@ public interface PatientService extends OpenmrsService {
 	/**
 	 * Purge PatientIdentifierType (cannot be undone)
 	 * 
-	 * @param PatientIdentifierType to purge from the database
+	 * @param patientIdentifierType PatientIdentifierType to purge from the database
 	 * @throws APIException
 	 * @should delete type from database
 	 */
@@ -385,7 +394,7 @@ public interface PatientService extends OpenmrsService {
 	 * @param patientIdentifier identifier to be validated
 	 * @see #checkPatientIdentifiers(Patient)
 	 * @throws PatientIdentifierException if the identifier is invalid
-	 * @deprecated use {@link PatientIdentifierValidator.validate(PatientIdentifier)}
+	 * @deprecated use {@link PatientIdentifierValidator#validateIdentifier(PatientIdentifier)}
 	 */
 	@Authorized( { OpenmrsConstants.PRIV_VIEW_PATIENT_IDENTIFIERS })
 	public void checkPatientIdentifier(PatientIdentifier patientIdentifier) throws PatientIdentifierException;
@@ -401,40 +410,6 @@ public interface PatientService extends OpenmrsService {
 	public void checkPatientIdentifiers(Patient patient) throws PatientIdentifierException;
 	
 	/**
-	 * Get tribe by internal tribe identifier
-	 * 
-	 * @return Tribe
-	 * @param tribeId
-	 * @deprecated tribe will be moved to patient attribute
-	 * @throws APIException
-	 */
-	@Transactional(readOnly = true)
-	@Authorized( { OpenmrsConstants.PRIV_VIEW_TRIBES })
-	public Tribe getTribe(Integer tribeId) throws APIException;
-	
-	/**
-	 * Get list of tribes that are not retired
-	 * 
-	 * @return non-retired Tribe list
-	 * @deprecated tribe will be moved to patient attributes
-	 * @throws APIException
-	 */
-	@Transactional(readOnly = true)
-	@Authorized( { OpenmrsConstants.PRIV_VIEW_TRIBES })
-	public List<Tribe> getTribes() throws APIException;
-	
-	/**
-	 * Find tribes by partial name lookup
-	 * 
-	 * @return non-retired Tribe list
-	 * @deprecated tribe will be moved to patient attributes
-	 * @throws APIException
-	 */
-	@Transactional(readOnly = true)
-	@Authorized( { OpenmrsConstants.PRIV_VIEW_TRIBES })
-	public List<Tribe> findTribes(String search) throws APIException;
-	
-	/**
 	 * @see #getPatients(String)
 	 * @deprecated use #getPatients(String)
 	 */
@@ -448,6 +423,8 @@ public interface PatientService extends OpenmrsService {
 	 * 
 	 * @param query the string to search on
 	 * @return a list of matching Patients
+	 * @should force search string to be greater than minsearchcharacters global property
+	 * @should allow search string to be one according to minsearchcharacters global property
 	 */
 	@Transactional(readOnly = true)
 	@Authorized( { OpenmrsConstants.PRIV_VIEW_PATIENTS })
@@ -487,8 +464,8 @@ public interface PatientService extends OpenmrsService {
 	 * passed in must be identical to what is stored for at least one other patient for both
 	 * patients to be returned.
 	 * 
-	 * @param attributes attributes on a Person or Patient object. similar to: [gender, tribe,
-	 *            givenName, middleName, familyName]
+	 * @param attributes attributes on a Person or Patient object. similar to: [gender, givenName,
+	 *            middleName, familyName]
 	 * @return list of patients that match other patients
 	 * @throws APIException
 	 */
@@ -509,6 +486,11 @@ public interface PatientService extends OpenmrsService {
 	 * @param preferred The Patient to merge to
 	 * @param notPreferred The Patient to merge from (and then void)
 	 * @throws APIException
+	 * @should not merge the same patient to itself
+	 * @should copy nonvoided names to preferred patient
+	 * @should copy nonvoided identifiers to preferred patient
+	 * @should copy nonvoided addresses to preferred patient
+	 * @should not copy over relationships that are only between the preferred and notpreferred patient
 	 */
 	@Authorized( { OpenmrsConstants.PRIV_EDIT_PATIENTS })
 	public void mergePatients(Patient preferred, Patient notPreferred) throws APIException;
@@ -562,7 +544,7 @@ public interface PatientService extends OpenmrsService {
 	                                                                                                         throws APIException;
 	
 	/**
-	 * @param identifierValidator which validator to get.
+	 * @param clazz identifierValidator which validator to get.
 	 */
 	public IdentifierValidator getIdentifierValidator(Class<IdentifierValidator> clazz);
 	
@@ -581,7 +563,7 @@ public interface PatientService extends OpenmrsService {
 	 * @should return all registered identifier validators
 	 */
 	public Collection<IdentifierValidator> getAllIdentifierValidators();
-
+	
 	/**
 	 * Checks whether the given patient identifier is already assigned to a patient other than
 	 * patientIdentifier.patient
@@ -589,8 +571,14 @@ public interface PatientService extends OpenmrsService {
 	 * @param patientIdentifier the patient identifier to look for in other patients
 	 * @return whether or not the identifier is in use by a patient other than
 	 *         patientIdentifier.patient
+	 * @should return true when patientIdentifier contains a patient and another patient has this id
+	 * @should return false when patientIdentifier contains a patient and no other patient has this id
+	 * @should return true when patientIdentifier does not contain a patient and a patient has this id
+	 * @should return false when patientIdentifier does not contain a patient and no patient has this id
+	 * @should ignore voided patientIdentifiers
+	 * @should ignore voided patients
 	 */
-	@Authorized( OpenmrsConstants.PRIV_VIEW_PATIENTS )
+	@Authorized(OpenmrsConstants.PRIV_VIEW_PATIENTS)
 	@Transactional(readOnly = true)
 	public boolean isIdentifierInUseByAnotherPatient(PatientIdentifier patientIdentifier);
 	

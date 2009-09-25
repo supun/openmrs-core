@@ -25,7 +25,10 @@ import org.openmrs.report.EvaluationContext;
  * exists because in order to keep our application layers separate, we need to be able to call
  * CohortService.evaluate(CohortDefinition, EvaluationContext) -> Cohort instead of
  * CohortDefinition.evaluate(EvaluationContext) -> Cohort
+ * 
+ * @deprecated see reportingcompatibility module
  */
+@Deprecated
 public interface CohortDefinitionProvider {
 	
 	/**
@@ -61,7 +64,6 @@ public interface CohortDefinitionProvider {
 	 * called with a CohortDefinition of a class this provider is registered for.
 	 * 
 	 * @param cohortDefinition
-	 * @return the CohortDefinition that was passed in
 	 */
 	public void purgeCohortDefinition(CohortDefinition cohortDefinition);
 	

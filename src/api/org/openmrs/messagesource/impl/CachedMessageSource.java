@@ -6,20 +6,15 @@ package org.openmrs.messagesource.impl;
 import java.text.MessageFormat;
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Properties;
-import java.util.Set;
 import java.util.Vector;
 
 import org.openmrs.messagesource.MutableMessageSource;
 import org.openmrs.messagesource.PresentationMessage;
 import org.openmrs.messagesource.PresentationMessageMap;
-import org.springframework.context.MessageSourceResolvable;
-import org.springframework.context.NoSuchMessageException;
 import org.springframework.context.support.AbstractMessageSource;
-import org.springframework.context.support.StaticMessageSource;
 
 /**
  * A MutableMessageSource backed by a localized map of PresentationMessageCollections, providing
@@ -42,8 +37,9 @@ public class CachedMessageSource extends AbstractMessageSource implements Mutabl
 		codeMessageMap.put(message.getCode(), message);
 	}
 	
-	/* (non-Javadoc)
+	/**
 	 * @see org.openmrs.messagesource.MutableMessageSource#getLocales()
+	 * @should should be able to contain multiple locales
 	 */
 	public Collection<Locale> getLocales() {
 		return localizedMap.keySet();
@@ -63,8 +59,10 @@ public class CachedMessageSource extends AbstractMessageSource implements Mutabl
 		return allMessages;
 	}
 	
-	/* (non-Javadoc)
-	 * @see org.openmrs.messagesource.MutableMessageSource#publishProperties(java.util.Properties, java.lang.String, java.lang.String, java.lang.String, java.lang.String)
+	/**
+	 * @see org.openmrs.messagesource.MutableMessageSource#publishProperties(java.util.Properties,
+	 *      java.lang.String, java.lang.String, java.lang.String, java.lang.String)
+	 * @deprecated use {@linkplain #merge(MutableMessageSource, boolean)}
 	 */
 	public void publishProperties(Properties arg0, String arg1, String arg2, String arg3, String arg4) {
 		// ABKTODO: no-op?
@@ -89,6 +87,7 @@ public class CachedMessageSource extends AbstractMessageSource implements Mutabl
 	/**
 	 * @see org.openmrs.messagesource.MutableMessageSource#getPresentation(java.lang.String,
 	 *      java.util.Locale)
+	 * @should match get message with presentation message
 	 */
 	public PresentationMessage getPresentation(String key, Locale forLocale) {
 		PresentationMessage foundPM = null;

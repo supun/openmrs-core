@@ -50,14 +50,14 @@ public class ModuleFactory {
 	
 	private static Log log = LogFactory.getLog(ModuleFactory.class);
 	
-	private static Map<String, Module> loadedModules = new WeakHashMap<String, Module>();
+	protected static Map<String, Module> loadedModules = new WeakHashMap<String, Module>();
 	
-	private static Map<String, Module> startedModules = new WeakHashMap<String, Module>();
+	protected static Map<String, Module> startedModules = new WeakHashMap<String, Module>();
 	
-	private static Map<String, List<Extension>> extensionMap = new HashMap<String, List<Extension>>();
+	protected static Map<String, List<Extension>> extensionMap = new HashMap<String, List<Extension>>();
 	
 	// maps to keep track of the memory and objects to free/close
-	private static Map<Module, ModuleClassLoader> moduleClassLoaders = new WeakHashMap<Module, ModuleClassLoader>();
+	protected static Map<Module, ModuleClassLoader> moduleClassLoaders = new WeakHashMap<Module, ModuleClassLoader>();
 	
 	/**
 	 * Add a module (in the form of a jar file) to the list of openmrs modules Returns null if an
@@ -77,8 +77,7 @@ public class ModuleFactory {
 	 * error occurred and/or module was not successfully loaded
 	 * 
 	 * @param moduleFile
-	 * @param Boolean replaceIfExists unload a module that has the same moduleId if one is loaded
-	 *            already
+	 * @param replaceIfExists unload a module that has the same moduleId if one is loaded already
 	 * @return Module
 	 */
 	public static Module loadModule(File moduleFile, Boolean replaceIfExists) throws ModuleException {
@@ -94,8 +93,7 @@ public class ModuleFactory {
 	 * Add a module to the list of openmrs modules
 	 * 
 	 * @param module
-	 * @param Boolean replaceIfExists unload a module that has the same moduleId if one is loaded
-	 *            already
+	 * @param replaceIfExists unload a module that has the same moduleId if one is loaded already
 	 */
 	public static Module loadModule(Module module, Boolean replaceIfExists) throws ModuleException {
 		
@@ -250,7 +248,7 @@ public class ModuleFactory {
 				for (Module leftoverModule : leftoverModules) {
 					String message = "Unable to start module '" + leftoverModule.getName()
 					        + "'.  All required modules are not available: "
-					        + OpenmrsUtil.join(leftoverModule.getRequiredModules(), ", ");
+					        + OpenmrsUtil.join(getMissingRequiredModules(leftoverModule), ", ");
 					log.error(message);
 					leftoverModule.setStartupErrorMessage(message);
 				}
@@ -259,9 +257,27 @@ public class ModuleFactory {
 	}
 	
 	/**
+	 * Convenience method to return a List of Strings containing a description of which modules the
+	 * passed module requires but which are not started. The returned description of each module is
+	 * the moduleId followed by the required version if one is specified
+	 * 
+	 * @param module the module to check required modules for
+	 * @return List<String> of module names + optional required versions:
+	 *         "org.openmrs.formentry 1.8, org.rg.patientmatching"
+	 */
+	private static List<String> getMissingRequiredModules(Module module) {
+		List<String> ret = new ArrayList<String>();
+		for (String moduleName : module.getRequiredModules()) {
+			String moduleVersion = module.getRequiredModuleVersion(moduleName);
+			ret.add(moduleName + (moduleVersion != null ? " " + moduleVersion : ""));
+		}
+		return ret;
+	}
+	
+	/**
 	 * Returns all modules found/loaded into the system (started and not started)
 	 * 
-	 * @return
+	 * @return <code>Collection<Module></code> of the modules loaded into the system
 	 */
 	public static Collection<Module> getLoadedModules() {
 		if (getLoadedModulesMap().size() > 0)
@@ -286,7 +302,7 @@ public class ModuleFactory {
 	/**
 	 * Returns the modules that have been successfully started
 	 * 
-	 * @return
+	 * @return <code>Collection<Module></code> of the started modules
 	 */
 	public static Collection<Module> getStartedModules() {
 		if (getStartedModulesMap().size() > 0)
@@ -330,7 +346,7 @@ public class ModuleFactory {
 	}
 	
 	/**
-	 * @param module id
+	 * @param moduleId
 	 * @return Module matching module id or null if none
 	 */
 	public static Module getModuleById(String moduleId) {
@@ -338,7 +354,7 @@ public class ModuleFactory {
 	}
 	
 	/**
-	 * @param module package
+	 * @param modulePackage
 	 * @return Module matching module package or null if none
 	 */
 	public static Module getModuleByPackage(String modulePackage) {
@@ -369,19 +385,10 @@ public class ModuleFactory {
 						        + "'.  Current code version is only '" + OpenmrsConstants.OPENMRS_VERSION_SHORT + "'",
 						        module.getName());
 				
-				// check to be sure this module can run with our current version
-				// of the OpenMRS database
-				String requireDBVersion = module.getRequireDatabaseVersion();
-				if (requireDBVersion != null && !requireDBVersion.equals(""))
-					if (ModuleUtil.compareVersion(OpenmrsConstants.DATABASE_VERSION, requireDBVersion) < 0)
-						throw new ModuleException("Module requires at least database version '" + requireDBVersion
-						        + "'. Current database version is only '" + OpenmrsConstants.DATABASE_VERSION + "'", module
-						        .getName());
-				
 				// check for required modules
 				if (!requiredModulesStarted(module)) {
 					throw new ModuleException("Not all required modules are started: "
-					        + OpenmrsUtil.join(module.getRequiredModules(), ", ") + ". ", module.getName());
+					        + OpenmrsUtil.join(getMissingRequiredModules(module), ", ") + ". ", module.getName());
 				}
 				
 				// fire up the classloader for this module
@@ -442,8 +449,15 @@ public class ModuleFactory {
 					// save the state of this module for future restarts
 					Context.addProxyPrivilege(OpenmrsConstants.PRIV_MANAGE_GLOBAL_PROPERTIES);
 					AdministrationService as = Context.getAdministrationService();
-					GlobalProperty gp = new GlobalProperty(module.getModuleId() + ".started", "true",
+					String propertyKey = module.getModuleId() + ".started";
+					GlobalProperty gp = as.getGlobalPropertyObject(propertyKey);
+					if (gp != null) {
+						gp.setPropertyValue("true");
+					}
+					else {
+						gp = new GlobalProperty(propertyKey, "true",
 					        getGlobalPropertyStartedDescription(module.getModuleId()));
+					}
 					as.saveGlobalProperty(gp);
 				}
 				catch (Exception e) {
@@ -568,14 +582,19 @@ public class ModuleFactory {
 			executeSQL = true;
 		}
 		
-		// version is greater than the currently installed version. execute this
-		// update.
+		// version is greater than the currently installed version. execute this update.
 		if (executeSQL) {
-			log.debug("Executing sql: " + sql);
-			String[] sqlStatements = sql.split(";");
-			for (String sqlStatement : sqlStatements) {
-				if (sqlStatement.trim().length() > 0)
-					as.executeSQL(sqlStatement, false);
+			try {
+				Context.addProxyPrivilege(OpenmrsConstants.PRIV_SQL_LEVEL_ACCESS);
+				log.debug("Executing sql: " + sql);
+				String[] sqlStatements = sql.split(";");
+				for (String sqlStatement : sqlStatements) {
+					if (sqlStatement.trim().length() > 0)
+						as.executeSQL(sqlStatement, false);
+				}
+			}
+			finally {
+				Context.removeProxyPrivilege(OpenmrsConstants.PRIV_SQL_LEVEL_ACCESS);
 			}
 			
 			// save the global property
@@ -595,7 +614,7 @@ public class ModuleFactory {
 					gp.setPropertyValue(version);
 					as.saveGlobalProperty(gp);
 				} else {
-					log.error("Should not be here. GP property valueand sqldiff version should not be equal");
+					log.error("Should not be here. GP property value and sqldiff version should not be equal");
 				}
 				
 			}
@@ -821,7 +840,7 @@ public class ModuleFactory {
 	 * getExtension(pointId) if no modules extend this pointId for given media type
 	 * 
 	 * @param pointId
-	 * @param Extension.MEDIA_TYPE
+	 * @param type Extension.MEDIA_TYPE
 	 * @return List of extensions
 	 */
 	public static List<Extension> getExtensions(String pointId, Extension.MEDIA_TYPE type) {
@@ -838,7 +857,7 @@ public class ModuleFactory {
 	/**
 	 * Get a list of required Privileges defined by the modules
 	 * 
-	 * @return
+	 * @return <code>List<Privilege></code> of the required privileges
 	 */
 	public static List<Privilege> getPrivileges() {
 		
@@ -856,7 +875,7 @@ public class ModuleFactory {
 	/**
 	 * Get a list of required GlobalProperties defined by the modules
 	 * 
-	 * @return
+	 * @return <code>List<GlobalProperty></code> object of the module's global properties
 	 */
 	public static List<GlobalProperty> getGlobalProperties() {
 		
@@ -872,10 +891,10 @@ public class ModuleFactory {
 	}
 	
 	/**
-	 * Returns true/false whether the Module <code>mod</code> is activated or not
+	 * Checks whether the given module is activated
 	 * 
-	 * @param mod Module to check if its started or not
-	 * @return started status
+	 * @param mod Module to check
+	 * @return true if the module is started, false otherwise
 	 */
 	public static boolean isModuleStarted(Module mod) {
 		return getStartedModulesMap().containsValue(mod);
@@ -901,8 +920,8 @@ public class ModuleFactory {
 	/**
 	 * Get a module's classloader via the module id
 	 * 
-	 * @param moduleId id of the module
-	 * @return ModuleClassLoader pertaining to thsi module
+	 * @param moduleId <code>String</code> id of the module
+	 * @return ModuleClassLoader pertaining to this module
 	 * @throws ModuleException if this module isn't started or doesn't have a classloader
 	 * @see #getModuleClassLoader(Module)
 	 */
@@ -960,15 +979,17 @@ public class ModuleFactory {
 	 */
 	private static boolean requiredModulesStarted(Module module) {
 		for (String reqModPackage : module.getRequiredModules()) {
-			boolean found = false;
+			boolean started = false;
 			for (Module mod : getStartedModules()) {
 				if (mod.getPackageName().equals(reqModPackage)) {
-					found = true;
+					String reqVersion = module.getRequiredModuleVersion(reqModPackage);
+					if (reqVersion == null || ModuleUtil.compareVersion(mod.getVersion(), reqVersion) >= 0)
+						started = true;
 					break;
 				}
 			}
 			
-			if (!found)
+			if (!started)
 				return false;
 		}
 		

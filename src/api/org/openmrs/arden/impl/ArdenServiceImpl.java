@@ -13,7 +13,6 @@
  */
 package org.openmrs.arden.impl;
 
-import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -21,8 +20,6 @@ import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.util.Date;
-import java.util.Set;
-import java.util.StringTokenizer;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -33,9 +30,6 @@ import org.openmrs.arden.ArdenBaseParser;
 import org.openmrs.arden.ArdenBaseTreeParser;
 import org.openmrs.arden.ArdenService;
 import org.openmrs.arden.MLMObject;
-import org.openmrs.logic.result.Result.Datatype;
-import org.openmrs.logic.rule.RuleParameterInfo;
-import org.openmrs.logic.*;
 
 import antlr.BaseAST;
 
@@ -173,12 +167,14 @@ public class ArdenServiceImpl implements ArdenService {
 			w.write("import org.openmrs.logic.Duration;\n");
 			w.write("import java.util.StringTokenizer;\n\n");
 			w.write("import org.openmrs.api.ConceptService;\n");
+			w.write("import java.text.SimpleDateFormat;\n");
 			
 			String classname = ardObj.getClassName();
 			w.write("public class " + classname + " implements Rule, DssRule{\n\n"); // Start of class
 			w.write("\tprivate Patient patient;\n\tprivate String firstname;\n");
 			w.write("\tprivate ArrayList<String> actions;\n");
 			w.write("\tprivate HashMap<String, String> userVarMap;\n\n");
+			w.write("\tprivate HashMap <String, Result> resultLookup;\n\n");
 			
 			w.write("\tprivate Log log = LogFactory.getLog(this.getClass());\n");
 			w.write("\tprivate LogicService logicService = Context.getLogicService();\n\n");

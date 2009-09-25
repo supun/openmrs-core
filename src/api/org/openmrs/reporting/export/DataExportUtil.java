@@ -15,28 +15,34 @@ package org.openmrs.reporting.export;
 
 import java.io.File;
 import java.io.PrintWriter;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.WeakHashMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.velocity.VelocityContext;
+import org.apache.velocity.runtime.RuntimeConstants;
+import org.apache.velocity.runtime.log.CommonsLogLogChute;
 import org.apache.velocity.app.VelocityEngine;
 import org.apache.velocity.app.event.EventCartridge;
 import org.apache.velocity.app.event.MethodExceptionEventHandler;
 import org.openmrs.Cohort;
+import org.openmrs.api.APIException;
 import org.openmrs.api.context.Context;
 import org.openmrs.report.EvaluationContext;
 import org.openmrs.util.OpenmrsUtil;
 
 /**
  * Utility methods for use by Data Exports
+ * 
+ * @deprecated see reportingcompatibility module
  */
+@Deprecated
 public class DataExportUtil {
 	
-	private static HashMap<String, Object> dataExportKeys = new HashMap<String, Object>();
+	private static Map<String, Object> dataExportKeys = new WeakHashMap<String, Object>();
 	
 	/**
 	 * Allows a module or some other service to add things to the available keys in the velocity
@@ -64,7 +70,7 @@ public class DataExportUtil {
 	 * Find the data export key previously added or null if not found
 	 * 
 	 * @param key
-	 * @return
+	 * @return Object the Data Export Key with the key identifier. Returns null if not found
 	 * @see #putDataExportKey(String, Object)
 	 * @see #generateExport(DataExportReportObject, Cohort, DataExportFunctions, EvaluationContext)
 	 */
@@ -134,6 +140,11 @@ public class DataExportUtil {
 		Log log = LogFactory.getLog(DataExportUtil.class);
 		
 		VelocityEngine velocityEngine = new VelocityEngine();
+
+        velocityEngine.setProperty( RuntimeConstants.RUNTIME_LOG_LOGSYSTEM_CLASS,
+                    "org.apache.velocity.runtime.log.CommonsLogLogChute" );
+        velocityEngine.setProperty(CommonsLogLogChute.LOGCHUTE_COMMONS_LOG_NAME,
+                        "dataexport_velocity");
 		
 		try {
 			velocityEngine.init();
@@ -176,6 +187,15 @@ public class DataExportUtil {
 		velocityContext.put("patientSet", patientSet);
 		
 		String template = dataExport.generateTemplate();
+		
+		// check if some deprecated columns are being used in this export
+		// warning: hacky.
+		if (template.contains("fn.getPatientAttr('Patient', 'tribe')")) {
+			throw new APIException(
+			        "Unable to generate export: "
+			                + dataExport.getName()
+			                + " because it contains a reference to an outdated 'tribe' column.  You must install the 'Tribe Module' into OpenMRS to continue to reference tribes in OpenMRS.");
+		}
 		
 		if (log.isDebugEnabled())
 			log.debug("Template: " + template.substring(0, template.length() < 3500 ? template.length() : 3500) + "...");
@@ -220,7 +240,6 @@ public class DataExportUtil {
 	 * Returns the path and name of the generated file
 	 * 
 	 * @param dataExport
-	 * @return
 	 */
 	public static File getGeneratedFile(DataExportReportObject dataExport) {
 		File dir = new File(OpenmrsUtil.getApplicationDataDirectory(), "dataExports");

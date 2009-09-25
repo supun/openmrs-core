@@ -35,6 +35,10 @@ import org.openmrs.reporting.PatientSearch;
 import org.openmrs.reporting.ReportObject;
 import org.openmrs.util.OpenmrsUtil;
 
+/**
+ * @deprecated see reportingcompatibility module
+ */
+@Deprecated
 public class CohortSearchHistory extends AbstractReportObject {
 	
 	protected transient final Log log = LogFactory.getLog(getClass());
@@ -184,6 +188,10 @@ public class CohortSearchHistory extends AbstractReportObject {
 		}
 	}
 	
+	public List<PatientFilter> getCachedFilters() {
+		return cachedFilters;
+	}
+	
 	public List<Date> getCachedResultDates() {
 		return cachedResultDates;
 	}
@@ -261,7 +269,7 @@ public class CohortSearchHistory extends AbstractReportObject {
 	}
 	
 	/**
-	 * TODO: Implement {@link org.openmrs.cohort.api.impl.CohortServiceImpl#getAllPatients()}
+	 * TODO: Implement {@link org.openmrs.api.impl.CohortServiceImpl#getAllCohorts()}
 	 * 
 	 * @param i
 	 * @param useCache whether to use a cached result, if available
@@ -398,6 +406,7 @@ public class CohortSearchHistory extends AbstractReportObject {
 		return ret;
 	}
 	
+	@SuppressWarnings("unchecked")
 	private static boolean testCompositionList(List<Object> list) {
 		// if length > 2, make sure there's at least one operator
 		// make sure NOT is always followed by something

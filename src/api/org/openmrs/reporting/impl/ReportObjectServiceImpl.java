@@ -17,6 +17,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.openmrs.api.APIException;
+import org.openmrs.api.context.Context;
 import org.openmrs.api.impl.BaseOpenmrsService;
 import org.openmrs.cohort.CohortSearchHistory;
 import org.openmrs.reporting.AbstractReportObject;
@@ -29,8 +30,9 @@ import org.openmrs.reporting.db.ReportObjectDAO;
 import org.openmrs.util.OpenmrsConstants;
 
 /**
- *
+ * @deprecated see reportingcompatibility module
  */
+@Deprecated
 public class ReportObjectServiceImpl extends BaseOpenmrsService implements ReportObjectService {
 	
 	private ReportObjectDAO reportObjectDAO;
@@ -148,7 +150,7 @@ public class ReportObjectServiceImpl extends BaseOpenmrsService implements Repor
 	 * @deprecated
 	 */
 	public Integer createReportObject(AbstractReportObject reportObject) throws APIException {
-		saveReportObject(reportObject);
+		Context.getReportObjectService().saveReportObject(reportObject);
 		return reportObject.getReportObjectId();
 	}
 	
@@ -164,7 +166,7 @@ public class ReportObjectServiceImpl extends BaseOpenmrsService implements Repor
 	 * @deprecated
 	 */
 	public void deleteReport(AbstractReportObject reportObject) throws APIException {
-		purgeReportObject(reportObject);
+		Context.getReportObjectService().purgeReportObject(reportObject);
 	}
 	
 	/**
@@ -179,7 +181,7 @@ public class ReportObjectServiceImpl extends BaseOpenmrsService implements Repor
 	 * @deprecated
 	 */
 	public void updateReportObject(AbstractReportObject reportObject) throws APIException {
-		saveReportObject(reportObject);
+		Context.getReportObjectService().saveReportObject(reportObject);
 	}
 	
 	/**
@@ -243,7 +245,7 @@ public class ReportObjectServiceImpl extends BaseOpenmrsService implements Repor
 	 * @deprecated
 	 */
 	public void createSearchHistory(CohortSearchHistory history) {
-		saveSearchHistory(history);
+		Context.getReportObjectService().saveSearchHistory(history);
 	}
 	
 	/**
@@ -255,9 +257,10 @@ public class ReportObjectServiceImpl extends BaseOpenmrsService implements Repor
 	
 	/**
 	 * @see org.openmrs.reporting.ReportObjectService#deleteSearchHistory(org.openmrs.cohort.CohortSearchHistory)
+	 * @deprecated
 	 */
 	public void deleteSearchHistory(CohortSearchHistory history) {
-		purgeSearchHistory(history);
+		Context.getReportObjectService().purgeSearchHistory(history);
 	}
 	
 	/**

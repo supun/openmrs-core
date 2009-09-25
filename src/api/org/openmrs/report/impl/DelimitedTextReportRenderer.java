@@ -33,8 +33,9 @@ import org.openmrs.report.ReportRenderer;
 import org.openmrs.report.ReportSchema;
 
 /**
- *
+ * @deprecated see reportingcompatibility module
  */
+@Deprecated
 public abstract class DelimitedTextReportRenderer implements ReportRenderer {
 	
 	public abstract String getFilenameExtension();
@@ -50,14 +51,14 @@ public abstract class DelimitedTextReportRenderer implements ReportRenderer {
 	public abstract String escape(String text);
 	
 	/**
-	 * @see org.openmrs.report.ReportRenderer#getLinkUrl(org.openmrs.report.ReportSchema)
+	 * TODO: this appears to be unused. Its not in the super interface or overridden in subclasses.
 	 */
 	public String getLinkUrl(ReportSchema schema) {
 		return null;
 	}
 	
 	/**
-	 * @see org.openmrs.report.ReportRenderer#getFilename(org.openmrs.report.ReportSchema)
+	 * @see org.openmrs.report.ReportRenderer#getFilename(ReportSchema, String)
 	 */
 	public String getFilename(ReportSchema schema, String argument) {
 		return schema.getName() + "." + getFilenameExtension();
@@ -84,6 +85,7 @@ public abstract class DelimitedTextReportRenderer implements ReportRenderer {
 	/**
 	 * @see org.openmrs.report.ReportRenderer#render(ReportData, String, Writer)
 	 */
+	@SuppressWarnings("unchecked")
 	public void render(ReportData results, String argument, Writer writer) throws IOException, RenderingException {
 		DataSet dataset = results.getDataSets().values().iterator().next();
 		List<String> colKeys = dataset.getDefinition().getColumnKeys();

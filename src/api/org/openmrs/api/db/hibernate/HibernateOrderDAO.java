@@ -20,7 +20,6 @@ import org.apache.commons.logging.LogFactory;
 import org.hibernate.Criteria;
 import org.hibernate.SessionFactory;
 import org.hibernate.criterion.Expression;
-import org.hibernate.criterion.Restrictions;
 import org.openmrs.Concept;
 import org.openmrs.Encounter;
 import org.openmrs.Order;
@@ -35,8 +34,9 @@ import org.openmrs.api.db.OrderDAO;
  * This class should not be used directly. This is just a common implementation of the OrderDAO that
  * is used by the OrderService. This class is injected by spring into the desired OrderService
  * class. This injection is determined by the xml mappings and elements in the spring application
- * context: /metadata/api/spring/applicationContext.xml The OrderService should be used for all
- * Order related database manipulation.
+ * context: /metadata/api/spring/applicationContext.xml.<br/>
+ * <br/>
+ * The OrderService should be used for all Order related database manipulation.
  * 
  * @see org.openmrs.api.OrderService
  * @see org.openmrs.api.db.OrderDAO
@@ -84,7 +84,7 @@ public class HibernateOrderDAO implements OrderDAO {
 	}
 	
 	/**
-	 * @see org.openmrs.api.db.OrderService#getOrderTypes()
+	 * @see org.openmrs.api.OrderService#getOrderTypes()
 	 */
 	@SuppressWarnings("unchecked")
 	public List<OrderType> getAllOrderTypes(boolean includeRetired) throws DAOException {
@@ -127,7 +127,7 @@ public class HibernateOrderDAO implements OrderDAO {
 	}
 	
 	/**
-	 * @see org.openmrs.api.db.OrderService#getOrder(java.lang.Integer)
+	 * @see org.openmrs.api.OrderService#getOrder(java.lang.Integer)
 	 */
 	@SuppressWarnings("unchecked")
 	public <Ord extends Order> Ord getOrder(Integer orderId, Class<Ord> orderClassType) throws DAOException {
@@ -175,6 +175,22 @@ public class HibernateOrderDAO implements OrderDAO {
 			crit.add(Expression.in("orderType", orderTypes));
 		
 		return crit.list();
+	}
+	
+	/**
+	 * @see org.openmrs.api.db.OrderDAO#getOrderByUuid(java.lang.String)
+	 */
+	public Order getOrderByUuid(String uuid) {
+		return (Order) sessionFactory.getCurrentSession().createQuery("from Order o where o.uuid = :uuid").setString("uuid",
+		    uuid).uniqueResult();
+	}
+	
+	/**
+	 * @see org.openmrs.api.db.OrderDAO#getOrderTypeByUuid(java.lang.String)
+	 */
+	public OrderType getOrderTypeByUuid(String uuid) {
+		return (OrderType) sessionFactory.getCurrentSession().createQuery("from OrderType ot where ot.uuid = :uuid")
+		        .setString("uuid", uuid).uniqueResult();
 	}
 	
 }

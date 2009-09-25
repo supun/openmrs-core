@@ -17,12 +17,18 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.fail;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.openmrs.GlobalProperty;
 import org.openmrs.ImplementationId;
 import org.openmrs.api.context.Context;
 import org.openmrs.test.BaseContextSensitiveTest;
+import org.openmrs.test.Verifies;
+import org.openmrs.util.OpenmrsConstants;
 
 /**
  * TODO clean up and finish this test class. Should test all methods in the
@@ -49,10 +55,10 @@ public class AdministrationServiceTest extends BaseContextSensitiveTest {
 	 * Tests the AdministrationService.executeSql method with a sql statement containing a valid
 	 * group by clause
 	 * 
-	 * @verifies {@link AdministrationService#executeSQL(String,null)} test = should execute sql
-	 *           containing group by
+	 * @see {@link AdministrationService#executeSQL(String,null)}
 	 */
 	@Test
+	@Verifies(value = "should execute sql containing group by", method = "executeSQL(String,null)")
 	public void executeSQL_shouldExecuteSqlContainingGroupBy() throws Exception {
 		
 		String sql = "select encounter1_.location_id, encounter1_.creator, encounter1_.encounter_type, encounter1_.form_id, location2_.location_id, count(obs0_.obs_id) from obs obs0_ right outer join encounter encounter1_ on obs0_.encounter_id=encounter1_.encounter_id inner join location location2_ on encounter1_.location_id=location2_.location_id inner join users user3_ on encounter1_.creator=user3_.user_id inner join person user3_1_ on user3_.user_id=user3_1_.person_id inner join encounter_type encountert4_ on encounter1_.encounter_type=encountert4_.encounter_type_id inner join form form5_ on encounter1_.form_id=form5_.form_id where encounter1_.date_created>='2007-05-05' and encounter1_.date_created<= '2008-05-05' group by encounter1_.location_id, encounter1_.creator , encounter1_.encounter_type , encounter1_.form_id";
@@ -63,26 +69,28 @@ public class AdministrationServiceTest extends BaseContextSensitiveTest {
 	}
 	
 	/**
-	 * This test runs over the set and get methods in AdminService to make sure that the impl id can
-	 * be saved and verified correctly
-	 * 
-	 * @throws Exception
+	 * @see AdministrationService#setImplementationId(ImplementationId)
 	 */
-	public void testSetVerifyGetImplementationId() throws Exception {
-		
-		// make sure we have no impl id already
-		ImplementationId currentImplId = adminService.getImplementationId();
-		assertNull("There shouldn't be an impl id defined alread", currentImplId);
-		
+	@Test
+	@Verifies(value = "should not fail if given implementationId is null", method = "setImplementationId(ImplementationId)")
+	public void setImplementationId_shouldNotFailIfGivenImplementationIdIsNull() throws Exception {
 		// save a null impl id. no exception thrown
 		adminService.setImplementationId(null);
 		ImplementationId afterNull = adminService.getImplementationId();
 		assertNull("There shouldn't be an impl id defined after setting a null impl id", afterNull);
-		
+	}
+	
+	/**
+	 * This uses a try/catch so that we can make sure no blank id is saved to the database.
+	 * 
+	 * @see AdministrationService#setImplementationId(ImplementationId)
+	 */
+	@Test()
+	@Verifies(value = "should throw APIException if given empty implementationId object", method = "setImplementationId(ImplementationId)")
+	public void setImplementationId_shouldThrowAPIExceptionIfGivenEmptyImplementationIdObject() throws Exception {
 		// save a blank impl id. exception thrown
-		ImplementationId blankId = new ImplementationId();
 		try {
-			adminService.setImplementationId(blankId);
+			adminService.setImplementationId(new ImplementationId());
 			fail("An exception should be thrown on a blank impl id save");
 		}
 		catch (APIException e) {
@@ -90,10 +98,20 @@ public class AdministrationServiceTest extends BaseContextSensitiveTest {
 		}
 		ImplementationId afterBlank = adminService.getImplementationId();
 		assertNull("There shouldn't be an impl id defined after setting a blank impl id", afterBlank);
-		
+	}
+	
+	/**
+	 * This uses a try/catch so that we can make sure no blank id is saved to the database.
+	 * 
+	 * @see {@link AdministrationService#setImplementationId(ImplementationId)}
+	 */
+	@Test
+	@Verifies(value = "should throw APIException if given a caret in the implementationId code", method = "setImplementationId(ImplementationId)")
+	public void setImplementationId_shouldThrowAPIExceptionIfGivenACaretInTheImplementationIdCode() throws Exception {
 		// save an impl id with an invalid hl7 code
 		ImplementationId invalidId = new ImplementationId();
 		invalidId.setImplementationId("caret^caret");
+		invalidId.setName("an invalid impl id for a unit test");
 		invalidId.setPassphrase("some valid passphrase");
 		invalidId.setDescription("Some valid description");
 		try {
@@ -105,12 +123,20 @@ public class AdministrationServiceTest extends BaseContextSensitiveTest {
 		}
 		ImplementationId afterInvalid = adminService.getImplementationId();
 		assertNull("There shouldn't be an impl id defined after setting an invalid impl id", afterInvalid);
-		
+	}
+	
+	/**
+	 * @see {@link AdministrationService#setImplementationId(ImplementationId)}
+	 */
+	@Test
+	@Verifies(value = "should throw APIException if given a pipe in the implementationId code", method = "setImplementationId(ImplementationId)")
+	public void setImplementationId_shouldThrowAPIExceptionIfGivenAPipeInTheImplementationIdCode() throws Exception {
 		// save an impl id with an invalid hl7 code
 		ImplementationId invalidId2 = new ImplementationId();
-		invalidId.setImplementationId("pipe|pipe");
-		invalidId.setPassphrase("some valid passphrase");
-		invalidId.setDescription("Some valid description");
+		invalidId2.setImplementationId("pipe|pipe");
+		invalidId2.setName("an invalid impl id for a unit test");
+		invalidId2.setPassphrase("some valid passphrase");
+		invalidId2.setDescription("Some valid description");
 		try {
 			adminService.setImplementationId(invalidId2);
 			fail("An exception should be thrown on an invalid impl id save");
@@ -120,41 +146,78 @@ public class AdministrationServiceTest extends BaseContextSensitiveTest {
 		}
 		ImplementationId afterInvalid2 = adminService.getImplementationId();
 		assertNull("There shouldn't be an impl id defined after setting an invalid impl id", afterInvalid2);
-		
+	}
+	
+	/**
+	 * @see AdministrationService#setImplementationId(ImplementationId)
+	 */
+	@Test
+	@Verifies(value = "should create implementation id in database", method = "setImplementationId(ImplementationId)")
+	public void setImplementationId_shouldCreateImplementationIdInDatabase() throws Exception {
 		// save a valid impl id
 		ImplementationId validId = new ImplementationId();
 		validId.setImplementationId("JUNIT-TEST");
+		validId.setName("JUNIT-TEST implementation id");
 		validId.setPassphrase("This is the junit test passphrase");
 		validId.setDescription("This is the junit impl id used for testing of the openmrs API only.");
 		adminService.setImplementationId(validId);
-		ImplementationId afterValid = adminService.getImplementationId();
-		assertEquals(validId, afterValid);
+		
+		assertEquals(validId, adminService.getImplementationId());
+	}
+	
+	/**
+	 * @see AdministrationService#setImplementationId(ImplementationId)
+	 */
+	@Test
+	@Verifies(value = "should overwrite implementation id in database if exists", method = "setImplementationId(ImplementationId)")
+	public void setImplementationId_shouldOverwriteImplementationIdInDatabaseIfExists() throws Exception {
+		executeDataSet("org/openmrs/api/include/AdministrationServiceTest-general.xml");
+		
+		// sanity check to make sure we have an implementation id
+		Assert.assertNotNull(adminService.getImplementationId());
+		Context.clearSession(); // so a NonUniqueObjectException doesn't occur on the global property later
 		
 		// save a second valid id
 		ImplementationId validId2 = new ImplementationId();
 		validId2.setImplementationId("JUNIT-TEST 2");
+		validId2.setName("JUNIT-TEST (#2) implementation id");
 		validId2.setPassphrase("This is the junit test passphrase 2");
 		validId2.setDescription("This is the junit impl id (2) used for testing of the openmrs API only.");
 		adminService.setImplementationId(validId2);
-		ImplementationId afterValid2 = adminService.getImplementationId();
-		assertEquals(validId2, afterValid2);
-		
+		assertEquals(validId2, adminService.getImplementationId());
 	}
 	
 	/**
-	 * @verifies {@link AdministrationService#getGlobalProperty(String)} test = should not fail with
-	 *           null propertyName
+	 * @see AdministrationService#setImplementationId(ImplementationId)
 	 */
 	@Test
+	@Verifies(value = "should set uuid on implementation id global property", method = "setImplementationId(ImplementationId)")
+	public void setImplementationId_shouldSetUuidOnImplementationIdGlobalProperty() throws Exception {
+		ImplementationId validId = new ImplementationId();
+		validId.setImplementationId("JUNIT-TEST");
+		validId.setName("JUNIT-TEST implementation id");
+		validId.setPassphrase("This is the junit test passphrase");
+		validId.setDescription("This is the junit impl id used for testing of the openmrs API only.");
+		adminService.setImplementationId(validId);
+		
+		GlobalProperty gp = adminService.getGlobalPropertyObject(OpenmrsConstants.GLOBAL_PROPERTY_IMPLEMENTATION_ID);
+		Assert.assertNotNull(gp.getUuid());
+	}
+	
+	/**
+	 * @see {@link AdministrationService#getGlobalProperty(String)}
+	 */
+	@Test
+	@Verifies(value = "should not fail with null propertyName", method = "getGlobalProperty(String)")
 	public void getGlobalProperty_shouldNotFailWithNullPropertyName() throws Exception {
 		adminService.getGlobalProperty(null);
 	}
 	
 	/**
-	 * @verifies {@link AdministrationService#getGlobalProperty(String)} test = should get property
-	 *           value given valid property name
+	 * @see {@link AdministrationService#getGlobalProperty(String)}
 	 */
 	@Test
+	@Verifies(value = "should get property value given valid property name", method = "getGlobalProperty(String)")
 	public void getGlobalProperty_shouldGetPropertyValueGivenValidPropertyName() throws Exception {
 		// put the global property into the database
 		executeDataSet("org/openmrs/api/include/AdministrationServiceTest-globalproperties.xml");
@@ -165,19 +228,19 @@ public class AdministrationServiceTest extends BaseContextSensitiveTest {
 	}
 	
 	/**
-	 * @verifies {@link AdministrationService#getGlobalProperty(String,String)} test = should not
-	 *           fail with null default value
+	 * @see {@link AdministrationService#getGlobalProperty(String,String)}
 	 */
 	@Test
+	@Verifies(value = "should not fail with null default value", method = "getGlobalProperty(String,String)")
 	public void getGlobalProperty_shouldNotFailWithNullDefaultValue() throws Exception {
 		adminService.getGlobalProperty("asdfsadfsafd", null);
 	}
 	
 	/**
-	 * @verifies {@link AdministrationService#getGlobalProperty(String,String)} test = should return
-	 *           default value if property name does not exist
+	 * @see {@link AdministrationService#getGlobalProperty(String,String)}
 	 */
 	@Test
+	@Verifies(value = "should return default value if property name does not exist", method = "getGlobalProperty(String,String)")
 	public void getGlobalProperty_shouldReturnDefaultValueIfPropertyNameDoesNotExist() throws Exception {
 		String invalidKey = "asdfasdf";
 		String propertyValue = adminService.getGlobalProperty(invalidKey);
@@ -185,6 +248,109 @@ public class AdministrationServiceTest extends BaseContextSensitiveTest {
 		
 		String value = adminService.getGlobalProperty(invalidKey, "default");
 		Assert.assertEquals("default", value);
+	}
+	
+	/**
+	 * @see {@link AdministrationService#getGlobalPropertiesByPrefix(String)}
+	 */
+	@Test
+	@Verifies(value = "should return all relevant global properties in the database", method = "getGlobalPropertiesByPrefix(String)")
+	public void getGlobalPropertiesByPrefix_shouldReturnAllRelevantGlobalPropertiesInTheDatabase() throws Exception {
+		executeDataSet("org/openmrs/api/include/AdministrationServiceTest-globalproperties.xml");
+		
+		List<GlobalProperty> properties = adminService.getGlobalPropertiesByPrefix("fake.module.");
+		
+		for (GlobalProperty property : properties) {
+			Assert.assertTrue(property.getProperty().startsWith("fake.module."));
+			Assert.assertTrue(property.getPropertyValue().startsWith("correct-value"));
+		}
+	}
+	
+	/**
+	 * @see {@link AdministrationService#getAllowedLocales()}
+	 */
+	@Test
+	@Verifies(value = "should not fail if not global property for locales allowed defined yet", method = "getAllowedLocales()")
+	public void getAllowedLocales_shouldNotFailIfNotGlobalPropertyForLocalesAllowedDefinedYet() throws Exception {
+		Context.getAdministrationService().purgeGlobalProperty(
+		    new GlobalProperty(OpenmrsConstants.GLOBAL_PROPERTY_LOCALE_ALLOWED_LIST));
+		Context.getAdministrationService().getAllowedLocales();
+	}
+	
+	/**
+	 * @see {@link AdministrationService#getGlobalPropertyByUuid(String)}
+	 */
+	@Test
+	@Verifies(value = "should find object given valid uuid", method = "getGlobalPropertyByUuid(String)")
+	public void getGlobalPropertyByUuid_shouldFindObjectGivenValidUuid() throws Exception {
+		String uuid = "4f55827e-26fe-102b-80cb-0017a47871b3";
+		GlobalProperty prop = Context.getAdministrationService().getGlobalPropertyByUuid(uuid);
+		Assert.assertEquals("locale.allowed.list", prop.getProperty());
+	}
+	
+	/**
+	 * @see {@link AdministrationService#getGlobalPropertyByUuid(String)}
+	 */
+	@Test
+	@Verifies(value = "should return null if no object found with given uuid", method = "getGlobalPropertyByUuid(String)")
+	public void getGlobalPropertyByUuid_shouldReturnNullIfNoObjectFoundWithGivenUuid() throws Exception {
+		Assert.assertNull(Context.getAdministrationService().getGlobalPropertyByUuid("some invalid uuid"));
+	}
+	
+	/**
+	 * @see AdministrationService#saveGlobalProperties(List)
+	 */
+	@Test
+	@Verifies(value = "should delete property from database if not in list", method = "saveGlobalProperties(List<QGlobalProperty;>)")
+	public void saveGlobalProperties_shouldDeletePropertyFromDatabaseIfNotInList() throws Exception {
+		List<GlobalProperty> globalProperties = Context.getAdministrationService().getAllGlobalProperties();
+		GlobalProperty firstGlobalProperty = globalProperties.remove(0);
+		Context.getAdministrationService().saveGlobalProperties(globalProperties);
+		Assert.assertNull(Context.getAdministrationService().getGlobalProperty(firstGlobalProperty.getProperty()));
+	}
+	
+	/**
+	 * @see AdministrationService#saveGlobalProperties(List)
+	 */
+	@Test
+	@Verifies(value = "should not fail with empty list", method = "saveGlobalProperties(List<QGlobalProperty;>)")
+	public void saveGlobalProperties_shouldNotFailWithEmptyList() throws Exception {
+		Context.getAdministrationService().saveGlobalProperties(new ArrayList<GlobalProperty>());
+	}
+	
+	/**
+	 * @see AdministrationService#saveGlobalProperties(List)
+	 */
+	@Test
+	@Verifies(value = "should save all global properties to the database", method = "saveGlobalProperties(List<QGlobalProperty;>)")
+	public void saveGlobalProperties_shouldSaveAllGlobalPropertiesToTheDatabase() throws Exception {
+		// get the current global properties
+		List<GlobalProperty> globalProperties = Context.getAdministrationService().getAllGlobalProperties();
+		
+		// and now add some new ones to it
+		globalProperties.add(new GlobalProperty("new prop1", "new prop value1", "desc"));
+		globalProperties.add(new GlobalProperty("new prop2", "new prop value2", "desc"));
+		
+		Context.getAdministrationService().saveGlobalProperties(globalProperties);
+		
+		Assert.assertEquals("new prop value1", Context.getAdministrationService().getGlobalProperty("new prop1"));
+		Assert.assertEquals("new prop value2", Context.getAdministrationService().getGlobalProperty("new prop2"));
+	}
+	
+	/**
+	 * @see AdministrationService#saveGlobalProperties(List)
+	 */
+	@Test
+	@Verifies(value = "should assign uuid to all new properties", method = "saveGlobalProperties(List<QGlobalProperty;>)")
+	public void saveGlobalProperties_shouldAssignUuidToAllNewProperties() throws Exception {
+		// get the current global properties
+		List<GlobalProperty> globalProperties = Context.getAdministrationService().getAllGlobalProperties();
+		
+		// and now add a new one to it and save it
+		globalProperties.add(new GlobalProperty("new prop", "new prop value", "desc"));
+		Context.getAdministrationService().saveGlobalProperties(globalProperties);
+		
+		Assert.assertNotNull(Context.getAdministrationService().getGlobalPropertyObject("new prop").getUuid());
 	}
 	
 }

@@ -30,7 +30,6 @@ import org.openmrs.PatientIdentifierType;
 import org.openmrs.api.PatientService;
 import org.openmrs.api.context.Context;
 import org.openmrs.patient.IdentifierValidator;
-import org.openmrs.util.OpenmrsUtil;
 import org.openmrs.web.WebConstants;
 
 public class AuditServlet extends HttpServlet {

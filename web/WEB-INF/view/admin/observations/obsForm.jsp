@@ -50,7 +50,7 @@
 			function() {
 				var codedSearch = dojo.widget.manager.getWidgetById("codedSearch");
 				var conceptId = conceptSelection.hiddenInputNode.value;
-				DWRConceptService.findConceptAnswers(codedSearch.simpleClosure(codedSearch, 'doObjectsFound'), '', conceptId, false, true);
+				DWRConceptService.findConceptAnswers('', conceptId, false, true, codedSearch.simpleClosure(codedSearch, 'doObjectsFound'));
 			}
 		);
 		
@@ -77,7 +77,7 @@
 			var codedSearch = dojo.widget.manager.getWidgetById("codedSearch");
 			var codedSelection = dojo.widget.manager.getWidgetById("codedSelection");
 			var conceptId = codedSelection.conceptId; 
-			DWRConceptService.findConceptAnswers(codedSearch.simpleClosure(codedSearch, 'doObjectsFound'), txt, conceptId, false, true);
+			DWRConceptService.findConceptAnswers(txt, conceptId, false, true, codedSearch.simpleClosure(codedSearch, 'doObjectsFound'));
 		}
 		
 		dojo.event.topic.subscribe("codedSearch/objectsFound", 
@@ -106,7 +106,7 @@
 	}
 	
 	function updateObsValues(tmpConcept) {
-		var values = ['valueBooleanRow', 'valueCodedRow', 'valueDatetimeRow', 'valueModifierRow', 'valueTextRow', 'valueNumericRow', 'valueInvalidRow'];
+		var values = ['valueBooleanRow', 'valueCodedRow', 'valueDatetimeRow', 'valueModifierRow', 'valueTextRow', 'valueNumericRow', 'valueInvalidRow', 'valueComplex'];
 		for (var i=0; i<values.length; i++) {
 			$(values[i]).style.display = "none";
 		}
@@ -123,7 +123,7 @@
 			else if (datatype == 'NM' || datatype == 'SN') {
 				$('valueNumericRow').style.display = "";
 				$('valueNumericRow').style.visibility = "visible";
-				DWRConceptService.getConceptNumericUnits(fillNumericUnits, tmpConcept.conceptId);
+				DWRConceptService.getConceptNumericUnits(tmpConcept.conceptId, fillNumericUnits);
 			}
 			else if (datatype == 'CWE') {
 				$('valueCodedRow').style.display = "";
@@ -144,10 +144,14 @@
 				$('valueDatetimeRow').style.visibility = "visible";
 			}
 			// TODO move datatype 'TM' to own time box.  How to have them select?
+			else if (datatype == 'ED') {
+				$('valueComplex').style.display = "";
+				$('valueComplex').style.visibility = "visible";
+			}
 			else {
 				$('valueInvalidRow').style.display = "";
 				$('valueInvalidRow').style.visibility = "visible";
-				DWRConceptService.getQuestionsForAnswer(fillValueInvalidPossible(tmpConcept), tmpConcept.conceptId);
+				DWRConceptService.getQuestionsForAnswer(tmpConcept.conceptId, fillValueInvalidPossible(tmpConcept));
 			}
 		}
 	}
@@ -167,7 +171,7 @@
 				else
 					errorTag.innerHTML = errorTag.className = "";
 			}
-			DWRConceptService.isValidNumericValue(numericErrorMessage, value, conceptId);
+			DWRConceptService.isValidNumericValue(value, conceptId, numericErrorMessage);
 		}
 	}
 	
@@ -263,21 +267,27 @@
 	</div>
 	<br/>
 </spring:hasBindErrors>
-<form method="post" onSubmit="removeHiddenRows()">
-
-<spring:nestedPath path="obs">
 
 <c:if test="${obs.voided}">
-	<div class="retiredMessage">
-		<div>
-			<spring:message code="general.voidedBy"/>
-			${obs.voidedBy.personName}
-			<openmrs:formatDate date="${obs.dateVoided}" type="medium" />
-			-
-			${obs.voidReason}
+	<form action="" method="post">
+		<div class="retiredMessage">
+			<div>
+				<spring:message code="general.voidedBy"/>
+				${obs.voidedBy.personName}
+				<openmrs:formatDate date="${obs.dateVoided}" type="medium" />
+				-
+				${obs.voidReason}
+				<input type="submit" value='<spring:message code="Obs.unvoidObs"/>' name="unvoidObs"/>
+			</div>
 		</div>
-	</div>
+	</form>
 </c:if>
+
+<form method="post" onSubmit="removeHiddenRows()" enctype="multipart/form-data">
+
+<fieldset>
+
+<spring:nestedPath path="obs">
 
 <table id="obsTable">
 	<c:if test="${obs.obsId != null}">
@@ -296,6 +306,7 @@
 			<script type="text/javascript">$('obsTable').style.visibility = 'hidden';</script>
 			<spring:bind path="person">
 				<openmrs_tag:personField formFieldName="person" searchLabelCode="Person.findBy" initialValue="${status.editor.value.personId}" linkUrl="" callback="" />
+				<c:if test="${status.errorMessage != ''}"><span class="error">${status.errorMessage}</span></c:if>
 			</spring:bind>
 		</td>
 	</tr>
@@ -447,6 +458,19 @@
 			</td>
 		</spring:bind>
 	</tr>
+	<tr id="valueComplex" class="obsValue">
+		<th><spring:message code="general.value"/></th>
+		<spring:bind path="valueComplex">
+			<td>
+				${status.value}<br/>
+				<a href="${hyperlinkView}" target="_blank"><spring:message code="Obs.viewCurrentComplexValue"/></a><br/>
+				${htmlView}<br/><br/>
+				<spring:message code="Obs.valueComplex.uploadNew"/>
+				<input type="file" name="complexDataFile" />
+				<c:if test="${status.errorMessage != ''}"><span class="error">${status.errorMessage}</span></c:if>
+			</td>
+		</spring:bind>
+	</tr>
 	<tr id="valueInvalidRow" class="obsValue">
 		<th><spring:message code="general.value"/></th>
 		<td>
@@ -455,7 +479,7 @@
 		</td>
 	</tr>
 	
-	<c:if test="${1 == 2}">
+	<%--
 		<tr>
 			<th><spring:message code="Obs.dateStarted"/></th>
 			<td>
@@ -476,7 +500,7 @@
 				</spring:bind>
 			</td>
 		</tr>
-	</c:if>
+	--%>
 	
 	<tr>
 		<th><spring:message code="Obs.comment"/></th>
@@ -516,29 +540,30 @@
 
 &nbsp; 
 <input type="button" value='<spring:message code="general.cancel"/>' onclick="history.go(-1);">
+
+</fieldset>
 </form>
 
 <br/>
 <br/>
 
-<form action="" method="post">
-<c:choose>
-	<c:when test="${obs.voided}">
-		<input type="submit" value='<spring:message code="Obs.unvoidObs"/>' name="unvoidObs"/>
-	</c:when>
-	<c:otherwise>
-		<b><spring:message code="Obs.void.reason"/></b>
-		<input type="text" value="" size="40" name="voidReason" />
-		<spring:hasBindErrors name="obs">
-			<c:forEach items="${errors.allErrors}" var="error">
-				<c:if test="${error.code == 'voidReason'}"><span class="error"><spring:message code="${error.defaultMessage}" text="${error.defaultMessage}"/></span></c:if>
-			</c:forEach>
-		</spring:hasBindErrors>
-		<br/>
-		<input type="submit" value='<spring:message code="Obs.voidObs"/>' name="voidObs"/>
-	</c:otherwise>
-</c:choose>
-</form>
+<c:if test="${not obs.voided && not empty obs.obsId}">
+	<form action="" method="post">
+		<fieldset>
+			<h4><spring:message code="Obs.voidObs"/></h4>
+			
+			<b><spring:message code="general.reason"/></b>
+			<input type="text" value="" size="40" name="voidReason" />
+			<spring:hasBindErrors name="obs">
+				<c:forEach items="${errors.allErrors}" var="error">
+					<c:if test="${error.code == 'voidReason'}"><span class="error"><spring:message code="${error.defaultMessage}" text="${error.defaultMessage}"/></span></c:if>
+				</c:forEach>
+			</spring:hasBindErrors>
+			<br/>
+			<input type="submit" value='<spring:message code="Obs.voidObs"/>' name="voidObs"/>
+		</fieldset>
+	</form>
+</c:if>
 
 <script type="text/javascript">
 	$('obsTable').style.visibility = 'visible';

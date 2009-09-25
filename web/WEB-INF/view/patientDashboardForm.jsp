@@ -78,12 +78,17 @@
 			<c:if test="${not empty patient.causeOfDeath}">
 				&nbsp;&nbsp;&nbsp;&nbsp;
 				<spring:message code="Person.causeOfDeath"/>: <openmrs:format concept="${patient.causeOfDeath}"/>
+				<c:if test="${not empty causeOfDeathOther}"> 
+					  &nbsp;:&nbsp;<c:out value="${causeOfDeathOther}"></c:out>
+				</c:if>
 			</c:if>
 		</div>
 	</div>
 </c:if>
 
 <openmrs:portlet url="patientHeader" id="patientDashboardHeader" patientId="${patient.patientId}"/>
+
+<openmrs:globalProperty var="enableFormEntryTab" key="FormEntry.enableDashboardTab" defaultValue="true"/>
 
 <div id="patientTabs${patientVariation}">
 	<ul>
@@ -102,6 +107,11 @@
 		<openmrs:hasPrivilege privilege="Patient Dashboard - View Graphs Section">
 			<li><a id="patientGraphsTab" href="#" onclick="return changeTab(this);" hidefocus="hidefocus"><spring:message code="patientDashboard.graphs"/></a></li>
 		</openmrs:hasPrivilege>
+		<c:if test="${enableFormEntryTab}">
+			<openmrs:hasPrivilege privilege="Form Entry">
+				<li><a id="formEntryTab" href="#" onclick="return changeTab(this);" hidefocus="hidefocus"><spring:message code="patientDashboard.formEntry"/></a></li>
+			</openmrs:hasPrivilege>
+		</c:if>
 		<openmrs:extensionPoint pointId="org.openmrs.patientDashboardTab" type="html">
 			<openmrs:hasPrivilege privilege="${extension.requiredPrivilege}">
 				<li>
@@ -134,7 +144,7 @@
 		<div id="patientEncounters" style="display:none;">
 			
 			<openmrs:extensionPoint pointId="org.openmrs.patientDashboard.EncountersTabHeader" type="html" parameters="patientId=${patient.patientId}" />
-			<openmrs:portlet url="patientEncounters" id="patientDashboardEncounters" patientId="${patient.patientId}"/>
+			<openmrs:portlet url="patientEncounters" id="patientDashboardEncounters" patientId="${patient.patientId}" parameters="formEntryReturnUrl=${pageContext.request.contextPath}/patientDashboard.form"/>
 			
 		</div>
 	</openmrs:hasPrivilege>
@@ -154,6 +164,16 @@
 			
 		</div>
 	</openmrs:hasPrivilege>
+	<c:if test="${enableFormEntryTab}">
+		<openmrs:hasPrivilege privilege="Form Entry">
+			<div id="formEntry" style="display:none;">
+			
+				<openmrs:extensionPoint pointId="org.openmrs.patientDashboard.FormEntryTabHeader" type="html" parameters="patientId=${patient.patientId}" />
+				<openmrs:portlet url="personFormEntry" id="formEntryPortlet" personId="${patient.personId}" parameters="showDecoration=true|showLastThreeEncounters=true|returnUrl=${pageContext.request.contextPath}/patientDashboard.form"/>
+				
+			</div>
+		</openmrs:hasPrivilege>
+	</c:if>		
 	<openmrs:extensionPoint pointId="org.openmrs.patientDashboardTab" type="html">
 		<openmrs:hasPrivilege privilege="${extension.requiredPrivilege}">
 			<div id="${extension.tabId}" style="display:none;">

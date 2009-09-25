@@ -18,7 +18,6 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.Vector;
 
 import javax.servlet.ServletException;
@@ -39,21 +38,20 @@ import org.openmrs.PatientIdentifierType;
 import org.openmrs.Person;
 import org.openmrs.PersonAddress;
 import org.openmrs.PersonName;
-import org.openmrs.Tribe;
 import org.openmrs.api.APIException;
 import org.openmrs.api.DuplicateIdentifierException;
-import org.openmrs.api.EncounterService;
 import org.openmrs.api.IdentifierNotUniqueException;
 import org.openmrs.api.InsufficientIdentifiersException;
 import org.openmrs.api.InvalidIdentifierFormatException;
+import org.openmrs.api.LocationService;
 import org.openmrs.api.PatientIdentifierException;
 import org.openmrs.api.PatientService;
 import org.openmrs.api.context.Context;
 import org.openmrs.propertyeditor.ConceptEditor;
 import org.openmrs.propertyeditor.LocationEditor;
 import org.openmrs.propertyeditor.PatientIdentifierTypeEditor;
-import org.openmrs.propertyeditor.TribeEditor;
 import org.openmrs.util.OpenmrsConstants;
+import org.openmrs.util.OpenmrsUtil;
 import org.openmrs.web.WebConstants;
 import org.openmrs.web.controller.person.PersonFormController;
 import org.springframework.beans.propertyeditors.CustomDateEditor;
@@ -90,7 +88,6 @@ public class PatientFormController extends PersonFormController {
 		NumberFormat nf = NumberFormat.getInstance(Context.getLocale());
 		binder.registerCustomEditor(java.lang.Integer.class, new CustomNumberEditor(java.lang.Integer.class, nf, true));
 		binder.registerCustomEditor(java.util.Date.class, new CustomDateEditor(Context.getDateFormat(), true, 10));
-		binder.registerCustomEditor(Tribe.class, new TribeEditor());
 		binder.registerCustomEditor(PatientIdentifierType.class, new PatientIdentifierTypeEditor());
 		binder.registerCustomEditor(Location.class, new LocationEditor());
 		binder.registerCustomEditor(Concept.class, "civilStatus", new ConceptEditor());
@@ -110,7 +107,7 @@ public class PatientFormController extends PersonFormController {
 		if (Context.isAuthenticated()) {
 			
 			PatientService ps = Context.getPatientService();
-			EncounterService es = Context.getEncounterService();
+			LocationService ls = Context.getLocationService();
 			Object[] objs = null;
 			
 			MessageSourceAccessor msa = getMessageSourceAccessor();
@@ -137,7 +134,7 @@ public class PatientFormController extends PersonFormController {
 							PatientIdentifier pi = new PatientIdentifier();
 							pi.setIdentifier(id);
 							pi.setIdentifierType(ps.getPatientIdentifierType(Integer.valueOf(idTypes[i])));
-							pi.setLocation(es.getLocation(Integer.valueOf(locs[i])));
+							pi.setLocation(ls.getLocation(Integer.valueOf(locs[i])));
 							if (idPrefStatus != null && idPrefStatus.length > i)
 								pi.setPreferred(new Boolean(idPrefStatus[i]));
 							patient.addIdentifier(pi);
@@ -417,7 +414,8 @@ public class PatientFormController extends PersonFormController {
 					Concept causeOfDeath = Context.getConceptService().getConcept(causeOfDeathConceptId);
 					
 					if (causeOfDeath != null) {
-						List<Obs> obssDeath = Context.getObsService().getObservationsByPersonAndConcept(patient, causeOfDeath);
+						List<Obs> obssDeath = Context.getObsService().getObservationsByPersonAndConcept(patient,
+						    causeOfDeath);
 						if (obssDeath != null) {
 							if (obssDeath.size() > 1) {
 								log.error("Multiple causes of death (" + obssDeath.size() + ")?  Shouldn't be...");
@@ -484,7 +482,7 @@ public class PatientFormController extends PersonFormController {
 										obsDeath.setValueText("");
 									}
 									
-									Context.getObsService().saveObs(obsDeath, null);
+									Context.getObsService().saveObs(obsDeath, obsDeath.getVoidReason());
 								} else {
 									log.debug("Current cause is still null - aborting mission");
 								}
@@ -595,12 +593,13 @@ public class PatientFormController extends PersonFormController {
 		
 		String patientVariation = "";
 		
-		Concept reasonForExitConcept = Context.getConceptService().getConceptByIdOrName(
+		Concept reasonForExitConcept = Context.getConceptService().getConcept(
 		    Context.getAdministrationService().getGlobalProperty("concept.reasonExitedCare"));
 		
 		if (reasonForExitConcept != null && patient.getPatientId() != null) {
-			Set<Obs> patientExitObs = Context.getObsService().getObservations(patient, reasonForExitConcept, false);
-			if (patientExitObs != null) {
+			List<Obs> patientExitObs = Context.getObsService().getObservationsByPersonAndConcept(patient,
+			    reasonForExitConcept);
+			if (patientExitObs != null && patientExitObs.size() > 0) {
 				log.debug("Exit obs is size " + patientExitObs.size());
 				if (patientExitObs.size() == 1) {
 					Obs exitObs = patientExitObs.iterator().next();

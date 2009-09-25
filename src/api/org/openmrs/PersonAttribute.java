@@ -15,8 +15,6 @@ package org.openmrs;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
 import java.util.Date;
 
 import org.apache.commons.logging.Log;
@@ -40,9 +38,9 @@ import org.simpleframework.xml.Root;
  * @see org.openmrs.Attributable
  */
 @Root(strict = false)
-public class PersonAttribute implements java.io.Serializable, Comparable<PersonAttribute> {
+public class PersonAttribute extends BaseOpenmrsData implements java.io.Serializable, Comparable<PersonAttribute> {
 	
-	private Log log = LogFactory.getLog(getClass());
+	private transient Log log = LogFactory.getLog(getClass());
 	
 	public static final long serialVersionUID = 11231211232111L;
 	
@@ -56,22 +54,6 @@ public class PersonAttribute implements java.io.Serializable, Comparable<PersonA
 	
 	private String value;
 	
-	private User creator;
-	
-	private Date dateCreated;
-	
-	private User changedBy;
-	
-	private Date dateChanged;
-	
-	private User voidedBy;
-	
-	private Boolean voided = false;
-	
-	private Date dateVoided;
-	
-	private String voidReason;
-	
 	/** default constructor */
 	public PersonAttribute() {
 	}
@@ -83,8 +65,8 @@ public class PersonAttribute implements java.io.Serializable, Comparable<PersonA
 	/**
 	 * Constructor for creating a basic attribute
 	 * 
-	 * @param attributeType
-	 * @param value
+	 * @param type PersonAttributeType
+	 * @param value String
 	 */
 	public PersonAttribute(PersonAttributeType type, String value) {
 		this.attributeType = type;
@@ -104,8 +86,8 @@ public class PersonAttribute implements java.io.Serializable, Comparable<PersonA
 	 * The purpose of this method is to allow subclasses of PersonAttribute to delegate a portion of
 	 * their copy() method back to the superclass, in case the base class implementation changes.
 	 * 
-	 * @param ret a PersonAttribute that will have the state of <code>this</code> copied into it
-	 * @return the PersonAttribute that was passed in, with state copied into it
+	 * @param target a PersonAttribute that will have the state of <code>this</code> copied into it
+	 * @return Returns the PersonAttribute that was passed in, with state copied into it
 	 */
 	protected PersonAttribute copyHelper(PersonAttribute target) {
 		target.setPerson(getPerson());
@@ -116,7 +98,7 @@ public class PersonAttribute implements java.io.Serializable, Comparable<PersonA
 		target.setChangedBy(getChangedBy());
 		target.setDateChanged(getDateChanged());
 		target.setVoidedBy(getVoidedBy());
-		target.setVoided(getVoided());
+		target.setVoided(isVoided());
 		target.setDateVoided(getDateVoided());
 		target.setVoidReason(getVoidReason());
 		return target;
@@ -192,55 +174,7 @@ public class PersonAttribute implements java.io.Serializable, Comparable<PersonA
 		return returnValue;
 	}
 	
-	//property accessors
-	
-	/**
-	 * @return Returns the creator.
-	 */
-	@Element(required = true)
-	public User getCreator() {
-		return creator;
-	}
-	
-	/**
-	 * @param creator The creator to set.
-	 */
-	@Element(required = true)
-	public void setCreator(User creator) {
-		this.creator = creator;
-	}
-	
-	/**
-	 * @return Returns the dateCreated.
-	 */
-	@Element(required = true)
-	public Date getDateCreated() {
-		return dateCreated;
-	}
-	
-	/**
-	 * @param dateCreated The dateCreated to set.
-	 */
-	@Element(required = true)
-	public void setDateCreated(Date dateCreated) {
-		this.dateCreated = dateCreated;
-	}
-	
-	/**
-	 * @return Returns the dateVoided.
-	 */
-	@Element(required = false)
-	public Date getDateVoided() {
-		return dateVoided;
-	}
-	
-	/**
-	 * @param dateVoided The dateVoided to set.
-	 */
-	@Element(required = false)
-	public void setDateVoided(Date dateVoided) {
-		this.dateVoided = dateVoided;
-	}
+	// property accessors
 	
 	/**
 	 * @return Returns the person.
@@ -259,58 +193,6 @@ public class PersonAttribute implements java.io.Serializable, Comparable<PersonA
 	}
 	
 	/**
-	 * @return Returns the voided.
-	 */
-	public Boolean isVoided() {
-		return voided;
-	}
-	
-	@Attribute(required = true)
-	public Boolean getVoided() {
-		return isVoided();
-	}
-	
-	/**
-	 * @param voided The voided to set.
-	 */
-	@Attribute(required = true)
-	public void setVoided(Boolean voided) {
-		this.voided = voided;
-	}
-	
-	/**
-	 * @return Returns the voidedBy.
-	 */
-	@Element(required = false)
-	public User getVoidedBy() {
-		return voidedBy;
-	}
-	
-	/**
-	 * @param voidedBy The voidedBy to set.
-	 */
-	@Element(required = false)
-	public void setVoidedBy(User voidedBy) {
-		this.voidedBy = voidedBy;
-	}
-	
-	/**
-	 * @return Returns the voidReason.
-	 */
-	@Element(data = true, required = false)
-	public String getVoidReason() {
-		return voidReason;
-	}
-	
-	/**
-	 * @param voidReason The voidReason to set.
-	 */
-	@Element(data = true, required = false)
-	public void setVoidReason(String voidReason) {
-		this.voidReason = voidReason;
-	}
-	
-	/**
 	 * @return the attributeType
 	 */
 	@Element(required = true)
@@ -324,38 +206,6 @@ public class PersonAttribute implements java.io.Serializable, Comparable<PersonA
 	@Element(required = true)
 	public void setAttributeType(PersonAttributeType attributeType) {
 		this.attributeType = attributeType;
-	}
-	
-	/**
-	 * @return the changedBy
-	 */
-	@Element(required = false)
-	public User getChangedBy() {
-		return changedBy;
-	}
-	
-	/**
-	 * @param changedBy the changedBy to set
-	 */
-	@Element(required = false)
-	public void setChangedBy(User changedBy) {
-		this.changedBy = changedBy;
-	}
-	
-	/**
-	 * @return the dateChanged
-	 */
-	@Element(required = false)
-	public Date getDateChanged() {
-		return dateChanged;
-	}
-	
-	/**
-	 * @param dateChanged the dateChanged to set
-	 */
-	@Element(required = false)
-	public void setDateChanged(Date dateChanged) {
-		this.dateChanged = dateChanged;
 	}
 	
 	/**
@@ -458,5 +308,23 @@ public class PersonAttribute implements java.io.Serializable, Comparable<PersonA
 			retValue = OpenmrsUtil.compareWithNullAsGreatest(getPersonAttributeId(), other.getPersonAttributeId());
 		
 		return retValue;
+	}
+	
+	/**
+	 * @since 1.5
+	 * @see org.openmrs.OpenmrsObject#getId()
+	 */
+	public Integer getId() {
+		
+		return getPersonAttributeId();
+	}
+	
+	/**
+	 * @since 1.5
+	 * @see org.openmrs.OpenmrsObject#setId(java.lang.Integer)
+	 */
+	public void setId(Integer id) {
+		setPersonAttributeId(id);
+		
 	}
 }

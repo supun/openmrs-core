@@ -17,10 +17,12 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 import java.util.Vector;
 
@@ -42,8 +44,11 @@ import org.hibernate.criterion.Subqueries;
 import org.openmrs.Concept;
 import org.openmrs.ConceptAnswer;
 import org.openmrs.ConceptClass;
+import org.openmrs.ConceptComplex;
 import org.openmrs.ConceptDatatype;
 import org.openmrs.ConceptDerived;
+import org.openmrs.ConceptDescription;
+import org.openmrs.ConceptMap;
 import org.openmrs.ConceptName;
 import org.openmrs.ConceptNameTag;
 import org.openmrs.ConceptNumeric;
@@ -53,15 +58,19 @@ import org.openmrs.ConceptSetDerived;
 import org.openmrs.ConceptSource;
 import org.openmrs.ConceptWord;
 import org.openmrs.Drug;
+import org.openmrs.DrugIngredient;
+import org.openmrs.api.ConceptService;
 import org.openmrs.api.context.Context;
 import org.openmrs.api.db.ConceptDAO;
 import org.openmrs.api.db.DAOException;
 import org.openmrs.util.OpenmrsConstants;
 
 /**
- * The Hibernate class for Concepts, Drugs, and related classes
+ * The Hibernate class for Concepts, Drugs, and related classes. <br/>
+ * <br/>
+ * Use the {@link ConceptService} to access these methods
  * 
- * @see org.openmrs.ConceptService to access these methods
+ * @see ConceptService
  */
 public class HibernateConceptDAO implements ConceptDAO {
 	
@@ -76,6 +85,27 @@ public class HibernateConceptDAO implements ConceptDAO {
 	 */
 	public void setSessionFactory(SessionFactory sessionFactory) {
 		this.sessionFactory = sessionFactory;
+	}
+	
+	/**
+	 * @see org.openmrs.api.db.ConceptDAO#getConceptComplex(java.lang.Integer)
+	 */
+	public ConceptComplex getConceptComplex(Integer conceptId) {
+		ConceptComplex cc;
+		Object obj = sessionFactory.getCurrentSession().get(ConceptComplex.class, conceptId);
+		// If Concept has already been read & cached, we may get back a Concept instead of
+		// ConceptComplex.  If this happens, we need to clear the object from the cache
+		// and re-fetch it as a ConceptComplex
+		if (obj != null && !obj.getClass().equals(ConceptComplex.class)) {
+			sessionFactory.getCurrentSession().evict(obj); // remove from cache
+			// session.get() did not work here, we need to perform a query to get a ConceptComplex
+			Query query = sessionFactory.getCurrentSession().createQuery("from ConceptComplex where conceptId = :conceptId")
+			        .setParameter("conceptId", conceptId);
+			obj = query.uniqueResult();
+		}
+		cc = (ConceptComplex) obj;
+		
+		return cc;
 	}
 	
 	/**
@@ -104,11 +134,14 @@ public class HibernateConceptDAO implements ConceptDAO {
 	private void insertRowIntoSubclassIfNecessary(Concept concept) {
 		Connection connection = sessionFactory.getCurrentSession().connection();
 		
+		PreparedStatement ps = null;
+		PreparedStatement ps2 = null;
+		
 		// check the concept_numeric table
 		if (concept instanceof ConceptNumeric) {
 			
 			try {
-				PreparedStatement ps = connection
+				ps = connection
 				        .prepareStatement("SELECT * FROM concept WHERE concept_id = ? and not exists (select * from concept_numeric WHERE concept_id = ?)");
 				ps.setInt(1, concept.getConceptId());
 				ps.setInt(2, concept.getConceptId());
@@ -121,9 +154,9 @@ public class HibernateConceptDAO implements ConceptDAO {
 					// (must be done before the "insert into...")
 					sessionFactory.getCurrentSession().clear();
 					
-					ps = connection.prepareStatement("INSERT INTO concept_numeric (concept_id, precise) VALUES (?, false)");
-					ps.setInt(1, concept.getConceptId());
-					ps.executeUpdate();
+					ps2 = connection.prepareStatement("INSERT INTO concept_numeric (concept_id, precise) VALUES (?, false)");
+					ps2.setInt(1, concept.getConceptId());
+					ps2.executeUpdate();
 				} else {
 					// no stub insert is needed because either a concept row 
 					// doesn't exist or a concept_numeric row does exist
@@ -132,6 +165,70 @@ public class HibernateConceptDAO implements ConceptDAO {
 			}
 			catch (SQLException e) {
 				log.error("Error while trying to see if this ConceptNumeric is in the concept_numeric table already", e);
+			}
+			finally {
+				if (ps != null) {
+					try {
+						ps.close();
+					}
+					catch (SQLException e) {
+						log.error("Error generated while closing statement", e);
+					}
+				}
+				if (ps2 != null) {
+					try {
+						ps2.close();
+					}
+					catch (SQLException e) {
+						log.error("Error generated while closing statement", e);
+					}
+				}
+			}
+		} else if (concept instanceof ConceptComplex) {
+			
+			try {
+				ps = connection
+				        .prepareStatement("SELECT * FROM concept WHERE concept_id = ? and not exists (select * from concept_complex WHERE concept_id = ?)");
+				ps.setInt(1, concept.getConceptId());
+				ps.setInt(2, concept.getConceptId());
+				ps.execute();
+				
+				if (ps.getResultSet().next()) {
+					// we have to evict the current concept out of the session because
+					// the user probably had to change the class of this object to get it 
+					// to now be a numeric
+					// (must be done before the "insert into...")
+					sessionFactory.getCurrentSession().clear();
+					
+					ps2 = connection.prepareStatement("INSERT INTO concept_complex (concept_id, precise) VALUES (?, false)");
+					ps2.setInt(1, concept.getConceptId());
+					ps2.executeUpdate();
+				} else {
+					// no stub insert is needed because either a concept row 
+					// doesn't exist or a concept_numeric row does exist
+				}
+				
+			}
+			catch (SQLException e) {
+				log.error("Error while trying to see if this ConceptComplex is in the concept_complex table already", e);
+			}
+			finally {
+				if (ps != null) {
+					try {
+						ps.close();
+					}
+					catch (SQLException e) {
+						log.error("Error generated while closing statement", e);
+					}
+				}
+				if (ps2 != null) {
+					try {
+						ps2.close();
+					}
+					catch (SQLException e) {
+						log.error("Error generated while closing statement", e);
+					}
+				}
 			}
 		} else if (concept instanceof ConceptDerived) {
 			// check the concept_derived table
@@ -820,7 +917,7 @@ public class HibernateConceptDAO implements ConceptDAO {
 	}
 	
 	/**
-	 * y * returns a list of n-generations of parents of a concept in a concept set
+	 * returns a list of n-generations of parents of a concept in a concept set
 	 * 
 	 * @param Concept current
 	 * @return List<Concept>
@@ -887,6 +984,7 @@ public class HibernateConceptDAO implements ConceptDAO {
 	/**
 	 * @see org.openmrs.api.db.ConceptDAO#getAllConceptNameTags()
 	 */
+	@SuppressWarnings("unchecked")
 	public List<ConceptNameTag> getAllConceptNameTags() {
 		return sessionFactory.getCurrentSession().createQuery("from ConceptNameTag cnt order by cnt.tag").list();
 	}
@@ -901,6 +999,7 @@ public class HibernateConceptDAO implements ConceptDAO {
 	/**
 	 * @see org.openmrs.api.db.ConceptDAO#getAllConceptSources()
 	 */
+	@SuppressWarnings("unchecked")
 	public List<ConceptSource> getAllConceptSources() {
 		Criteria criteria = sessionFactory.getCurrentSession().createCriteria(ConceptSource.class);
 		
@@ -992,7 +1091,6 @@ public class HibernateConceptDAO implements ConceptDAO {
 			}
 			
 			currentConcept = nextConcept;
-			
 			nextConcept = getNextConcept(currentConcept);
 			
 			return currentConcept;
@@ -1005,5 +1103,139 @@ public class HibernateConceptDAO implements ConceptDAO {
 			throw new UnsupportedOperationException();
 		}
 		
+	}
+	
+	/**
+	 * @see org.openmrs.api.db.ConceptDAO#getConceptByMapping(java.lang.String, java.lang.String)
+	 */
+	public Concept getConceptByMapping(String conceptCode, String mappingCode) {
+		Criteria criteria = sessionFactory.getCurrentSession().createCriteria(ConceptMap.class);
+		
+		// select the concept as the return value
+		criteria.setProjection(Projections.property("concept"));
+		
+		criteria.add(Expression.eq("sourceCode", conceptCode));
+		
+		// join to conceptSource and match to the hl7Code
+		criteria.createAlias("source", "conceptSource");
+		criteria.add(Expression.eq("conceptSource.hl7Code", mappingCode));
+		
+		return (Concept) criteria.uniqueResult();
+	}
+	
+	/**
+	 * @see org.openmrs.api.db.ConceptDAO#getConceptByUuid(java.lang.String)
+	 */
+	public Concept getConceptByUuid(String uuid) {
+		return (Concept) sessionFactory.getCurrentSession().createQuery("from Concept c where c.uuid = :uuid").setString(
+		    "uuid", uuid).uniqueResult();
+	}
+	
+	/**
+	 * @see org.openmrs.api.db.ConceptDAO#getConceptClassByUuid(java.lang.String)
+	 */
+	public ConceptClass getConceptClassByUuid(String uuid) {
+		return (ConceptClass) sessionFactory.getCurrentSession().createQuery("from ConceptClass cc where cc.uuid = :uuid")
+		        .setString("uuid", uuid).uniqueResult();
+	}
+	
+	public ConceptAnswer getConceptAnswerByUuid(String uuid) {
+		return (ConceptAnswer) sessionFactory.getCurrentSession().createQuery("from ConceptAnswer cc where cc.uuid = :uuid")
+		        .setString("uuid", uuid).uniqueResult();
+	}
+	
+	public ConceptDerived getConceptDerivedByUuid(String uuid) {
+		return (ConceptDerived) sessionFactory.getCurrentSession().createQuery(
+		    "from ConceptDerived cc where cc.uuid = :uuid").setString("uuid", uuid).uniqueResult();
+	}
+	
+	public ConceptName getConceptNameByUuid(String uuid) {
+		return (ConceptName) sessionFactory.getCurrentSession().createQuery("from ConceptName cc where cc.uuid = :uuid")
+		        .setString("uuid", uuid).uniqueResult();
+	}
+	
+	public ConceptSet getConceptSetByUuid(String uuid) {
+		return (ConceptSet) sessionFactory.getCurrentSession().createQuery("from ConceptSet cc where cc.uuid = :uuid")
+		        .setString("uuid", uuid).uniqueResult();
+	}
+	
+	public ConceptSetDerived getConceptSetDerivedByUuid(String uuid) {
+		return (ConceptSetDerived) sessionFactory.getCurrentSession().createQuery(
+		    "from ConceptSetDerived cc where cc.uuid = :uuid").setString("uuid", uuid).uniqueResult();
+	}
+	
+	public ConceptSource getConceptSourceByUuid(String uuid) {
+		return (ConceptSource) sessionFactory.getCurrentSession().createQuery("from ConceptSource cc where cc.uuid = :uuid")
+		        .setString("uuid", uuid).uniqueResult();
+	}
+	
+	public ConceptWord getConceptWordByUuid(String uuid) {
+		return (ConceptWord) sessionFactory.getCurrentSession().createQuery("from ConceptWord cc where cc.uuid = :uuid")
+		        .setString("uuid", uuid).uniqueResult();
+	}
+	
+	/**
+	 * @see org.openmrs.api.db.ConceptDAO#getConceptDatatypeByUuid(java.lang.String)
+	 */
+	public ConceptDatatype getConceptDatatypeByUuid(String uuid) {
+		return (ConceptDatatype) sessionFactory.getCurrentSession().createQuery(
+		    "from ConceptDatatype cd where cd.uuid = :uuid").setString("uuid", uuid).uniqueResult();
+	}
+	
+	/**
+	 * @see org.openmrs.api.db.ConceptDAO#getConceptNumericByUuid(java.lang.String)
+	 */
+	public ConceptNumeric getConceptNumericByUuid(String uuid) {
+		return (ConceptNumeric) sessionFactory.getCurrentSession().createQuery(
+		    "from ConceptNumeric cn where cn.uuid = :uuid").setString("uuid", uuid).uniqueResult();
+	}
+	
+	/**
+	 * @see org.openmrs.api.db.ConceptDAO#getConceptProposalByUuid(java.lang.String)
+	 */
+	public ConceptProposal getConceptProposalByUuid(String uuid) {
+		return (ConceptProposal) sessionFactory.getCurrentSession().createQuery(
+		    "from ConceptProposal cp where cp.uuid = :uuid").setString("uuid", uuid).uniqueResult();
+	}
+	
+	/**
+	 * @see org.openmrs.api.db.ConceptDAO#getDrugByUuid(java.lang.String)
+	 */
+	public Drug getDrugByUuid(String uuid) {
+		return (Drug) sessionFactory.getCurrentSession().createQuery("from Drug d where d.uuid = :uuid").setString("uuid",
+		    uuid).uniqueResult();
+	}
+	
+	public DrugIngredient getDrugIngredientByUuid(String uuid) {
+		return (DrugIngredient) sessionFactory.getCurrentSession().createQuery("from DrugIngredient d where d.uuid = :uuid")
+		        .setString("uuid", uuid).uniqueResult();
+	}
+	
+	/**
+	 * @see org.openmrs.api.db.ConceptDAO#getConceptUuids()
+	 */
+	public Map<Integer, String> getConceptUuids() {
+		Map<Integer, String> ret = new HashMap<Integer, String>();
+		Query q = sessionFactory.getCurrentSession().createQuery("select conceptId, uuid from Concept");
+		List<Object[]> list = q.list();
+		for (Object[] o : list)
+			ret.put((Integer) o[0], (String) o[1]);
+		return ret;
+	}
+	
+	/**
+	 * @see org.openmrs.api.db.ConceptDAO#getConceptDescriptionByUuid(java.lang.String)
+	 */
+	public ConceptDescription getConceptDescriptionByUuid(String uuid) {
+		return (ConceptDescription) sessionFactory.getCurrentSession().createQuery(
+		    "from ConceptDescription cd where cd.uuid = :uuid").setString("uuid", uuid).uniqueResult();
+	}
+	
+	/**
+	 * @see org.openmrs.api.db.ConceptDAO#getConceptNameTagByUuid(java.lang.String)
+	 */
+	public ConceptNameTag getConceptNameTagByUuid(String uuid) {
+		return (ConceptNameTag) sessionFactory.getCurrentSession().createQuery(
+		    "from ConceptNameTag cnt where cnt.uuid = :uuid").setString("uuid", uuid).uniqueResult();
 	}
 }

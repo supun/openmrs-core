@@ -23,6 +23,8 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.Reader;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -55,9 +57,11 @@ import org.dbunit.operation.DatabaseOperation;
 import org.hibernate.SessionFactory;
 import org.hibernate.cfg.Environment;
 import org.hibernate.dialect.HSQLDialect;
+import org.junit.AfterClass;
 import org.junit.Before;
 import org.openmrs.api.context.Context;
 import org.openmrs.api.context.ContextAuthenticationException;
+import org.openmrs.module.ModuleUtil;
 import org.openmrs.util.OpenmrsClassLoader;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.TestExecutionListeners;
@@ -72,8 +76,9 @@ import org.springframework.transaction.annotation.Transactional;
  * down. (because spring is started before test cases are run). Normal test cases do not need to
  * extend anything
  */
-@ContextConfiguration(locations = { "classpath:applicationContext-service.xml" })
-@TestExecutionListeners( { TransactionalTestExecutionListener.class, SkipBaseSetupAnnotationExecutionListener.class })
+@ContextConfiguration(locations = { "classpath:applicationContext-service.xml", "classpath*:moduleApplicationContext.xml" })
+@TestExecutionListeners( { TransactionalTestExecutionListener.class, SkipBaseSetupAnnotationExecutionListener.class,
+        StartModuleExecutionListener.class })
 @Transactional
 public abstract class BaseContextSensitiveTest extends AbstractJUnit4SpringContextTests {
 	
@@ -108,12 +113,6 @@ public abstract class BaseContextSensitiveTest extends AbstractJUnit4SpringConte
 	 * TimerTask method, we make it a private field
 	 */
 	private static Frame frame;
-	
-	/**
-	 * Private variable defining whether or not the columns have been initialized in the hsql
-	 * database yet (adding password and salt columns)
-	 */
-	protected static boolean columnsAdded = false;
 	
 	/**
 	 * Static variable to keep track of the number of times this class has been loaded (aka, number
@@ -201,7 +200,7 @@ public abstract class BaseContextSensitiveTest extends AbstractJUnit4SpringConte
 	
 	/**
 	 * Authenticate to the Context. A popup box will appear asking the current user to enter
-	 * credentials unless there is a junit.username and junit.userpassword defined in the runtime
+	 * credentials unless there is a junit.username and junit.password defined in the runtime
 	 * properties
 	 * 
 	 * @throws Exception
@@ -215,8 +214,11 @@ public abstract class BaseContextSensitiveTest extends AbstractJUnit4SpringConte
 			return;
 		}
 		catch (ContextAuthenticationException wrongCredentialsError) {
-			// if we get here the user is using some database other than the standard 
-			// in-memory database, prompt the user for input
+			if (useInMemoryDatabase()) {
+				// if we get here the user is using some database other than the standard 
+				// in-memory database, prompt the user for input
+				log.error("For some reason we couldn't auth as admin:test ?!", wrongCredentialsError);
+			}
 		}
 		
 		Integer attempts = 0;
@@ -382,25 +384,6 @@ public abstract class BaseContextSensitiveTest extends AbstractJUnit4SpringConte
 	}
 	
 	/**
-	 * True/false whether the extra columns not in the hbm mapping files have been added to the
-	 * current database or not.
-	 * 
-	 * @return the columnsAdded value
-	 */
-	public boolean areColumnsAdded() {
-		return BaseContextSensitiveTest.columnsAdded;
-	}
-	
-	/**
-	 * Set the columns added value as either done or not done.
-	 * 
-	 * @param columnsAdded the columnsAdded to save
-	 */
-	public void setColumnsAdded(boolean columnsAdded) {
-		BaseContextSensitiveTest.columnsAdded = columnsAdded;
-	}
-	
-	/**
 	 * This initializes the empty in-memory hsql database with some rows in order to actually run
 	 * some tests
 	 */
@@ -409,29 +392,6 @@ public abstract class BaseContextSensitiveTest extends AbstractJUnit4SpringConte
 		if (useInMemoryDatabase() == false)
 			throw new Exception(
 			        "You shouldn't be initializing a NON in-memory database. Consider unoverriding useInMemoryDatabase");
-		
-		// we only want to add columns once. Hsql won't roll back "alter table" 
-		// commands
-		if (areColumnsAdded() == false) {
-			Connection connection = getConnection();
-			
-			// add the password and salt columns to the users table
-			// because they are not in the hibernate mapping files
-			String sql = "alter table users add column password varchar(255)";
-			PreparedStatement ps = connection.prepareStatement(sql);
-			ps.execute();
-			ps.close();
-			sql = "alter table users add column salt varchar(255)";
-			ps = connection.prepareStatement(sql);
-			ps.execute();
-			ps.close();
-			sql = "alter table users add column secret_answer varchar(255)";
-			ps = connection.prepareStatement(sql);
-			ps.execute();
-			ps.close();
-			
-			setColumnsAdded(true);
-		}
 		
 		executeDataSet(INITIAL_XML_DATASET_PACKAGE_PATH);
 	}
@@ -473,13 +433,19 @@ public abstract class BaseContextSensitiveTest extends AbstractJUnit4SpringConte
 					throw new FileNotFoundException("Unable to find '" + datasetFilename + "' in the classpath");
 			}
 			
+			Reader reader = null;
 			try {
-				ReplacementDataSet replacementDataSet = new ReplacementDataSet(new FlatXmlDataSet(fileInInputStreamFormat));
+				reader = new InputStreamReader(fileInInputStreamFormat);
+				ReplacementDataSet replacementDataSet = new ReplacementDataSet(
+				        new FlatXmlDataSet(reader, false, true, false));
 				replacementDataSet.addReplacementObject("[NULL]", null);
 				xmlDataSetToRun = replacementDataSet;
 			}
 			finally {
 				fileInInputStreamFormat.close();
+				
+				if (reader != null)
+					reader.close();
 			}
 		}
 		
@@ -582,6 +548,10 @@ public abstract class BaseContextSensitiveTest extends AbstractJUnit4SpringConte
 		// clear the (hibernate) session to make sure nothing is cached, etc
 		Context.clearSession();
 		
+		// needed because the authenticatedUser is the only object that sticks 
+		// around after tests and the clearSession call 
+		Context.refreshAuthenticatedUser();
+		
 	}
 	
 	/**
@@ -600,6 +570,11 @@ public abstract class BaseContextSensitiveTest extends AbstractJUnit4SpringConte
 	 */
 	@Before
 	public void baseSetupWithStandardDataAndAuthentication() throws Exception {
+		// only open one session per class
+		if (!Context.isSessionOpen()) {
+			Context.openSession();
+		}
+		
 		// the skipBaseSetup flag is controlled by the @SkipBaseSetup
 		// annotation.  If it is deflagged or if the developer has
 		// marked this class as a non-inmemory database, skip these base steps
@@ -610,6 +585,23 @@ public abstract class BaseContextSensitiveTest extends AbstractJUnit4SpringConte
 			
 			authenticate();
 		}
+		Context.clearSession();
+	}
+	
+	/**
+	 * Called after each test class. This is called once per test class that extends
+	 * {@link BaseContextSensitiveTest}. Needed so that "unit of work" that is the test class is
+	 * surrounded by a pair of open/close session calls.
+	 * 
+	 * @throws Exception
+	 */
+	@AfterClass
+	public static void closeSessionAfterEachClass() throws Exception {
+		// close any modules that might have been loaded by the @StartModules class annotation
+		ModuleUtil.shutdown();
+		
+		// clean up the session so we don't leak memory
+		Context.closeSession();
 	}
 	
 	/**

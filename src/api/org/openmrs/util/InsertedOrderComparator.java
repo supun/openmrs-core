@@ -22,7 +22,7 @@ import java.util.Map;
  * on the order which they are inserted (and hence compared). Caveat: If an item is removed and
  * readded, it will retain the old order
  * 
- * @author bwolfe
+ * @deprecated this is not needed. Use a LinkedHashSet object instead of this class.
  */
 public class InsertedOrderComparator implements Comparator<String> {
 	

@@ -31,6 +31,25 @@ public class ConceptNameTest {
 	
 	final static Generator<String> nameGenerator;
 	
+	static {
+		nameGenerator = GeneratorFactory.getUniqueRegexStringGenerator(NAME_PATTERN, 2, 12, Locale.ENGLISH);
+	}
+	
+	/**
+	 * Convenient factory method to create a populated Concept.
+	 * 
+	 * @param i
+	 */
+	public static ConceptName createMockConceptName(int conceptNameId, Locale locale) {
+		ConceptName mockConceptName = new ConceptName();
+		
+		mockConceptName.setConceptNameId(conceptNameId);
+		mockConceptName.setLocale(locale);
+		mockConceptName.setName(nameGenerator.generate());
+		
+		return mockConceptName;
+	}
+	
 	/**
 	 * @see {@link ConceptName#equals(Object)}
 	 */
@@ -82,25 +101,6 @@ public class ConceptNameTest {
 	public void isPreferred_shouldReturnFalseIfThisTagDoesntHaveThePreferredTag() throws Exception {
 		ConceptName name = new ConceptName("name", Locale.ENGLISH);
 		Assert.assertFalse(name.isPreferred());
-	}
-	
-	static {
-		nameGenerator = GeneratorFactory.getUniqueRegexStringGenerator(NAME_PATTERN, 2, 12, Locale.ENGLISH);
-	}
-	
-	/**
-	 * Convenient factory method to create a populated Concept.
-	 * 
-	 * @param i
-	 */
-	public static ConceptName createMockConceptName(int conceptNameId, Locale locale) {
-		ConceptName mockConceptName = new ConceptName();
-		
-		mockConceptName.setConceptNameId(conceptNameId);
-		mockConceptName.setLocale(locale);
-		mockConceptName.setName(nameGenerator.generate());
-		
-		return mockConceptName;
 	}
 	
 }

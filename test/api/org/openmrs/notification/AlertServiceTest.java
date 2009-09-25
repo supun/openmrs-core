@@ -17,6 +17,7 @@ import static org.junit.Assert.assertEquals;
 
 import java.util.List;
 
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.openmrs.Role;
@@ -24,6 +25,7 @@ import org.openmrs.User;
 import org.openmrs.api.UserService;
 import org.openmrs.api.context.Context;
 import org.openmrs.test.BaseContextSensitiveTest;
+import org.openmrs.test.Verifies;
 
 /**
  * TODO add more tests to cover the methods in <code>AlertService</code>
@@ -44,10 +46,11 @@ public class AlertServiceTest extends BaseContextSensitiveTest {
 	/**
 	 * Test that we can create/update an alert
 	 * 
-	 * @throws Exception
+	 * @see {@link AlertService#saveAlert(Alert)}
 	 */
 	@Test
-	public void shouldSaveBasicAlert() throws Exception {
+	@Verifies(value = "should save simple alert with one user", method = "saveAlert(Alert)")
+	public void saveAlert_shouldSaveSimpleAlertWithOneUser() throws Exception {
 		AlertService alertService = Context.getAlertService();
 		
 		Alert alert = new Alert("asdf", new User(1));
@@ -61,10 +64,11 @@ public class AlertServiceTest extends BaseContextSensitiveTest {
 	/**
 	 * Test add by role -- similar to how the alert form works
 	 * 
-	 * @throws Exception
+	 * @see {@link AlertService#saveAlert(Alert)}
 	 */
 	@Test
-	public void shouldAlertRecipientsByRole() throws Exception {
+	@Verifies(value = "should save alerts by role", method = "saveAlert(Alert)")
+	public void saveAlert_shouldSaveAlertsByRole() throws Exception {
 		AlertService alertService = Context.getAlertService();
 		UserService userService = Context.getUserService();
 		
@@ -82,6 +86,17 @@ public class AlertServiceTest extends BaseContextSensitiveTest {
 		
 		assertEquals(alertSaved, alert);
 		
+	}
+	
+	/**
+	 * @see {@link AlertService#saveAlert(Alert)}
+	 */
+	@Test
+	@Verifies(value = "should assign uuid to alert", method = "saveAlert(Alert)")
+	public void saveAlert_shouldAssignUuidToAlert() throws Exception {
+		Alert alert = new Alert("asdf", new User(1));
+		Context.getAlertService().saveAlert(alert);
+		Assert.assertNotNull(alert.getUuid());
 	}
 	
 }

@@ -21,7 +21,8 @@ import javax.servlet.http.HttpSession;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.openmrs.Location;
-import org.openmrs.api.EncounterService;
+import org.openmrs.api.APIException;
+import org.openmrs.api.LocationService;
 import org.openmrs.api.context.Context;
 import org.openmrs.web.WebConstants;
 import org.springframework.beans.propertyeditors.CustomNumberEditor;
@@ -56,6 +57,8 @@ public class LocationFormController extends SimpleFormController {
 	 * @see org.springframework.web.servlet.mvc.SimpleFormController#onSubmit(javax.servlet.http.HttpServletRequest,
 	 *      javax.servlet.http.HttpServletResponse, java.lang.Object,
 	 *      org.springframework.validation.BindException)
+	 * @should retire location
+	 * @should not retire location if reason is empty
 	 */
 	protected ModelAndView onSubmit(HttpServletRequest request, HttpServletResponse response, Object obj,
 	                                BindException errors) throws Exception {
@@ -63,12 +66,34 @@ public class LocationFormController extends SimpleFormController {
 		HttpSession httpSession = request.getSession();
 		
 		String view = getFormView();
-		
 		if (Context.isAuthenticated()) {
-			Location location = (Location) obj;
-			Context.getAdministrationService().updateLocation(location);
+			try {
+				Location location = (Location) obj;
+				LocationService locationService = Context.getLocationService();
+				
+				//if the user was editing the location
+				if (request.getParameter("saveLocation") != null) {
+					locationService.saveLocation(location);
+					httpSession.setAttribute(WebConstants.OPENMRS_MSG_ATTR, "Location.saved");
+				}
+				//the 'retire this location' button was clicked
+				else if (request.getParameter("retireLocation") != null) {
+					locationService.retireLocation(location, location.getRetireReason());
+					httpSession.setAttribute(WebConstants.OPENMRS_MSG_ATTR, "Location.retired");
+				}
+				//the 'unretire this location' button was clicked
+				else if (request.getParameter("unretireLocation") != null) {
+					locationService.unretireLocation(location);
+					httpSession.setAttribute(WebConstants.OPENMRS_MSG_ATTR, "Location.unretired");
+				}
+			}
+			catch (APIException e) {
+				log.error("Error while saving location: " + obj, e);
+				httpSession.setAttribute(WebConstants.OPENMRS_ERROR_ATTR, e.getMessage());
+				return showForm(request, response, errors);
+			}
+			
 			view = getSuccessView();
-			httpSession.setAttribute(WebConstants.OPENMRS_MSG_ATTR, "Location.saved");
 		}
 		
 		return new ModelAndView(new RedirectView(view));
@@ -79,16 +104,17 @@ public class LocationFormController extends SimpleFormController {
 	 * form/command object to load into the request
 	 * 
 	 * @see org.springframework.web.servlet.mvc.AbstractFormController#formBackingObject(javax.servlet.http.HttpServletRequest)
+	 * @should return valid location given valid locationId
 	 */
 	protected Object formBackingObject(HttpServletRequest request) throws ServletException {
 		
 		Location location = null;
 		
 		if (Context.isAuthenticated()) {
-			EncounterService os = Context.getEncounterService();
+			LocationService ls = Context.getLocationService();
 			String locationId = request.getParameter("locationId");
 			if (locationId != null)
-				location = os.getLocation(Integer.valueOf(locationId));
+				location = ls.getLocation(Integer.valueOf(locationId));
 		}
 		
 		if (location == null)

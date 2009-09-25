@@ -13,6 +13,7 @@
  */
 package org.openmrs.web.taglib;
 
+import java.lang.reflect.Constructor;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -35,10 +36,10 @@ import org.openmrs.ProgramWorkflowState;
 import org.openmrs.Role;
 import org.openmrs.api.ConceptService;
 import org.openmrs.api.EncounterService;
+import org.openmrs.api.LocationService;
 import org.openmrs.api.PatientService;
 import org.openmrs.api.PersonService;
 import org.openmrs.api.context.Context;
-import org.openmrs.report.ReportSchemaXml;
 import org.openmrs.util.OpenmrsConstants;
 import org.openmrs.util.OpenmrsUtil;
 
@@ -58,7 +59,7 @@ public class ForEachRecordTag extends BodyTagSupport {
 	
 	private String conceptSet;
 	
-	private Iterator records;
+	private Iterator<?> records;
 	
 	public int doStartTag() {
 		
@@ -68,38 +69,25 @@ public class ForEachRecordTag extends BodyTagSupport {
 		
 		if (name.equals("patientIdentifierType")) {
 			PatientService ps = Context.getPatientService();
-			records = ps.getPatientIdentifierTypes().iterator();
+			records = ps.getAllPatientIdentifierTypes().iterator();
 		} else if (name.equals("relationshipType")) {
 			PersonService ps = Context.getPersonService();
-			records = ps.getRelationshipTypes().iterator();
+			records = ps.getAllRelationshipTypes().iterator();
 		} else if (name.equals("encounterType")) {
 			EncounterService es = Context.getEncounterService();
-			records = es.getEncounterTypes().iterator();
+			records = es.getAllEncounterTypes().iterator();
 		} else if (name.equals("location")) {
-			EncounterService es = Context.getEncounterService();
-			records = es.getLocations().iterator();
-		} else if (name.equals("tribe")) {
-			PatientService ps = Context.getPatientService();
-			records = ps.getTribes().iterator();
+			LocationService locServ = Context.getLocationService();
+			records = locServ.getAllLocations().iterator();
 		} else if (name.equals("cohort")) {
-			List<Cohort> cohorts = Context.getCohortService().getCohorts();
+			List<Cohort> cohorts = Context.getCohortService().getAllCohorts();
 			records = cohorts.iterator();
 		} else if (name.equals("conceptSource")) {
 			List<ConceptSource> conceptSources = Context.getConceptService().getAllConceptSources();
 			records = conceptSources.iterator();
 		} else if (name.equals("form")) {
-			List<Form> forms = Context.getFormService().getForms();
+			List<Form> forms = Context.getFormService().getAllForms();
 			records = forms.iterator();
-		} else if (name.equals("reportSchemaXml")) {
-			List<ReportSchemaXml> list = Context.getReportService().getReportSchemaXmls();
-			records = list.iterator();
-		} else if (name.equals("reportObject")) {
-			List ret = null;
-			if (reportObjectType != null)
-				ret = Context.getReportObjectService().getReportObjectsByType(reportObjectType);
-			else
-				ret = Context.getReportObjectService().getAllReportObjects();
-			records = ret.iterator();
 		} else if (name.equals("civilStatus")) {
 			ConceptService cs = Context.getConceptService();
 			Concept civilStatus = cs.getConcept(OpenmrsConstants.CIVIL_STATUS_CONCEPT_ID);
@@ -110,8 +98,7 @@ public class ForEachRecordTag extends BodyTagSupport {
 			
 			Map<String, String> opts = new HashMap<String, String>();
 			for (ConceptAnswer a : civilStatus.getAnswers()) {
-				opts.put(a.getAnswerConcept().getConceptId().toString(), a.getAnswerConcept().getName(locale, false)
-				        .getName());
+				opts.put(a.getAnswerConcept().getConceptId().toString(), a.getAnswerConcept().getBestName(locale).getName());
 			}
 			records = opts.entrySet().iterator();
 			if (select != null)
@@ -125,10 +112,10 @@ public class ForEachRecordTag extends BodyTagSupport {
 			List<ProgramWorkflowState> ret = Context.getProgramWorkflowService().getStates();
 			records = ret.iterator();
 		} else if (name.equals("workflowProgram")) {
-			List<org.openmrs.Program> ret = Context.getProgramWorkflowService().getPrograms();
+			List<org.openmrs.Program> ret = Context.getProgramWorkflowService().getAllPrograms();
 			records = ret.iterator();
 		} else if (name.equals("role")) {
-			List<Role> ret = Context.getUserService().getRoles();
+			List<Role> ret = Context.getUserService().getAllRoles();
 			records = ret.iterator();
 		} else if (name.equals("conceptSet")) {
 			if (conceptSet == null)
@@ -136,20 +123,31 @@ public class ForEachRecordTag extends BodyTagSupport {
 			Concept c = OpenmrsUtil.getConceptByIdOrName(conceptSet);
 			if (c == null)
 				throw new IllegalArgumentException("Can't find conceptSet " + conceptSet);
-			List<Concept> list = Context.getConceptService().getConceptsInSet(c);
+			List<Concept> list = Context.getConceptService().getConceptsByConceptSet(c);
 			records = list.iterator();
 		} else if (name.equals("answer")) {
 			if (concept == null)
 				throw new IllegalArgumentException("Must specify concept");
 			Concept c = OpenmrsUtil.getConceptByIdOrName(concept);
-			if (c == null)
-				throw new IllegalArgumentException("Can't find concept " + concept);
-			if (c.getAnswers() != null)
+			if (c == null) {
+				log.error("Can't find concept with name or id of: " + concept + " and so no answers will be returned");
+				records = null;
+			}
+			else if (c.getAnswers() != null)
 				records = c.getAnswers().iterator();
 			else
 				records = new ArrayList<Concept>().iterator();
 		} else {
-			log.error(name + " not found in ForEachRecord list");
+			try {
+				Class<?> cls = Context.loadClass(name);
+				Constructor<?> ct = cls.getConstructor();
+				Iterable<?> iterable = (Iterable<?>) ct.newInstance();
+				records = iterable.iterator();
+				
+			}
+			catch (Exception e) {
+				log.error(name + " not found in ForEachRecord list " + e);
+			}
 		}
 		
 		if (records == null || records.hasNext() == false) {

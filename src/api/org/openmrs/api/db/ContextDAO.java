@@ -21,8 +21,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 /**
  * Defines the functions that the Context needs to access the database
- * 
- * @version 1.1
  */
 public interface ContextDAO {
 	
@@ -46,8 +44,11 @@ public interface ContextDAO {
 	 * @should not authenticate given non null password when password in database is null
 	 * @should not authenticate when password in database is empty
 	 * @should give identical error messages between username and password mismatch
-	 * @should lockout after five attempts
-	 * @should pass regression test for 1580
+	 * @should lockout user after eight failed attempts
+	 * @should authenticateWithCorrectHashedPassword
+	 * @should authenticateWithIncorrectHashedPassword
+	 * @should set uuid on user property when authentication fails with valid user
+	 * @should pass regression test for 1580 
 	 */
 	@Transactional(noRollbackFor = ContextAuthenticationException.class)
 	public User authenticate(String username, String password) throws ContextAuthenticationException;
@@ -74,14 +75,16 @@ public interface ContextDAO {
 	 * cached copy
 	 * 
 	 * @param obj The object to evict/remove from the session
-	 * @see Context.evictFromSession(Object)
+	 * @see org.openmrs.api.context.Context#evictFromSession(Object)
 	 */
 	public void evictFromSession(Object obj);
 	
 	/**
-	 * Starts the OpenMRS System Should be called prior to any kind of activity
+	 * Starts the OpenMRS System
+	 * <p>
+	 * Should be called prior to any kind of activity
 	 * 
-	 * @param Properties
+	 * @param props Properties
 	 */
 	@Transactional
 	public void startup(Properties props);
@@ -90,16 +93,12 @@ public interface ContextDAO {
 	 * Stops the OpenMRS System Should be called after all activity has ended and application is
 	 * closing
 	 */
-	@Transactional
 	public void shutdown();
 	
 	/**
-	 * Compares core data against the current database and inserts data into the database where
-	 * necessary
+	 * Merge in the default properties defined for this database connection
+	 * 
+	 * @param runtimeProperties The current user specific runtime properties
 	 */
-	@Transactional
-	public void checkCoreDataset();
-	
-	public void closeDatabaseConnection();
-	
+	public void mergeDefaultRuntimeProperties(Properties runtimeProperties);
 }

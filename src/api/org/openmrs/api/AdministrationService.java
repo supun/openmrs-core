@@ -14,7 +14,6 @@
 package org.openmrs.api;
 
 import java.util.Collection;
-import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
@@ -24,7 +23,6 @@ import org.openmrs.Concept;
 import org.openmrs.ConceptClass;
 import org.openmrs.ConceptDatatype;
 import org.openmrs.ConceptProposal;
-import org.openmrs.DataEntryStatistic;
 import org.openmrs.EncounterType;
 import org.openmrs.FieldType;
 import org.openmrs.GlobalProperty;
@@ -43,10 +41,12 @@ import org.openmrs.util.OpenmrsConstants;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Contains methods pertaining to doing some administrative tasks in OpenMRS Use:<br/>
+ * Contains methods pertaining to doing some administrative tasks in OpenMRS
+ * <p>
+ * Use:<br/>
  * 
  * <pre>
- *   List<GlobalProperty> globalProperties = Context.getAdministrationService().getGlobalProperties();
+ * List&lt;GlobalProperty&gt; globalProperties = Context.getAdministrationService().getGlobalProperties();
  * </pre>
  * 
  * @see org.openmrs.api.context.Context
@@ -98,35 +98,27 @@ public interface AdministrationService extends OpenmrsService {
 	public void deletePatientIdentifierType(PatientIdentifierType patientIdentifierType) throws APIException;
 	
 	/**
-	 * @deprecated tribe will be moved to patient attribute
+	 * @deprecated The Tribe object is no longer supported. Install the Tribe module
 	 */
 	public void createTribe(Tribe tribe) throws APIException;
 	
 	/**
-	 * Update Tribe
-	 * 
-	 * @deprecated tribe will be moved to patient attribute
+	 * @deprecated The Tribe object is no longer supported. Install the Tribe module
 	 */
 	public void updateTribe(Tribe tribe) throws APIException;
 	
 	/**
-	 * Delete Tribe
-	 * 
-	 * @deprecated tribe will be moved to patient attribute
+	 * @deprecated The Tribe object is no longer supported. Install the Tribe module
 	 */
 	public void deleteTribe(Tribe tribe) throws APIException;
 	
 	/**
-	 * Retire Tribe
-	 * 
-	 * @deprecated tribe will be moved to patient attribute
+	 * @deprecated The Tribe object is no longer supported. Install the Tribe module
 	 */
 	public void retireTribe(Tribe tribe) throws APIException;
 	
 	/**
-	 * Unretire Tribe
-	 * 
-	 * @deprecated tribe will be moved to patient attribute
+	 * @deprecated The Tribe object is no longer supported. Install the Tribe module
 	 */
 	public void unretireTribe(Tribe tribe) throws APIException;
 	
@@ -146,170 +138,180 @@ public interface AdministrationService extends OpenmrsService {
 	public void deleteFieldType(FieldType fieldType) throws APIException;
 	
 	/**
-	 * @deprecated @see {@link org.openmrs.api.ObsService#saveMimeType(MimeType)}
+	 * @deprecated see {@link org.openmrs.api.ObsService#saveMimeType(MimeType)}
 	 **/
 	@Authorized(OpenmrsConstants.PRIV_MANAGE_MIME_TYPES)
 	public void createMimeType(MimeType mimeType) throws APIException;
 	
 	/**
-	 * @deprecated @see {@link org.openmrs.api.ObsService#saveMimeType(MimeType)}
+	 * @deprecated see {@link org.openmrs.api.ObsService#saveMimeType(MimeType)}
 	 */
 	@Authorized(OpenmrsConstants.PRIV_MANAGE_MIME_TYPES)
 	public void updateMimeType(MimeType mimeType) throws APIException;
 	
 	/**
-	 * @deprecated @see {@link org.openmrs.api.ObsService#purgeMimeType(MimeType)}
+	 * @deprecated see {@link org.openmrs.api.ObsService#purgeMimeType(MimeType)}
 	 */
 	@Authorized(OpenmrsConstants.PRIV_MANAGE_MIME_TYPES)
 	public void deleteMimeType(MimeType mimeType) throws APIException;
 	
 	/**
-	 * @deprecated @see {@link org.openmrs.api.LocationService#saveLocation(Location)}
+	 * @deprecated see {@link org.openmrs.api.LocationService#saveLocation(Location)}
 	 */
 	public void createLocation(Location location) throws APIException;
 	
 	/**
-	 * @deprecated @see {@link org.openmrs.api.LocationService#saveLocation(Location)}
+	 * @deprecated see {@link org.openmrs.api.LocationService#saveLocation(Location)}
 	 */
 	public void updateLocation(Location location) throws APIException;
 	
 	/**
-	 * @deprecated @see {@link org.openmrs.api.LocationService#purgeLocation(Location)}
+	 * @deprecated see {@link org.openmrs.api.LocationService#purgeLocation(Location)}
 	 */
 	public void deleteLocation(Location location) throws APIException;
 	
 	/**
-	 * @deprecated @see {@link org.openmrs.api.UserService#saveRole(Role)}
+	 * @deprecated see {@link org.openmrs.api.UserService#saveRole(Role)}
 	 */
 	public void createRole(Role role) throws APIException;
 	
 	/**
-	 * @deprecated @see {@link org.openmrs.api.UserService#saveRole(Role)}
+	 * @deprecated see {@link org.openmrs.api.UserService#saveRole(Role)}
 	 */
 	public void updateRole(Role role) throws APIException;
 	
 	/**
-	 * @deprecated @see {@link org.openmrs.api.UserService#purgeRole(Role)}
+	 * @deprecated see {@link org.openmrs.api.UserService#purgeRole(Role)}
 	 */
 	public void deleteRole(Role role) throws APIException;
 	
 	/**
-	 * @deprecated @see {@link org.openmrs.api.UserService#savePrivilege(Privilege)}
+	 * @deprecated see {@link org.openmrs.api.UserService#savePrivilege(Privilege)}
 	 */
 	public void createPrivilege(Privilege privilege) throws APIException;
 	
 	/**
-	 * @deprecated @see {@link org.openmrs.api.UserService#savePrivilege(Privilege)}
+	 * @deprecated see {@link org.openmrs.api.UserService#savePrivilege(Privilege)}
 	 */
 	public void updatePrivilege(Privilege privilege) throws APIException;
 	
 	/**
-	 * @deprecated @see {@link org.openmrs.api.UserService#purgePrivilege(Privilege)}
+	 * @deprecated see {@link org.openmrs.api.UserService#purgePrivilege(Privilege)}
 	 */
 	public void deletePrivilege(Privilege privilege) throws APIException;
 	
 	/**
 	 * Create a new ConceptClass
 	 * 
-	 * @param ConceptClass to create
+	 * @param cc ConceptClass to create
 	 * @throws APIException
-	 * @deprecated use {@link org.openmrs.api.ConceptService.saveConceptClass(ConceptClass)}
+	 * @deprecated use {@link org.openmrs.api.ConceptService#saveConceptClass(ConceptClass)}
 	 */
 	public void createConceptClass(ConceptClass cc) throws APIException;
 	
 	/**
 	 * Update ConceptClass
 	 * 
-	 * @param ConceptClass to update
+	 * @param cc ConceptClass to update
 	 * @throws APIException
-	 * @deprecated use {@link org.openmrs.api.ConceptService.saveConceptClass(ConceptClass)}
+	 * @deprecated use {@link org.openmrs.api.ConceptService#saveConceptClass(ConceptClass)}
 	 */
 	public void updateConceptClass(ConceptClass cc) throws APIException;
 	
 	/**
 	 * Delete ConceptClass
 	 * 
-	 * @param ConceptClass to delete
+	 * @param cc ConceptClass to delete
 	 * @throws APIException
-	 * @deprecated use {@link org.openmrs.api.ConceptService.retireConceptClass(ConceptClass)} or
-	 *             {@link org.openmrs.api.ConcepService.purgeConceptClass(ConceptClass)}
+	 * @deprecated use {@link org.openmrs.api.ConceptService#purgeConceptClass(ConceptClass)}
 	 */
 	public void deleteConceptClass(ConceptClass cc) throws APIException;
 	
 	/**
 	 * Create a new ConceptDatatype
 	 * 
-	 * @param ConceptDatatype to create
+	 * @param cd ConceptDatatype to create
 	 * @throws APIException
-	 * @deprecated use {@link org.openmrs.api.ConceptService.saveConceptDatatype(ConceptDatatype)}
+	 * @deprecated use {@link org.openmrs.api.ConceptService#saveConceptDatatype(ConceptDatatype)}
 	 */
 	public void createConceptDatatype(ConceptDatatype cd) throws APIException;
 	
 	/**
 	 * Update ConceptDatatype
 	 * 
-	 * @param ConceptDatatype to update
+	 * @param cd ConceptDatatype to update
 	 * @throws APIException
-	 * @deprecated use {@link org.openmrs.api.ConceptService.saveConceptDatatype(ConceptDatatype)}
+	 * @deprecated use {@link org.openmrs.api.ConceptService#saveConceptDatatype(ConceptDatatype)}
 	 */
 	public void updateConceptDatatype(ConceptDatatype cd) throws APIException;
 	
 	/**
 	 * Delete ConceptDatatype
 	 * 
-	 * @param ConceptDatatype to delete
+	 * @param cd ConceptDatatype to delete
 	 * @throws APIException
-	 * @deprecated use {@link org.openmrs.api.ConceptService.retireConceptDatatype(ConceptDatatype)}
-	 *             or {@link org.openmrs.api.deleteConceptDatatype(ConceptDatatype)}
+	 * @deprecated use {@link org.openmrs.api#deleteConceptDatatype(ConceptDatatype)}
 	 */
 	public void deleteConceptDatatype(ConceptDatatype cd) throws APIException;
 	
 	/**
 	 * Create a new Report
 	 * 
-	 * @param Report to create
+	 * @param report Report to create
 	 * @throws APIException
+	 * @deprecated see reportingcompatibility module
 	 */
+	@Deprecated
 	public void createReport(Report report) throws APIException;
 	
 	/**
 	 * Update Report
 	 * 
-	 * @param Report to update
+	 * @param report Report to update
+	 * @deprecated see reportingcompatibility module
 	 * @throws APIException
 	 */
+	@Deprecated
 	public void updateReport(Report report) throws APIException;
 	
 	/**
 	 * Delete Report
 	 * 
-	 * @param Report to delete
+	 * @param report Report to delete
 	 * @throws APIException
+	 * @deprecated see reportingcompatibility module
 	 */
+	@Deprecated
 	public void deleteReport(Report report) throws APIException;
 	
 	/**
 	 * Create a new Report Object
 	 * 
-	 * @param Report Object to create
+	 * @param reportObject Report Object to create
+	 * @deprecated see reportingcompatibility module
 	 * @throws APIException
 	 */
+	@Deprecated
 	public void createReportObject(AbstractReportObject reportObject) throws APIException;
 	
 	/**
 	 * Update Report Object
 	 * 
-	 * @param Report Object to update
+	 * @param reportObject the Report Object to update
+	 * @deprecated see reportingcompatibility module
 	 * @throws APIException
 	 */
+	@Deprecated
 	public void updateReportObject(AbstractReportObject reportObject) throws APIException;
 	
 	/**
 	 * Delete Report Object
 	 * 
-	 * @param Report Object to delete
+	 * @param reportObjectId Internal identifier for the Report Object to delete
+	 * @deprecated see reportingcompatibility module
 	 * @throws APIException
 	 */
+	@Deprecated
 	public void deleteReportObject(Integer reportObjectId) throws APIException;
 	
 	/**
@@ -318,7 +320,7 @@ public interface AdministrationService extends OpenmrsService {
 	 * 
 	 * @param concept
 	 * @throws APIException
-	 * @deprecated moved to {@link org.openmrs.api.ConceptService.updateConceptWord(Concept)}
+	 * @deprecated moved to {@link org.openmrs.api.ConceptService#updateConceptWord(Concept)}
 	 */
 	public void updateConceptWord(Concept concept) throws APIException;
 	
@@ -326,7 +328,7 @@ public interface AdministrationService extends OpenmrsService {
 	 * Iterates over all concepts calling updateConceptWord(concept)
 	 * 
 	 * @throws APIException
-	 * @deprecated moved to {@link org.openmrs.api.ConceptService.updateConceptWords()}
+	 * @deprecated moved to {@link org.openmrs.api.ConceptService#updateConceptWords()}
 	 */
 	public void updateConceptWords() throws APIException;
 	
@@ -335,8 +337,8 @@ public interface AdministrationService extends OpenmrsService {
 	 * <code>conceptIdEnd</code> (inclusive) calling updateConceptWord(concept)
 	 * 
 	 * @throws APIException
-	 * @deprecated moved to {@link org.openmrs.api.ConceptService.updateConceptWords(Integer,
-	 *             Integer)}
+	 * @deprecated moved to
+	 *             {@link org.openmrs.api.ConceptService#updateConceptWords(Integer, Integer)}
 	 */
 	public void updateConceptWords(Integer conceptIdStart, Integer conceptIdEnd) throws APIException;
 	
@@ -345,7 +347,7 @@ public interface AdministrationService extends OpenmrsService {
 	 * 
 	 * @param concept
 	 * @throws APIException
-	 * @deprecated moved to {@link org.openmrs.api.ConceptService.updateConceptSetDerived(Concept)};
+	 * @deprecated moved to {@link org.openmrs.api.ConceptService#updateConceptSetDerived(Concept)};
 	 */
 	public void updateConceptSetDerived(Concept concept) throws APIException;
 	
@@ -353,7 +355,7 @@ public interface AdministrationService extends OpenmrsService {
 	 * Iterates over all concepts calling updateConceptSetDerived(concept)
 	 * 
 	 * @throws APIException
-	 * @deprecated moved to {@link org.openmrs.api.ConceptService.updateConceptSetDerived()}
+	 * @deprecated moved to {@link org.openmrs.api.ConceptService#updateConceptSetDerived()}
 	 */
 	public void updateConceptSetDerived() throws APIException;
 	
@@ -362,7 +364,7 @@ public interface AdministrationService extends OpenmrsService {
 	 * 
 	 * @param cp
 	 * @throws APIException
-	 * @deprecated use {@link org.openmrs.api.ConceptService.saveConceptProposal(ConceptProposal)}
+	 * @deprecated use {@link org.openmrs.api.ConceptService#saveConceptProposal(ConceptProposal)}
 	 */
 	public void createConceptProposal(ConceptProposal cp) throws APIException;
 	
@@ -371,7 +373,7 @@ public interface AdministrationService extends OpenmrsService {
 	 * 
 	 * @param cp
 	 * @throws APIException
-	 * @deprecated use {@link org.openmrs.api.ConceptService.saveConceptProposal(ConceptProposal)}
+	 * @deprecated use {@link org.openmrs.api.ConceptService#saveConceptProposal(ConceptProposal)}
 	 */
 	public void updateConceptProposal(ConceptProposal cp) throws APIException;
 	
@@ -381,9 +383,8 @@ public interface AdministrationService extends OpenmrsService {
 	 * @param cp
 	 * @param mappedConcept
 	 * @throws APIException
-	 * @deprecated moved to {@link
-	 *             org.openmrs.api.ConceptService.mapConceptProposalToConcept(ConceptProposal,
-	 *             Concept)}
+	 * @deprecated moved to
+	 *             {@link org.openmrs.api.ConceptService#mapConceptProposalToConcept(ConceptProposal, Concept)}
 	 */
 	public void mapConceptProposalToConcept(ConceptProposal cp, Concept mappedConcept) throws APIException;
 	
@@ -391,29 +392,35 @@ public interface AdministrationService extends OpenmrsService {
 	 * rejects a concept proposal
 	 * 
 	 * @param cp
-	 * @deprecated moved to {@link
-	 *             org.openmrs.api.ConceptServicerejectConceptProposal(ConceptProposal)}
+	 * @deprecated moved to
+	 *             {@link org.openmrs.api#ConceptServicerejectConceptProposal(ConceptProposal)}
 	 */
 	public void rejectConceptProposal(ConceptProposal cp);
 	
 	/**
-	 * To be deprecated when mrn generator module is completed
-	 * 
 	 * @param site
 	 * @param start
 	 * @param count
-	 * @deprecated use the mrngen module now
+	 * @deprecated use the mrngen module instead
 	 */
 	public void mrnGeneratorLog(String site, Integer start, Integer count);
 	
 	/**
-	 * To be deprecated when the mrn generator module is completed
-	 * 
-	 * @return
-	 * @deprecated use the mrngen module now
+	 * @deprecated use the mrngen module instead
 	 */
 	@Transactional(readOnly = true)
 	public Collection<?> getMRNGeneratorLog();
+	
+	/**
+	 * Get a global property by its uuid. There should be only one of these in the database (well,
+	 * in the world actually). If multiple are found, an error is thrown.
+	 * 
+	 * @return the global property matching the given uuid
+	 * @should find object given valid uuid
+	 * @should return null if no object found with given uuid
+	 */
+	@Transactional(readOnly = true)
+	public GlobalProperty getGlobalPropertyByUuid(String uuid) throws APIException;
 	
 	/**
 	 * Get a listing or important variables used in openmrs
@@ -425,9 +432,10 @@ public interface AdministrationService extends OpenmrsService {
 	public SortedMap<String, String> getSystemVariables() throws APIException;
 	
 	/**
-	 * Gets the global property that has the given <code>propertyName</code> If propertyName is not
-	 * found in the list of Global Properties currently in the database, a null value is returned
-	 * This method should not have any authorization check
+	 * Gets the global property that has the given <code>propertyName</code>.
+	 * <p>
+	 * If <code>propertyName</code> is not found in the list of Global Properties currently in the
+	 * database, a null value is returned. This method should not have any authorization check.
 	 * 
 	 * @param propertyName property key to look for
 	 * @return value of property returned or null if none
@@ -462,6 +470,17 @@ public interface AdministrationService extends OpenmrsService {
 	public GlobalProperty getGlobalPropertyObject(String propertyName);
 	
 	/**
+	 * Gets all global properties that begin with <code>prefix</code>.
+	 * 
+	 * @param prefix The beginning of the property name to match.
+	 * @return a <code>List</code> of <code>GlobalProperty</code>s that match <code>prefix</code>
+	 * @since 1.5
+	 * @should return all relevant global properties in the database
+	 */
+	@Transactional(readOnly = true)
+	public List<GlobalProperty> getGlobalPropertiesByPrefix(String prefix);
+	
+	/**
 	 * Get a list of all global properties in the system
 	 * 
 	 * @return list of global properties
@@ -482,11 +501,12 @@ public interface AdministrationService extends OpenmrsService {
 	 * given values. If a value exists in the database that does not exist in the given list, that
 	 * property is deleted from the database.
 	 * 
-	 * @param props GlobalProperty objects to save
+	 * @param props list of GlobalProperty objects to save
 	 * @return the saved global properties
 	 * @should save all global properties to the database
 	 * @should not fail with empty list
 	 * @should delete property from database if not in list
+	 * @should assign uuid to all new properties
 	 */
 	@Authorized(OpenmrsConstants.PRIV_MANAGE_GLOBAL_PROPERTIES)
 	public List<GlobalProperty> saveGlobalProperties(List<GlobalProperty> props) throws APIException;
@@ -509,7 +529,9 @@ public interface AdministrationService extends OpenmrsService {
 	/**
 	 * Use
 	 * 
-	 * <pre>purgeGlobalProperty(new GlobalProperty(propertyName));</pre>
+	 * <pre>
+	 * purgeGlobalProperty(new GlobalProperty(propertyName));
+	 * </pre>
 	 * 
 	 * @deprecated use {@link #purgeGlobalProperty(GlobalProperty)}
 	 */
@@ -518,7 +540,9 @@ public interface AdministrationService extends OpenmrsService {
 	/**
 	 * Use
 	 * 
-	 * <pre>purgeGlobalProperty(new GlobalProperty(propertyName, propertyValue));</pre>
+	 * <pre>
+	 * purgeGlobalProperty(new GlobalProperty(propertyName, propertyValue));
+	 * </pre>
 	 * 
 	 * @deprecated use #saveGlobalProperty(GlobalProperty)
 	 */
@@ -561,28 +585,11 @@ public interface AdministrationService extends OpenmrsService {
 	
 	/**
 	 * Removes a GlobalPropertyListener previously registered by
-	 * {@link #addGlobalPropertyListener(String, GlobalPropertyListener)}
+	 * {@link #addGlobalPropertyListener(GlobalPropertyListener)}
 	 * 
 	 * @param listener
 	 */
 	public void removeGlobalPropertyListener(GlobalPropertyListener listener);
-	
-	/**
-	 * Creates a list of data entry stats from <code>fromDate</code> to <code>toDate</code>
-	 * EncounterUserColumn is a column in the encounter table like <code>creator</code>,
-	 * <code>provider</code>, etc (defaults to creator) EncounterUserColumn is a column in the
-	 * encounter table like <code>creator</code>, <code>orderer</code>, etc (defaults to orderer)
-	 * 
-	 * @param fromDate
-	 * @param toDate
-	 * @param encounterUserColumn
-	 * @param orderUserColumn
-	 * @param groupBy (optional)
-	 * @return
-	 */
-	// Authorization?
-	public List<DataEntryStatistic> getDataEntryStatistics(Date fromDate, Date toDate, String encounterUserColumn,
-	                                                       String orderUserColumn, String groupBy);
 	
 	/**
 	 * Runs the <code>sql</code> on the database. If <code>selectOnly</code> is flagged then any
@@ -594,7 +601,7 @@ public interface AdministrationService extends OpenmrsService {
 	 * @throws APIException
 	 * @should execute sql containing group by
 	 */
-	// TODO Authorization?!?
+	@Authorized(OpenmrsConstants.PRIV_SQL_LEVEL_ACCESS)
 	public List<List<Object>> executeSQL(String sql, boolean selectOnly) throws APIException;
 	
 	/**
@@ -605,16 +612,23 @@ public interface AdministrationService extends OpenmrsService {
 	 * @should return null if no implementation id is defined yet
 	 */
 	@Transactional(readOnly = true)
+	@Authorized(OpenmrsConstants.PRIV_MANAGE_IMPLEMENTATION_ID)
 	public ImplementationId getImplementationId() throws APIException;
 	
 	/**
 	 * Set the given <code>implementationId</code> as this implementation's unique id
 	 * 
 	 * @param implementationId the ImplementationId to save
-	 * @throws APIException
+	 * @throws APIException if implementationId is empty or is invalid according to central id server
 	 * @should create implementation id in database
 	 * @should overwrite implementation id in database if exists
+	 * @should not fail if given implementationId is null
+	 * @should throw APIException if given empty implementationId object
+	 * @should throw APIException if given a caret in the implementationId code
+	 * @should throw APIException if given a pipe in the implementationId code
+	 * @should set uuid on implementation id global property
 	 */
+	@Authorized(OpenmrsConstants.PRIV_MANAGE_IMPLEMENTATION_ID)
 	public void setImplementationId(ImplementationId implementationId) throws APIException;
 	
 	/**
@@ -624,6 +638,7 @@ public interface AdministrationService extends OpenmrsService {
 	 * 
 	 * @return list of allowed locales
 	 * @should return at least one locale if no locales defined in database yet
+	 * @should not fail if not global property for locales allowed defined yet
 	 */
 	@Transactional(readOnly = true)
 	public List<Locale> getAllowedLocales();

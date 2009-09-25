@@ -94,6 +94,7 @@ public class SchedulerUtil {
 	 */
 	public static void sendSchedulerError(Throwable throwable) {
 		try {
+			Context.openSession();
 			
 			Boolean emailIsEnabled = Boolean.valueOf(Context.getAdministrationService().getGlobalProperty(
 			    SchedulerConstants.SCHEDULER_ADMIN_EMAIL_ENABLED_PROPERTY));
@@ -132,6 +133,9 @@ public class SchedulerUtil {
 			// Log, but otherwise suppress errors
 			log.warn("Could not send scheduler error email: ", e);
 		}
+		finally {
+			Context.closeSession();
+		}
 	}
 	
 	/**
@@ -164,6 +168,7 @@ public class SchedulerUtil {
 	 * @see java.util.Timer
 	 * @param taskDefinition the task definition to be executed
 	 * @return the next "future" execution time for the given task
+	 * @should get the correct repeat interval
 	 */
 	public static Date getNextExecution(TaskDefinition taskDefinition) {
 		Calendar nextTime = Calendar.getInstance();

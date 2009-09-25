@@ -56,6 +56,10 @@ import org.openmrs.reporting.PatientFilter;
 import org.openmrs.reporting.PatientSearchReportObject;
 import org.openmrs.util.OpenmrsUtil;
 
+/**
+ * @deprecated see reportingcompatibility module
+ */
+@Deprecated
 public class DataExportFunctions {
 	
 	public final Log log = LogFactory.getLog(this.getClass());
@@ -154,6 +158,7 @@ public class DataExportFunctions {
 		dateFormatYmd = new SimpleDateFormat("yyyy-MM-dd", locale);
 	}
 	
+	@SuppressWarnings("unchecked")
 	public void clear() {
 		for (Map map : patientEncounterMap.values())
 			map.clear();
@@ -362,9 +367,12 @@ public class DataExportFunctions {
 	}
 	
 	/**
+	 * Get the attribute (encounterDatetime, provider, encounterType, etc) from the most recent
+	 * encounter.
+	 * 
 	 * @param typeArray
 	 * @param attr
-	 * @return
+	 * @return the encounter attribute
 	 */
 	@SuppressWarnings("unchecked")
 	public Object getLastEncounterAttr(Object typeArray, String attr) {
@@ -427,9 +435,11 @@ public class DataExportFunctions {
 	}
 	
 	/**
+	 * Get an attribute (encounterDatetime, provider, etc) from the oldest encounter.
+	 * 
 	 * @param typeArray
 	 * @param attr
-	 * @return
+	 * @return Object from the oldest encounter
 	 */
 	@SuppressWarnings("unchecked")
 	public Object getFirstEncounterAttr(Object typeArray, String attr) {
@@ -529,7 +539,7 @@ public class DataExportFunctions {
 	 * Gets a patient program given a program ID or program name.
 	 * 
 	 * @param programIdOrName the identifier or name of the program
-	 * @return
+	 * @return PatientProgram by the program ID or name
 	 */
 	public PatientProgram getProgram(String programIdOrName) {
 		
@@ -577,7 +587,10 @@ public class DataExportFunctions {
 		StringBuilder ret = new StringBuilder();
 		for (Iterator<DrugOrder> i = patientOrders.iterator(); i.hasNext();) {
 			DrugOrder o = i.next();
-			ret.append(o.getDrug().getName());
+			if (o.getDrug() != null)
+				ret.append(o.getDrug().getName());
+			else
+				ret.append(o.getConcept().getBestName(Context.getLocale()).getName());
 			if (i.hasNext())
 				ret.append(" ");
 		}
@@ -614,7 +627,7 @@ public class DataExportFunctions {
 			patientIdRelationshipMap = relationshipMap.get(relationshipTypeName);
 		} else {
 			//log.debug("getting relationship list for type: " + relationshipTypeName);
-			RelationshipType relType = Context.getPersonService().findRelationshipType(relationshipTypeName);
+			RelationshipType relType = Context.getPersonService().getRelationshipTypeByName(relationshipTypeName);
 			patientIdRelationshipMap = patientSetService.getRelationships(getPatientSetIfNotAllPatients(), relType);
 			relationshipMap.put(relationshipTypeName, patientIdRelationshipMap);
 		}
@@ -678,20 +691,23 @@ public class DataExportFunctions {
 	 * 
 	 * @param className
 	 * @param property
-	 * @return
+	 * @return Object the specified property of the patient
 	 */
 	public Object getPatientAttr(String className, String property) {
 		return getPatientAttr(className, property, false);
 	}
 	
 	/**
-	 * Retrieves properties on the patient like patient.patientName.familyName If returnAll is set,
-	 * returns an array of every matching property for the patient instead of just the preferred one
+	 * Retrieves properties on the patient like patient.patientName.familyName
+	 * <p>
+	 * If returnAll is set, returns an array of every matching property for the patient instead of
+	 * just the preferred one
 	 * 
 	 * @param className
 	 * @param property
 	 * @param returnAll
-	 * @return
+	 * @return Object the specified property of the patient, or an array of all properties if
+	 *         returnAll is set to true
 	 */
 	public Object getPatientAttr(String className, String property, boolean returnAll) {
 		String key = className + "." + property;
@@ -740,18 +756,18 @@ public class DataExportFunctions {
 	 * 
 	 * @param n max number of obs to return
 	 * @param conceptName
-	 * @return
+	 * @return List<Object> of observations
 	 */
 	public List<Object> getLastNObs(Integer n, String conceptName) throws Exception {
 		return getLastNObs(n, getConcept(conceptName));
 	}
 	
 	/**
-	 * Gets an Observation from the last encounter
+	 * Gets Observations from the last encounter
 	 * 
 	 * @param n max number of obs to return
 	 * @param concept
-	 * @return
+	 * @return List<Object> of observations
 	 * @throws Exception
 	 */
 	public List<Object> getLastNObs(Integer n, Concept concept) throws Exception {
@@ -762,6 +778,7 @@ public class DataExportFunctions {
 		return returnList;
 	}
 	
+	@SuppressWarnings("unchecked")
 	public List<List<Object>> getLastNObsWithValues(Integer n, String conceptId, Object attrs) throws Exception {
 		return getLastNObsWithValues(n, getConcept(conceptId), (List<String>) attrs);
 	}
@@ -772,9 +789,10 @@ public class DataExportFunctions {
 	 * @param n max number of obs to return
 	 * @param concept
 	 * @param attrs
-	 * @return
+	 * @return List<List<Object>> of the n most recent observations (with their values)
 	 * @throws Exception
 	 */
+	@SuppressWarnings("unused")
 	public List<List<Object>> getLastNObsWithValues(Integer n, Concept concept, List<String> attrs) throws Exception {
 		//log.debug("Looking for n concepts: " + n + " " + concept);
 		
@@ -812,7 +830,7 @@ public class DataExportFunctions {
 	 * Gets the most recent Observation matching this concept
 	 * 
 	 * @param conceptName
-	 * @return
+	 * @return Object the most recent observation that matches the concept name specified
 	 */
 	public Object getLastObs(String conceptName) throws Exception {
 		return getLastObs(getConcept(conceptName));
@@ -823,8 +841,9 @@ public class DataExportFunctions {
 	 * 
 	 * @param conceptName
 	 * @param attrs string array
-	 * @return
+	 * @return List<Object> of the most recent observation values
 	 */
+	@SuppressWarnings("unchecked")
 	public List<Object> getLastObsWithValues(String conceptName, Object attrs) throws Exception {
 		//List<String> attrs = new Vector<String>();
 		//Collections.addAll(attrs, attrArray);
@@ -834,9 +853,8 @@ public class DataExportFunctions {
 	/**
 	 * Get the most recent obs matching <code>concept</code> out of the patient's encounters
 	 * 
-	 * @param e
 	 * @param concept
-	 * @return
+	 * @return the most recent Obs matching concept from the last encounter
 	 * @throws Exception
 	 */
 	public Object getLastObs(Concept concept) throws Exception {
@@ -848,10 +866,10 @@ public class DataExportFunctions {
 	/**
 	 * Get the most recent obs matching <code>concept</code> out of the patient's encounters
 	 * 
-	 * @param e
 	 * @param concept
-	 * @param attr list of Strings
-	 * @return
+	 * @param attrs list of Strings like provider, encounterDatetime, etc
+	 * @return List<Object> of the most recent observation values that matches the concept of the
+	 *         patient encounters
 	 * @throws Exception
 	 */
 	public List<Object> getLastObsWithValues(Concept concept, List<String> attrs) throws Exception {
@@ -861,21 +879,21 @@ public class DataExportFunctions {
 	}
 	
 	/**
-	 * Get the first occurence of matching <code>obs.concept</code> out of the patient's encounters
+	 * Get the first occurrence of matching <code>obs.concept</code> out of the patient's encounters
 	 * 
 	 * @param conceptName
-	 * @return
+	 * @return Object the first occurrence of the observation concept name of the patient's
+	 *         encounters
 	 */
 	public Object getFirstObs(String conceptName) throws Exception {
 		return getFirstObs(getConcept(conceptName));
 	}
 	
 	/**
-	 * Get the first occurence of matching <code>obs.concept</code> out of the patient's encounters
+	 * Get the first occurrence of matching <code>obs.concept</code> out of the patient's encounters
 	 * 
-	 * @param e
 	 * @param concept
-	 * @return
+	 * @return Object
 	 * @throws Exception
 	 */
 	public Object getFirstObs(Concept concept) throws Exception {
@@ -892,11 +910,12 @@ public class DataExportFunctions {
 	}
 	
 	/**
-	 * Get the first occurence of matching <code>obs.concept</code> out of the patient's encounters
+	 * Get the first occurrence of matching <code>obs.concept</code> out of the patient's encounters
 	 * 
 	 * @param conceptName
-	 * @return
+	 * @return List<Object>
 	 */
+	@SuppressWarnings("unchecked")
 	public List<Object> getFirstObsWithValues(String conceptName, Object attrs) throws Exception {
 		//List<String> attrs = new Vector<String>();
 		//Collections.addAll(attrs, attrArray);
@@ -908,9 +927,10 @@ public class DataExportFunctions {
 	 * 
 	 * @param concept
 	 * @param attrs the List of attributes to fetch
-	 * @return
+	 * @return List<Object>
 	 * @throws Exception
 	 */
+	@SuppressWarnings("unused")
 	public List<Object> getFirstObsWithValues(Concept concept, List<String> attrs) throws Exception {
 		// add a null first column for the actual obs value
 		attrs.add(0, null);
@@ -934,14 +954,16 @@ public class DataExportFunctions {
 	}
 	
 	/**
-	 * Get the first occurence of matching <code>obs.concept</code> out of the patient's encounters
+	 * Get the first occurrences of matching <code>obs.concept</code> out of the patient's
+	 * encounters
 	 * 
 	 * @param concept the Concept of the obs to fetch
 	 * @param n number of obs to get
 	 * @param attrs the Extra obs attributes to get along with this obs value
-	 * @return
+	 * @return List<List<Object>>
 	 * @throws Exception
 	 */
+	@SuppressWarnings("unused")
 	public List<List<Object>> getFirstNObsWithValues(Integer n, Concept concept, List<String> attrs) throws Exception {
 		// add a null first column for the actual obs value
 		attrs.add(0, null);
@@ -973,6 +995,7 @@ public class DataExportFunctions {
 	 * 
 	 * @see #getFirstNObsWithValues(Integer, Concept, List)
 	 */
+	@SuppressWarnings("unchecked")
 	public List<List<Object>> getFirstNObsWithValues(Integer n, String conceptId, Object attrs) throws Exception {
 		return getFirstNObsWithValues(n, getConcept(conceptId), (List<String>) attrs);
 	}
@@ -981,7 +1004,7 @@ public class DataExportFunctions {
 	 * Retrieves a patient identifier based on the given identifier type.
 	 * 
 	 * @param typeName
-	 * @return
+	 * @return the PatientIdentifier for the given typename
 	 */
 	public Object getPatientIdentifier(String typeName) {
 		
@@ -999,7 +1022,7 @@ public class DataExportFunctions {
 			catch (NumberFormatException ex) {}
 			// otherwise get identifier type by the given name
 			if (type == null) {
-				type = patientService.getPatientIdentifierType(typeName);
+				type = patientService.getPatientIdentifierTypeByName(typeName);
 			}
 			// Get identifiers by type 
 			patientIdentifiers = patientSetService.getPatientIdentifiersByType(getPatientSetIfNotAllPatients(), type);
@@ -1013,29 +1036,29 @@ public class DataExportFunctions {
 		
 	}
 	
-	/**
-	 * Get all obs for the current patient that match this
-	 * <code>obs.concept</code>=<code>concept</code> and
-	 * <code>obs.valueCoded</code>=<code>valueCoded</code>
-	 * 
-	 * @param conceptName
-	 * @param valueCoded
-	 * @return
-	 * @throws Exception
-	 */
+	// /**
+	// * Get all obs for the current patient that match this
+	// * <code>obs.concept</code>=<code>concept</code> and
+	// * <code>obs.valueCoded</code>=<code>valueCoded</code>
+	// * 
+	// * @param conceptName
+	// * @param valueCoded
+	// * @return 
+	// * @throws Exception
+	// */
 	//	public Collection<Obs> getMatchingObs(String conceptName, String valueCoded) throws Exception {
 	//		return getMatchingObs(getConcept(conceptName), getConcept(valueCoded));
 	//	}
-	/**
-	 * Get all obs for the current patient that match this
-	 * <code>obs.concept</code>=<code>concept</code> and
-	 * <code>obs.valueCoded</code>=<code>valueCoded</code>
-	 * 
-	 * @param concept
-	 * @param valueCoded
-	 * @return
-	 * @throws Exception
-	 */
+	// /**
+	// * Get all obs for the current patient that match this
+	// * <code>obs.concept</code>=<code>concept</code> and
+	// * <code>obs.valueCoded</code>=<code>valueCoded</code>
+	// * 
+	// * @param concept
+	// * @param valueCoded
+	// * @return
+	// * @throws Exception
+	// */
 	//	public Collection<Obs> getMatchingObs(Concept concept, Concept valueCoded) throws Exception {
 	//		Collection<Obs> returnList = new Vector<Obs>();
 	//		for (Obs o : getObs(concept)) {
@@ -1071,8 +1094,10 @@ public class DataExportFunctions {
 	}
 	
 	/**
-	 * @param birthdate
-	 * @return
+	 * Get the person's birthdate as of today
+	 * 
+	 * @param birthdate the person's date of birth
+	 * @return The calculated age
 	 */
 	public int calculateAge(Date birthdate) {
 		log.info("Calculating age " + birthdate);
@@ -1082,9 +1107,9 @@ public class DataExportFunctions {
 	/**
 	 * Format the given date according to the type ('short', 'long', 'ymd')
 	 * 
-	 * @param type
-	 * @param d
-	 * @return
+	 * @param type format to use
+	 * @param d Date to format
+	 * @return a String with the formatted date
 	 */
 	public String formatDate(String type, Date d) {
 		if (d == null)
@@ -1115,7 +1140,7 @@ public class DataExportFunctions {
 	 */
 	public boolean isValidCheckDigit(String id) {
 		try {
-			return OpenmrsUtil.isValidCheckDigit(id);
+			return Context.getPatientService().getDefaultIdentifierValidator().isValid(id);
 		}
 		catch (Exception e) {
 			log.error("Error evaluating identifier during report", e);

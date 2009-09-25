@@ -18,19 +18,24 @@ import org.simpleframework.xml.Root;
 
 /**
  * This class represents an argument as might be submitted from a web user interface.
+ * 
+ * @deprecated see reportingcompatibility module
  */
 @Root
+@Deprecated
 public class SearchArgument {
 	
 	private String name;
 	
 	private String value;
 	
+	@SuppressWarnings("unchecked")
 	private Class propertyClass;
 	
 	public SearchArgument() {
 	}
 	
+	@SuppressWarnings("unchecked")
 	public SearchArgument(String name, String value, Class propertyClass) {
 		super();
 		this.name = name;
@@ -62,11 +67,13 @@ public class SearchArgument {
 		this.value = value;
 	}
 	
+	@SuppressWarnings("unchecked")
 	@Attribute(required = true)
 	public Class getPropertyClass() {
 		return propertyClass;
 	}
 	
+	@SuppressWarnings("unchecked")
 	@Attribute(required = true)
 	public void setPropertyClass(Class propertyClass) {
 		this.propertyClass = propertyClass;

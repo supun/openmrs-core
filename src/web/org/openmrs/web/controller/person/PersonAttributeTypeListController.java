@@ -25,6 +25,7 @@ import javax.servlet.http.HttpSession;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.openmrs.GlobalProperty;
 import org.openmrs.PersonAttributeType;
 import org.openmrs.api.AdministrationService;
 import org.openmrs.api.PersonService;
@@ -83,34 +84,39 @@ public class PersonAttributeTypeListController extends SimpleFormController {
 				PersonService ps = Context.getPersonService();
 				
 				String[] attrTypeList = request.getParameterValues("personAttributeTypeId");
-				String type = msa.getMessage("PersonAttributeType.title");
-				String deleted = msa.getMessage("general.deleted");
-				String notDeleted = msa.getMessage("general.cannot.delete");
-				for (String p : attrTypeList) {
-					try {
-						ps.deletePersonAttributeType(Integer.valueOf(p));
-						if (!success.equals(""))
-							success += "<br/>";
-						success += type + " #" + p + " " + deleted;
+				if (attrTypeList != null) {
+					String type = msa.getMessage("PersonAttributeType.title");
+					String deleted = msa.getMessage("general.deleted");
+					String notDeleted = msa.getMessage("general.cannot.delete");
+					for (String p : attrTypeList) {
+						try {
+							ps.deletePersonAttributeType(Integer.valueOf(p));
+							if (!success.equals(""))
+								success += "<br/>";
+							success += type + " #" + p + " " + deleted;
+						}
+						catch (Exception e) {
+							log.warn("Error deleting person attribute type", e);
+							if (!error.equals(""))
+								error += "<br/>";
+							error += type + " #" + p + " " + notDeleted;
+						}
 					}
-					catch (Exception e) {
-						log.warn("Error deleting person attribute type", e);
-						if (!error.equals(""))
-							error += "<br/>";
-						error += type + " #" + p + " " + notDeleted;
-					}
-				}
+				} else
+					error = msa.getMessage("PersonAttributeType.select");
 			} else if ("attrs".equals(action)) {
 				AdministrationService as = Context.getAdministrationService();
 				
-				as.setGlobalProperty(OpenmrsConstants.GLOBAL_PROPERTY_PATIENT_LISTING_ATTRIBUTES, request
-				        .getParameter("patient.listingAttributeTypes"));
-				as.setGlobalProperty(OpenmrsConstants.GLOBAL_PROPERTY_PATIENT_VIEWING_ATTRIBUTES, request
-				        .getParameter("patient.viewingAttributeTypes"));
-				as.setGlobalProperty(OpenmrsConstants.GLOBAL_PROPERTY_USER_LISTING_ATTRIBUTES, request
-				        .getParameter("user.listingAttributeTypes"));
-				as.setGlobalProperty(OpenmrsConstants.GLOBAL_PROPERTY_USER_VIEWING_ATTRIBUTES, request
-				        .getParameter("user.viewingAttributeTypes"));
+				as.saveGlobalProperty(new GlobalProperty(OpenmrsConstants.GLOBAL_PROPERTY_PATIENT_LISTING_ATTRIBUTES,
+				        request.getParameter("patient.listingAttributeTypes")));
+				as.saveGlobalProperty(new GlobalProperty(OpenmrsConstants.GLOBAL_PROPERTY_PATIENT_VIEWING_ATTRIBUTES,
+				        request.getParameter("patient.viewingAttributeTypes")));
+				as.saveGlobalProperty(new GlobalProperty(OpenmrsConstants.GLOBAL_PROPERTY_PATIENT_HEADER_ATTRIBUTES, request
+				        .getParameter("patient.headerAttributeTypes")));
+				as.saveGlobalProperty(new GlobalProperty(OpenmrsConstants.GLOBAL_PROPERTY_USER_LISTING_ATTRIBUTES, request
+				        .getParameter("user.listingAttributeTypes")));
+				as.saveGlobalProperty(new GlobalProperty(OpenmrsConstants.GLOBAL_PROPERTY_USER_VIEWING_ATTRIBUTES, request
+				        .getParameter("user.viewingAttributeTypes")));
 				
 				success = msa.getMessage("PersonAttributeType.viewingListing.saved");
 			}
@@ -139,7 +145,7 @@ public class PersonAttributeTypeListController extends SimpleFormController {
 		//only fill the Object is the user has authenticated properly
 		if (Context.isAuthenticated()) {
 			PersonService ps = Context.getPersonService();
-			attributeTypeList = ps.getPersonAttributeTypes();
+			attributeTypeList = ps.getAllPersonAttributeTypes();
 		}
 		
 		return attributeTypeList;
@@ -150,7 +156,7 @@ public class PersonAttributeTypeListController extends SimpleFormController {
 	 *      java.lang.Object, org.springframework.validation.Errors)
 	 */
 	@Override
-	protected Map referenceData(HttpServletRequest request, Object command, Errors errors) throws Exception {
+	protected Map<String, Object> referenceData(HttpServletRequest request, Object command, Errors errors) throws Exception {
 		
 		Map<String, Object> map = new HashMap<String, Object>();
 		
@@ -160,6 +166,8 @@ public class PersonAttributeTypeListController extends SimpleFormController {
 		        .getGlobalProperty(OpenmrsConstants.GLOBAL_PROPERTY_PATIENT_LISTING_ATTRIBUTES));
 		map.put("patientViewingAttributeTypes", as
 		        .getGlobalProperty(OpenmrsConstants.GLOBAL_PROPERTY_PATIENT_VIEWING_ATTRIBUTES));
+		map.put("patientHeaderAttributeTypes", as
+		        .getGlobalProperty(OpenmrsConstants.GLOBAL_PROPERTY_PATIENT_HEADER_ATTRIBUTES));
 		map.put("userListingAttributeTypes", as.getGlobalProperty(OpenmrsConstants.GLOBAL_PROPERTY_USER_LISTING_ATTRIBUTES));
 		map.put("userViewingAttributeTypes", as.getGlobalProperty(OpenmrsConstants.GLOBAL_PROPERTY_USER_VIEWING_ATTRIBUTES));
 		

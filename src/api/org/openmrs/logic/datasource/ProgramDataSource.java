@@ -35,7 +35,7 @@ import org.openmrs.logic.util.Util;
  */
 public class ProgramDataSource implements LogicDataSource {
 	
-	private static Log log = LogFactory.getLog(ProgramDataSource.class);
+	private Log log = LogFactory.getLog(ProgramDataSource.class);
 	
 	private static final Collection<String> keys = new ArrayList<String>();
 	
@@ -119,11 +119,11 @@ public class ProgramDataSource implements LogicDataSource {
 	}
 	
 	/**
-	 * Get the patient programs for the
+	 * Get the <code>PatientProgram</code>s for the Patients in the Cohort
 	 * 
-	 * @param patients
-	 * @param criteria
-	 * @return
+	 * @param patients Cohort of patients to search
+	 * @param criteria This is not actually used right now
+	 * @return A <code>Collection<PatientProgram></code> object
 	 */
 	public Collection<PatientProgram> getPatientPrograms(Cohort patients, LogicCriteria criteria) {
 		Collection<PatientProgram> patientPrograms = new ArrayList<PatientProgram>();
@@ -131,10 +131,8 @@ public class ProgramDataSource implements LogicDataSource {
 		for (Integer patientId : patients.getMemberIds()) {
 			//log.info("Patient: " + patient);
 			patientPrograms.addAll(service.getPatientPrograms(new Patient(patientId)));
-			
 		}
 		//log.info("Patient programs: " + patientPrograms.size());
 		return patientPrograms;
-		
 	}
 }

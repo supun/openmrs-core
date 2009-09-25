@@ -21,6 +21,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 import java.util.Vector;
 
 import org.apache.commons.logging.Log;
@@ -38,7 +39,6 @@ import org.openmrs.PersonAddress;
 import org.openmrs.PersonAttribute;
 import org.openmrs.PersonName;
 import org.openmrs.Relationship;
-import org.openmrs.Tribe;
 import org.openmrs.User;
 import org.openmrs.api.APIException;
 import org.openmrs.api.BlankIdentifierException;
@@ -88,12 +88,22 @@ public class PatientServiceImpl extends BaseOpenmrsService implements PatientSer
 	}
 	
 	/**
-	 * @see {@link #savePatient(Patient)}
+	 * Clean up after this class. Set the static var to null so that the classloader can reclaim the
+	 * space.
+	 * 
+	 * @see org.openmrs.api.impl.BaseOpenmrsService#onShutdown()
+	 */
+	public void onShutdown() {
+		identifierValidators = null;
+	}
+	
+	/**
+	 * @see #savePatient(Patient)
 	 * @deprecated replaced by #savePatient(Patient)
 	 * @see org.openmrs.api.PatientService#createPatient(org.openmrs.Patient)
 	 */
 	public Patient createPatient(Patient patient) throws APIException {
-		return savePatient(patient);
+		return Context.getPatientService().savePatient(patient);
 	}
 	
 	/**
@@ -105,19 +115,7 @@ public class PatientServiceImpl extends BaseOpenmrsService implements PatientSer
 		else
 			Context.requirePrivilege(OpenmrsConstants.PRIV_EDIT_PATIENTS);
 		
-		setCollectionProperties(patient);
-		
 		checkPatientIdentifiers(patient);
-		
-		Date now = new Date();
-		if (patient.getDateCreated() == null)
-			patient.setDateCreated(now);
-		if (patient.getCreator() == null)
-			patient.setCreator(Context.getAuthenticatedUser());
-		if (patient.getPatientId() != null) {
-			patient.setChangedBy(Context.getAuthenticatedUser());
-			patient.setDateChanged(now);
-		}
 		
 		return dao.savePatient(patient);
 	}
@@ -135,7 +133,7 @@ public class PatientServiceImpl extends BaseOpenmrsService implements PatientSer
 	 * @see org.openmrs.api.PatientService#updatePatient(org.openmrs.Patient)
 	 */
 	public Patient updatePatient(Patient patient) throws APIException {
-		return savePatient(patient);
+		return Context.getPatientService().savePatient(patient);
 	}
 	
 	/**
@@ -186,7 +184,8 @@ public class PatientServiceImpl extends BaseOpenmrsService implements PatientSer
 		List<PatientIdentifier> identifiers = new Vector<PatientIdentifier>();
 		identifiers.addAll(patient.getIdentifiers());
 		List<String> identifiersUsed = new Vector<String>();
-		List<PatientIdentifierType> requiredTypes = Context.getPatientService().getPatientIdentifierTypes(null, null, true, null);
+		List<PatientIdentifierType> requiredTypes = Context.getPatientService().getPatientIdentifierTypes(null, null, true,
+		    null);
 		if (requiredTypes == null)
 			requiredTypes = new ArrayList<PatientIdentifierType>();
 		List<PatientIdentifierType> foundRequiredTypes = new ArrayList<PatientIdentifierType>();
@@ -238,21 +237,10 @@ public class PatientServiceImpl extends BaseOpenmrsService implements PatientSer
 	
 	/**
 	 * @see org.openmrs.api.PatientService#checkPatientIdentifier(org.openmrs.PatientIdentifier)
-	 * @deprecated use {@link PatientIdentifierValidator.validate(PatientIdentifier)}
+	 * @deprecated use {@link PatientIdentifierValidator#validateIdentifier(PatientIdentifier)}
 	 */
 	public void checkPatientIdentifier(PatientIdentifier pi) throws PatientIdentifierException {
 		PatientIdentifierValidator.validateIdentifier(pi);
-	}
-	
-	/**
-	 * checks if the given PatientIdentifer is in use by any other patient
-	 * 
-	 * @param pi PatientIdentifier
-	 * @return true/false whether or not this PatientIdentifier is in use
-	 * @deprecated use {@link #getPatientsByIdentifier(String, boolean)}yIdentifier(String) instead
-	 */
-	private Patient identifierInUse(PatientIdentifier pi) {
-		return identifierInUse(pi.getIdentifier(), pi.getIdentifierType(), pi.getPatient());
 	}
 	
 	/**
@@ -290,7 +278,7 @@ public class PatientServiceImpl extends BaseOpenmrsService implements PatientSer
 	}
 	
 	/**
-	 * @deprecated replaced by {@link #getPatients(String, String, List, String)}
+	 * @deprecated replaced by {@link #getPatients(String, String, List, boolean)}
 	 * @see org.openmrs.api.PatientService#getPatientsByIdentifierPattern(java.lang.String, boolean)
 	 */
 	public List<Patient> getPatientsByIdentifierPattern(String identifier, boolean includeVoided) throws APIException {
@@ -303,14 +291,14 @@ public class PatientServiceImpl extends BaseOpenmrsService implements PatientSer
 	
 	/**
 	 * @see org.openmrs.api.PatientService#getPatientsByName(java.lang.String)
-	 * @deprecated replaced by {@link #getPatients(String, String, List, String)}
+	 * @deprecated replaced by {@link #getPatients(String, String, List, boolean)}
 	 */
 	public List<Patient> getPatientsByName(String name) throws APIException {
 		return getPatients(name, null, null);
 	}
 	
 	/**
-	 * @deprecated replaced by {@link #getPatients(String, String, List, String)}
+	 * @deprecated replaced by {@link #getPatients(String, String, List, boolean)}
 	 */
 	public List<Patient> getPatientsByName(String name, boolean includeVoided) throws APIException {
 		
@@ -385,7 +373,7 @@ public class PatientServiceImpl extends BaseOpenmrsService implements PatientSer
 	 * @deprecated replaced by {@link #purgePatient(Patient)}
 	 */
 	public void deletePatient(Patient patient) throws APIException {
-		purgePatient(patient);
+		Context.getPatientService().purgePatient(patient);
 	}
 	
 	/**
@@ -429,8 +417,7 @@ public class PatientServiceImpl extends BaseOpenmrsService implements PatientSer
 	}
 	
 	/**
-	 * @deprecated replaced by
-	 *             {@link #getPatientIdentifiers(String, List, List, List, Boolean, boolean)}
+	 * @deprecated replaced by {@link #getPatientIdentifiers(String, List, List, List, Boolean)}
 	 * @see org.openmrs.api.PatientService#getPatientIdentifiers(java.lang.String,
 	 *      org.openmrs.PatientIdentifierType)
 	 */
@@ -441,10 +428,8 @@ public class PatientServiceImpl extends BaseOpenmrsService implements PatientSer
 	}
 	
 	/**
-	 * @deprecated replaced by
-	 *             {@link #getPatientIdentifiers(String, List, List, List, Boolean, boolean)}
-	 * @see org.openmrs.api.PatientService#getPatientIdentifiers(java.lang.String,
-	 *      org.openmrs.PatientIdentifierType, boolean)
+	 * @deprecated replaced by {@link #getPatientIdentifiers(String, List, List, List, Boolean)}
+	 * @see org.openmrs.api.PatientService#getPatientIdentifiers(String, PatientIdentifierType)
 	 */
 	public List<PatientIdentifier> getPatientIdentifiers(String identifier, PatientIdentifierType patientIdentifierType,
 	                                                     boolean includeVoided) throws APIException {
@@ -474,7 +459,7 @@ public class PatientServiceImpl extends BaseOpenmrsService implements PatientSer
 			}
 		}
 		
-		savePatient(p);
+		Context.getPatientService().savePatient(p);
 	}
 	
 	// end patient identifier section
@@ -487,15 +472,6 @@ public class PatientServiceImpl extends BaseOpenmrsService implements PatientSer
 	 * @see org.openmrs.api.PatientService#savePatientIdentifierType(org.openmrs.PatientIdentifierType)
 	 */
 	public PatientIdentifierType savePatientIdentifierType(PatientIdentifierType patientIdentifierType) throws APIException {
-		Date now = new Date();
-		if (patientIdentifierType.getDateCreated() == null)
-			patientIdentifierType.setDateCreated(now);
-		if (patientIdentifierType.getCreator() == null)
-			patientIdentifierType.setCreator(Context.getAuthenticatedUser());
-		// if (patientIdentifierType.getPatientIdentifierTypeId() != null) {
-		// patientIdentifierType.setChangedBy(Context.getAuthenticatedUser());
-		// patientIdentifierType.setDateChanged(now);
-		// }
 		return dao.savePatientIdentifierType(patientIdentifierType);
 	}
 	
@@ -595,36 +571,9 @@ public class PatientServiceImpl extends BaseOpenmrsService implements PatientSer
 	
 	// end patient identifier _type_ section
 	
-	// tribe section
-	
-	/**
-	 * @deprecated tribe will be moved to patient attribute
-	 * @see org.openmrs.api.PatientService#getTribe(java.lang.Integer)
-	 */
-	public Tribe getTribe(Integer tribeId) throws APIException {
-		return dao.getTribe(tribeId);
-	}
-	
-	/**
-	 * @deprecated tribe will be moved to patient attributes
-	 * @see org.openmrs.api.PatientService#getTribes()
-	 */
-	public List<Tribe> getTribes() throws APIException {
-		return dao.getTribes();
-	}
-	
-	/**
-	 * @deprecated tribe will be moved to patient attributes
-	 * @see org.openmrs.api.PatientService#findTribes(java.lang.String)
-	 */
-	public List<Tribe> findTribes(String search) throws APIException {
-		return dao.findTribes(search);
-	}
-	
-	// end tribe section
-	
 	/**
 	 * @see org.openmrs.api.PatientService#findPatients(java.lang.String, boolean)
+	 * @deprecated
 	 */
 	public List<Patient> findPatients(String query, boolean includeVoided) throws APIException {
 		if (includeVoided == true)
@@ -634,14 +583,22 @@ public class PatientServiceImpl extends BaseOpenmrsService implements PatientSer
 	}
 	
 	/**
-	 * @see org.openmrs.api.PatientService#findPatients(java.lang.String)
+	 * @see org.openmrs.api.PatientService#getPatients(java.lang.String)
 	 */
 	public List<Patient> getPatients(String query) throws APIException {
 		List<Patient> patients = new Vector<Patient>();
 		
-		// TODO create a global property that users can change for this
-		//query must be more than 2 characters
-		if (query.length() < 3)
+		String minSearchCharactersStr = Context.getAdministrationService().getGlobalProperty(
+		    OpenmrsConstants.GLOBAL_PROPERTY_MIN_SEARCH_CHARACTERS);
+		int minSearchCharacters;
+		try {
+			minSearchCharacters = Integer.valueOf(minSearchCharactersStr);
+		}
+		catch (NumberFormatException e) {
+			minSearchCharacters = 3;
+		}
+		
+		if (query.length() < minSearchCharacters)
 			return patients;
 		
 		// if there is a number in the query string
@@ -708,10 +665,15 @@ public class PatientServiceImpl extends BaseOpenmrsService implements PatientSer
 	 * @param preferred
 	 * @param notPreferred
 	 * @throws APIException
+	 * @see org.openmrs.api.PatientService#mergePatients(org.openmrs.Patient, org.openmrs.Patient)
 	 */
 	public void mergePatients(Patient preferred, Patient notPreferred) throws APIException {
 		log.debug("Merging patients: (preferred)" + preferred.getPatientId() + ", (notPreferred) "
 		        + notPreferred.getPatientId());
+		if (preferred.getPatientId().equals(notPreferred.getPatientId())) {
+			log.debug("Merge operation cancelled: Cannot merge user" + preferred.getPatientId() + " to self");
+			throw new APIException("Merge operation cancelled: Cannot merge user " + preferred.getPatientId() + " to self");
+		}
 		
 		// change all encounters. This will cascade to obs and orders contained in those encounters
 		// TODO: this should be a copy, not a move
@@ -720,88 +682,6 @@ public class PatientServiceImpl extends BaseOpenmrsService implements PatientSer
 			e.setPatient(preferred);
 			log.debug("Merging encounter " + e.getEncounterId() + " to " + preferred.getPatientId());
 			es.saveEncounter(e);
-		}
-		
-		// move all identifiers
-		for (PatientIdentifier pi : notPreferred.getIdentifiers()) {
-			PatientIdentifier tmpIdentifier = new PatientIdentifier();
-			tmpIdentifier.setIdentifier(pi.getIdentifier());
-			tmpIdentifier.setIdentifierType(null); // don't compare identifier
-			// types.
-			tmpIdentifier.setLocation(pi.getLocation());
-			tmpIdentifier.setPatient(preferred);
-			boolean found = false;
-			for (PatientIdentifier preferredIdentifier : preferred.getIdentifiers()) {
-				if (preferredIdentifier.getIdentifier() != null
-				        && preferredIdentifier.getIdentifier().equals(tmpIdentifier.getIdentifier())
-				        && preferredIdentifier.getIdentifierType() != null
-				        && preferredIdentifier.getIdentifierType().equals(tmpIdentifier.getIdentifierType()))
-					found = true;
-			}
-			if (!found) {
-				tmpIdentifier.setIdentifierType(pi.getIdentifierType());
-				tmpIdentifier.setCreator(Context.getAuthenticatedUser());
-				tmpIdentifier.setDateCreated(new Date());
-				tmpIdentifier.setVoided(false);
-				tmpIdentifier.setVoidedBy(null);
-				tmpIdentifier.setVoidReason(null);
-				// we don't want to change the preferred identifier of the preferred patient
-				tmpIdentifier.setPreferred(false);
-				preferred.addIdentifier(tmpIdentifier);
-				log.debug("Merging identifier " + tmpIdentifier.getIdentifier() + " to " + preferred.getPatientId());
-			}
-		}
-		
-		// move all names
-		for (PersonName newName : notPreferred.getNames()) {
-			boolean containsName = false;
-			for (PersonName currentName : preferred.getNames()) {
-				String given = newName.getGivenName();
-				String middle = newName.getMiddleName();
-				String family = newName.getFamilyName();
-				
-				if ((given != null && given.equals(currentName.getGivenName()))
-				        && (middle != null && middle.equals(currentName.getMiddleName()))
-				        && (family != null && family.equals(currentName.getFamilyName()))) {
-					containsName = true;
-				}
-			}
-			if (!containsName) {
-				PersonName tmpName = PersonName.newInstance(newName);
-				tmpName.setPersonNameId(null);
-				tmpName.setVoided(false);
-				tmpName.setVoidedBy(null);
-				tmpName.setVoidReason(null);
-				// we don't want to change the preferred name of the preferred patient
-				tmpName.setPreferred(false);
-				preferred.addName(tmpName);
-				log.debug("Merging name " + newName.getGivenName() + " to " + preferred.getPatientId());
-			}
-		}
-		
-		// move all addresses
-		for (PersonAddress newAddress : notPreferred.getAddresses()) {
-			boolean containsAddress = false;
-			for (PersonAddress currentAddress : preferred.getAddresses()) {
-				String address1 = currentAddress.getAddress1();
-				String address2 = currentAddress.getAddress2();
-				String cityVillage = currentAddress.getCityVillage();
-				
-				if ((address1 != null && address1.equals(newAddress.getAddress1()))
-				        || (address2 != null && address2.equals(newAddress.getAddress2()))
-				        || (cityVillage != null && cityVillage.equals(newAddress.getCityVillage()))) {
-					containsAddress = true;
-				}
-			}
-			if (!containsAddress) {
-				PersonAddress tmpAddress = (PersonAddress) newAddress.clone();
-				tmpAddress.setPersonAddressId(null);
-				tmpAddress.setVoided(false);
-				tmpAddress.setVoidedBy(null);
-				tmpAddress.setVoidReason(null);
-				preferred.addAddress(tmpAddress);
-				log.debug("Merging address " + newAddress.getPersonAddressId() + " to " + preferred.getPatientId());
-			}
 		}
 		
 		// copy all program enrollments
@@ -819,13 +699,17 @@ public class PatientServiceImpl extends BaseOpenmrsService implements PatientSer
 		PersonService personService = Context.getPersonService();
 		for (Relationship rel : personService.getRelationshipsByPerson(notPreferred)) {
 			if (!rel.isVoided()) {
-				Relationship tmpRel = rel.copy();
-				if (tmpRel.getPersonA().equals(notPreferred))
-					tmpRel.setPersonA(preferred);
-				if (tmpRel.getPersonB().equals(notPreferred))
-					tmpRel.setPersonB(preferred);
-				log.debug("Copying relationship " + rel.getRelationshipId() + " to " + preferred.getPatientId());
-				personService.saveRelationship(tmpRel);
+				// skip over this relationship if its just between the preferred and notpreferred patients
+				if (!((rel.getPersonA().equals(notPreferred) && rel.getPersonB().equals(preferred)) ||
+						rel.getPersonB().equals(notPreferred) && rel.getPersonA().equals(preferred))) {
+					Relationship tmpRel = rel.copy();
+					if (tmpRel.getPersonA().equals(notPreferred))
+						tmpRel.setPersonA(preferred);
+					if (tmpRel.getPersonB().equals(notPreferred))
+						tmpRel.setPersonB(preferred);
+					log.debug("Copying relationship " + rel.getRelationshipId() + " to " + preferred.getPatientId());
+					personService.saveRelationship(tmpRel);
+						}
 			}
 		}
 		
@@ -849,11 +733,100 @@ public class PatientServiceImpl extends BaseOpenmrsService implements PatientSer
 			}
 		}
 		
+		// move all identifiers
+		// (must be done after all calls to services above so hbm doesn't try to save things prematurely (hacky)
+		for (PatientIdentifier pi : notPreferred.getActiveIdentifiers()) {
+			PatientIdentifier tmpIdentifier = new PatientIdentifier();
+			tmpIdentifier.setIdentifier(pi.getIdentifier());
+			tmpIdentifier.setIdentifierType(null); // don't compare identifier
+			// types.
+			tmpIdentifier.setLocation(pi.getLocation());
+			tmpIdentifier.setPatient(preferred);
+			boolean found = false;
+			for (PatientIdentifier preferredIdentifier : preferred.getIdentifiers()) {
+				if (preferredIdentifier.getIdentifier() != null
+				        && preferredIdentifier.getIdentifier().equals(tmpIdentifier.getIdentifier())
+				        && preferredIdentifier.getIdentifierType() != null
+				        && preferredIdentifier.getIdentifierType().equals(tmpIdentifier.getIdentifierType()))
+					found = true;
+			}
+			if (!found) {
+				tmpIdentifier.setIdentifierType(pi.getIdentifierType());
+				tmpIdentifier.setCreator(Context.getAuthenticatedUser());
+				tmpIdentifier.setDateCreated(new Date());
+				tmpIdentifier.setVoided(false);
+				tmpIdentifier.setVoidedBy(null);
+				tmpIdentifier.setVoidReason(null);
+				tmpIdentifier.setUuid(UUID.randomUUID().toString());
+				// we don't want to change the preferred identifier of the preferred patient
+				tmpIdentifier.setPreferred(false);
+				preferred.addIdentifier(tmpIdentifier);
+				log.debug("Merging identifier " + tmpIdentifier.getIdentifier() + " to " + preferred.getPatientId());
+			}
+		}
+		
+		// move all names
+		// (must be done after all calls to services above so hbm doesn't try to save things prematurely (hacky)
+		for (PersonName newName : notPreferred.getNames()) {
+			boolean containsName = false;
+			for (PersonName currentName : preferred.getNames()) {
+				String given = newName.getGivenName();
+				String middle = newName.getMiddleName();
+				String family = newName.getFamilyName();
+				
+				if ((given != null && given.equals(currentName.getGivenName()))
+				        && (middle != null && middle.equals(currentName.getMiddleName()))
+				        && (family != null && family.equals(currentName.getFamilyName()))) {
+					containsName = true;
+				}
+			}
+			if (!containsName) {
+				PersonName tmpName = PersonName.newInstance(newName);
+				tmpName.setPersonNameId(null);
+				tmpName.setVoided(false);
+				tmpName.setVoidedBy(null);
+				tmpName.setVoidReason(null);
+				// we don't want to change the preferred name of the preferred patient
+				tmpName.setPreferred(false);
+				tmpName.setUuid(UUID.randomUUID().toString());
+				preferred.addName(tmpName);
+				log.debug("Merging name " + newName.getGivenName() + " to " + preferred.getPatientId());
+			}
+		}
+		
+		// move all addresses
+		// (must be done after all calls to services above so hbm doesn't try to save things prematurely (hacky)
+		for (PersonAddress newAddress : notPreferred.getAddresses()) {
+			boolean containsAddress = false;
+			for (PersonAddress currentAddress : preferred.getAddresses()) {
+				String address1 = currentAddress.getAddress1();
+				String address2 = currentAddress.getAddress2();
+				String cityVillage = currentAddress.getCityVillage();
+				
+				if ((address1 != null && address1.equals(newAddress.getAddress1()))
+				        && (address2 != null && address2.equals(newAddress.getAddress2()))
+				        && (cityVillage != null && cityVillage.equals(newAddress.getCityVillage()))) {
+					containsAddress = true;
+				}
+			}
+			if (!containsAddress) {
+				PersonAddress tmpAddress = (PersonAddress) newAddress.clone();
+				tmpAddress.setPersonAddressId(null);
+				tmpAddress.setVoided(false);
+				tmpAddress.setVoidedBy(null);
+				tmpAddress.setVoidReason(null);
+				tmpAddress.setUuid(UUID.randomUUID().toString());
+				preferred.addAddress(tmpAddress);
+				log.debug("Merging address " + newAddress.getPersonAddressId() + " to " + preferred.getPatientId());
+			}
+		}
+		
 		// copy person attributes
 		for (PersonAttribute attr : notPreferred.getAttributes()) {
 			if (!attr.isVoided()) {
 				PersonAttribute tmpAttr = attr.copy();
 				tmpAttr.setPerson(null);
+				tmpAttr.setUuid(UUID.randomUUID().toString());
 				preferred.addAttribute(tmpAttr);
 			}
 		}
@@ -874,41 +847,12 @@ public class PatientServiceImpl extends BaseOpenmrsService implements PatientSer
 			preferred.setBirthdateEstimated(notPreferred.getBirthdateEstimated());
 		}
 		
-		if (preferred.getTribe() == null)
-			preferred.setTribe(notPreferred.getTribe());
-		
-		/*
-		 * if (preferred.getBirthplace() == null ||
-		 * preferred.getBirthplace().equals(""))
-		 * preferred.setBirthplace(notPreferred.getBirthplace());
-		 * 
-		 * if (preferred.getCitizenship() == null ||
-		 * preferred.getCitizenship().equals(""))
-		 * preferred.setCitizenship(notPreferred.getCitizenship());
-		 * 
-		 * if (preferred.getMothersName() == null ||
-		 * preferred.getMothersName().equals(""))
-		 * preferred.setMothersName(notPreferred.getMothersName());
-		 * 
-		 * if (preferred.getCivilStatus() == null)
-		 * preferred.setCivilStatus(notPreferred.getCivilStatus());
-		*/
-
 		if (preferred.getDeathDate() == null || preferred.getDeathDate().equals(""))
 			preferred.setDeathDate(notPreferred.getDeathDate());
 		
 		if (preferred.getCauseOfDeath() == null || preferred.getCauseOfDeath().equals(""))
 			preferred.setCauseOfDeath(notPreferred.getCauseOfDeath());
 		
-		/*
-		 * if (preferred.getHealthDistrict() == null ||
-		 * preferred.getHealthDistrict().equals(""))
-		 * preferred.setHealthDistrict(notPreferred.getHealthDistrict());
-		 * 
-		 * if (preferred.getHealthCenter() == null)
-		 * preferred.setHealthCenter(notPreferred.getHealthCenter());
-		*/
-
 		// void the non preferred patient
 		voidPatient(notPreferred, "Merged with patient #" + preferred.getPatientId());
 		
@@ -916,57 +860,6 @@ public class PatientServiceImpl extends BaseOpenmrsService implements PatientSer
 		// This must be called _after_ voiding the nonPreferred patient so that
 		//  a "Duplicate Identifier" error doesn't pop up.
 		savePatient(preferred);
-		
-	}
-	
-	/**
-	 * Iterates over Names/Addresses/Identifiers to set dateCreated and creator properties if needed
-	 * 
-	 * @param patient
-	 */
-	private void setCollectionProperties(Patient patient) {
-		// set the properties on the collections for the generic person object
-		Context.getPersonService().setCollectionProperties(patient);
-		
-		User currentUser = Context.getAuthenticatedUser();
-		Date currentTime = new Date();
-		
-		// patient creator
-		if (patient.getCreator() == null)
-			patient.setCreator(currentUser);
-		if (patient.getDateCreated() == null)
-			patient.setDateCreated(currentTime);
-		
-		// patient changer
-		if (patient.getPatientId() != null) {
-			patient.setChangedBy(currentUser);
-			patient.setDateChanged(currentTime);
-		}
-		
-		// identifier collection
-		if (patient.getIdentifiers() != null) {
-			for (PatientIdentifier pIdentifier : patient.getIdentifiers()) {
-				// set the creator and date created if not set yet
-				if (pIdentifier.getDateCreated() == null)
-					pIdentifier.setDateCreated(currentTime);
-				if (pIdentifier.getCreator() == null)
-					pIdentifier.setCreator(currentUser);
-				
-				// make sure the identifier is associated with the current
-				// patient
-				if (pIdentifier.getPatient() == null)
-					pIdentifier.setPatient(patient);
-				
-				// if the user has marked this identifier as voided, make sure
-				// the other void attrs are filled in
-				if (pIdentifier.isVoided()) {
-					if (pIdentifier.getVoidedBy() == null)
-						pIdentifier.setVoidedBy(currentUser);
-					if (pIdentifier.getDateVoided() == null)
-						pIdentifier.setDateVoided(currentTime);
-				}
-			}
-		}
 	}
 	
 	/**
@@ -1223,6 +1116,24 @@ public class PatientServiceImpl extends BaseOpenmrsService implements PatientSer
 	}
 	
 	/**
+	 * @see org.openmrs.api.PatientService#getPatientByUuid(java.lang.String)
+	 */
+	public Patient getPatientByUuid(String uuid) throws APIException {
+		return dao.getPatientByUuid(uuid);
+	}
+	
+	public PatientIdentifier getPatientIdentifierByUuid(String uuid) throws APIException {
+		return dao.getPatientIdentifierByUuid(uuid);
+	}
+	
+	/**
+	 * @see org.openmrs.api.PatientService#getPatientIdentifierTypeByUuid(java.lang.String)
+	 */
+	public PatientIdentifierType getPatientIdentifierTypeByUuid(String uuid) throws APIException {
+		return dao.getPatientIdentifierTypeByUuid(uuid);
+	}
+	
+	/**
 	 * @see org.openmrs.api.PatientService#getDefaultIdentifierValidator()
 	 */
 	public IdentifierValidator getDefaultIdentifierValidator() {
@@ -1283,11 +1194,11 @@ public class PatientServiceImpl extends BaseOpenmrsService implements PatientSer
 			return getDefaultIdentifierValidator();
 		}
 	}
-
+	
 	/**
-     * @see org.openmrs.api.PatientService#isIdentifierInUseByAnotherPatient(org.openmrs.PatientIdentifier)
-     */
-    public boolean isIdentifierInUseByAnotherPatient(PatientIdentifier patientIdentifier) {
-    	return dao.isIdentifierInUseByAnotherPatient(patientIdentifier);
-    }
+	 * @see org.openmrs.api.PatientService#isIdentifierInUseByAnotherPatient(org.openmrs.PatientIdentifier)
+	 */
+	public boolean isIdentifierInUseByAnotherPatient(PatientIdentifier patientIdentifier) {
+		return dao.isIdentifierInUseByAnotherPatient(patientIdentifier);
+	}
 }

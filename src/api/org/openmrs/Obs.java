@@ -25,13 +25,22 @@ import java.util.Set;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.openmrs.aop.RequiredDataAdvice;
 import org.openmrs.api.APIException;
+import org.openmrs.api.handler.AuditableSaveHandler;
+import org.openmrs.api.handler.OpenmrsObjectSaveHandler;
+import org.openmrs.api.handler.SaveHandler;
+import org.openmrs.obs.ComplexData;
+import org.openmrs.obs.ComplexObsHandler;
 import org.openmrs.util.Format;
 import org.openmrs.util.Format.FORMAT_TYPE;
 
 /**
- * Observation object. An observation is a single unit of information Observations are collected and
- * grouped together into one Encounter (one visit). Obs can be grouped in a hierarchical fashion.
+ * An observation is a single unit of clinical information. <br/>
+ * <br/>
+ * Observations are collected and grouped together into one Encounter (one visit). Obs can be
+ * grouped in a hierarchical fashion. <br/>
+ * <br/>
  * The {@link #getObsGroup()} method returns an optional parent. That parent object is also an Obs.
  * The parent Obs object knows about its child objects through the {@link #getGroupMembers()}
  * method. (Multi-level hierarchies are achieved by an Obs parent object being a member of another
@@ -39,9 +48,9 @@ import org.openmrs.util.Format.FORMAT_TYPE;
  * 
  * @see Encounter
  */
-public class Obs implements java.io.Serializable {
+public class Obs extends BaseOpenmrsData implements java.io.Serializable {
 	
-	protected final static Log log = LogFactory.getLog(Obs.class);
+	private transient final static Log log = LogFactory.getLog(Obs.class);
 	
 	public static final long serialVersionUID = 112342333L;
 	
@@ -58,7 +67,7 @@ public class Obs implements java.io.Serializable {
 	 * obsGroup.getConcept().isSet() should be true This will be non-null if this obs is a member of
 	 * another groupedObs
 	 * 
-	 * @see #isGroupMember()
+	 * @see #isObsGrouping() (??)
 	 */
 	protected Obs obsGroup;
 	
@@ -83,9 +92,14 @@ public class Obs implements java.io.Serializable {
 	
 	protected String valueText;
 	
+	protected String valueComplex;
+	
+	// ComplexData is not persisted in the database.
+	protected transient ComplexData complexData;
+	
 	protected String comment;
 	
-	protected Integer personId;
+	protected transient Integer personId;
 	
 	protected Person person;
 	
@@ -98,18 +112,6 @@ public class Obs implements java.io.Serializable {
 	protected Date dateStarted;
 	
 	protected Date dateStopped;
-	
-	protected User creator;
-	
-	protected Date dateCreated;
-	
-	protected Boolean voided = false;
-	
-	protected User voidedBy;
-	
-	protected Date dateVoided;
-	
-	protected String voidReason;
 	
 	/** default constructor */
 	public Obs() {
@@ -169,6 +171,9 @@ public class Obs implements java.io.Serializable {
 		newObs.setDateVoided(obsToCopy.getDateVoided());
 		newObs.setVoidReason(obsToCopy.getVoidReason());
 		
+		newObs.setValueComplex(obsToCopy.getValueComplex());
+		newObs.setComplexData(obsToCopy.getComplexData());
+		
 		if (obsToCopy.getGroupMembers() != null)
 			for (Obs member : obsToCopy.getGroupMembers()) {
 				// if the obs hasn't been saved yet, no need to duplicate it
@@ -186,7 +191,7 @@ public class Obs implements java.io.Serializable {
 	 * <code>obs</code> object. If either has a null obsId, then they are not equal
 	 * 
 	 * @param obj
-	 * @return boolean true/false whether or not they are the same objects
+	 * @return boolean True if the obsIds match, false otherwise or if either obsId is null.
 	 */
 	public boolean equals(Object obj) {
 		if (obj instanceof Obs) {
@@ -202,7 +207,7 @@ public class Obs implements java.io.Serializable {
 		}
 		
 		// if the obsIds don't match, its possible that they are the same
-		// exact object.  Check that now on the way out.
+		// exact object. Check that now on the way out.
 		return this == obj;
 	}
 	
@@ -216,33 +221,17 @@ public class Obs implements java.io.Serializable {
 	}
 	
 	/**
-	 * determine if the current observation is complex --overridden in extending ComplexObs class
-	 */
-	public boolean isComplexObs() {
-		return false;
-	}
-	
-	/**
-	 * Sets the required Obs properties: creator and dateCreated
+	 * This method isn't needed anymore. There are handlers that are mapped around the saveObs(obs)
+	 * method that get called automatically. See {@link SaveHandler}, et al.
 	 * 
-	 * @param creator
-	 * @param dateCreated
+	 * @see SaveHandler
+	 * @see OpenmrsObjectSaveHandler
+	 * @see AuditableSaveHandler
+	 * @deprecated no longer needed. Replaced by handlers.
 	 */
+	@Deprecated
 	public void setRequiredProperties(User creator, Date dateCreated) {
-		if (this.getCreator() == null)
-			setCreator(creator);
-		
-		if (this.getDateCreated() == null)
-			setDateCreated(dateCreated);
-		
-		if (getGroupMembers() != null) {
-			for (Obs member : getGroupMembers()) {
-				// if statement does a quick sanity check to
-				// avoid the simplest of infinite loops
-				if (member.getCreator() == null || member.getDateCreated() == null)
-					member.setRequiredProperties(creator, dateCreated);
-			}
-		}
+		RequiredDataAdvice.recursivelyHandle(SaveHandler.class, this, creator, dateCreated, null, null);
 	}
 	
 	// Property accessors
@@ -289,48 +278,6 @@ public class Obs implements java.io.Serializable {
 		
 		// ABKTOD: description in which locale?
 		return concept.getDescription();
-	}
-	
-	/**
-	 * @return Returns the creator.
-	 */
-	public User getCreator() {
-		return creator;
-	}
-	
-	/**
-	 * @param creator The creator to set.
-	 */
-	public void setCreator(User creator) {
-		this.creator = creator;
-	}
-	
-	/**
-	 * @return Returns the dateCreated.
-	 */
-	public Date getDateCreated() {
-		return dateCreated;
-	}
-	
-	/**
-	 * @param dateCreated The dateCreated to set.
-	 */
-	public void setDateCreated(Date dateCreated) {
-		this.dateCreated = dateCreated;
-	}
-	
-	/**
-	 * @return Returns the dateVoided.
-	 */
-	public Date getDateVoided() {
-		return dateVoided;
-	}
-	
-	/**
-	 * @param dateVoided The dateVoided to set.
-	 */
-	public void setDateVoided(Date dateVoided) {
-		this.dateVoided = dateVoided;
 	}
 	
 	/**
@@ -757,53 +704,76 @@ public class Obs implements java.io.Serializable {
 	}
 	
 	/**
-	 * @return Returns the voided.
+	 * @return Returns true if this Obs is complex.
+	 * @since 1.5
+	 * @should return true if the concept is complex
 	 */
-	public Boolean isVoided() {
-		return voided;
+	public boolean isComplex() {
+		//		if (getValueComplex() != null) {
+		//			return true;
+		//		}
+		
+		if (getConcept() != null) {
+			return getConcept().isComplex();
+		}
+		
+		return false;
 	}
 	
 	/**
-	 * @return Returns the voided.
-	 * @see #isVoided()
+	 * Get the value for the ComplexData. This method is used by the ComplexObsHandler. The
+	 * valueComplex has two parts separated by a bar '|' character: part A) the title; and part B)
+	 * the URI. The title is the readable description of the valueComplex that is returned by
+	 * {@link Obs#getValueAsString()}. The URI is the location where the ComplexData is stored.
+	 * 
+	 * @return readable title and URI for the location of the ComplexData binary object.
+	 * @since 1.5
 	 */
-	public Boolean getVoided() {
-		return isVoided();
+	public String getValueComplex() {
+		return this.valueComplex;
 	}
 	
 	/**
-	 * @param voided The voided to set.
+	 * Set the value for the ComplexData. This method is used by the ComplexObsHandler. The
+	 * valueComplex has two parts separated by a bar '|' character: part A) the title; and part B)
+	 * the URI. The title is the readable description of the valueComplex that is returned by
+	 * Obs.getValueAsString(). The URI is the location where the ComplexData is stored.
+	 * 
+	 * @param valueComplex readable title and URI for the location of the ComplexData binary object.
+	 * @since 1.5
 	 */
-	public void setVoided(Boolean voided) {
-		this.voided = voided;
+	public void setValueComplex(String valueComplex) {
+		this.valueComplex = valueComplex;
 	}
 	
 	/**
-	 * @return Returns the voidedBy.
+	 * Set the ComplexData for this Obs. The ComplexData is stored in the file system or elsewhere,
+	 * but is not persisted to the database. <br/>
+	 * <br/> {@link ComplexObsHandler}s that are registered to {@link ConceptComplex}s will persist the
+	 * {@link ComplexData#getData()} object to the correct place for the given concept.
+	 * 
+	 * @param complexData
+	 * @since 1.5
 	 */
-	public User getVoidedBy() {
-		return voidedBy;
+	public void setComplexData(ComplexData complexData) {
+		this.complexData = complexData;
 	}
 	
 	/**
-	 * @param voidedBy The voidedBy to set.
+	 * Get the ComplexData. This is retrieved by the {@link ComplexObsHandler} from the file system
+	 * or another location, not from the database. <br/>
+	 * <br/>
+	 * This will be null unless you call:
+	 * 
+	 * <pre>
+	 * 	Obs obsWithComplexData = Context.getObsService().getComplexObs(obsId, OpenmrsConstants.RAW_VIEW);
+	 * </pre>
+	 * 
+	 * @return the complex data for this obs (if its a complex obs)
+	 * @since 1.5
 	 */
-	public void setVoidedBy(User voidedBy) {
-		this.voidedBy = voidedBy;
-	}
-	
-	/**
-	 * @return Returns the voidReason.
-	 */
-	public String getVoidReason() {
-		return voidReason;
-	}
-	
-	/**
-	 * @param voidReason The voidReason to set.
-	 */
-	public void setVoidReason(String voidReason) {
-		this.voidReason = voidReason;
+	public ComplexData getComplexData() {
+		return this.complexData;
 	}
 	
 	/**
@@ -853,9 +823,14 @@ public class Obs implements java.io.Serializable {
 	 **************************************************************************/
 	
 	/**
-	 * Convenience method for obtaining the observation's value as a string
+	 * Convenience method for obtaining the observation's value as a string If the Obs is complex,
+	 * returns the title of the complexData denoted by the section of getValueComplex() before the
+	 * first bar '|' character; or returns the entire getValueComplex() if the bar '|' character is
+	 * missing.
 	 * 
 	 * @param locale locale for locale-specific depictions of value
+	 * @should return first part of valueComplex for complex obs
+	 * @should return first part of valueComplex for non null valueComplexes
 	 */
 	public String getValueAsString(Locale locale) {
 		//branch on hl7 abbreviations
@@ -892,6 +867,14 @@ public class Obs implements java.io.Serializable {
 				return (getValueDatetime() == null ? "" : Format.format(getValueDatetime(), locale, FORMAT_TYPE.TIMESTAMP));
 			else if (abbrev.equals("ST"))
 				return getValueText();
+			else if (abbrev.equals("ED") && getValueComplex() != null) {
+				String[] valueComplex = getValueComplex().split("\\|");
+				for (int i = 0; i < valueComplex.length; i++) {
+					if (!"".equals(valueComplex[i])) {
+						return valueComplex[i].trim();
+					}
+				}
+			}
 		}
 		
 		// if the datatype is 'unknown', default to just returning what is not null
@@ -924,6 +907,17 @@ public class Obs implements java.io.Serializable {
 				sb.append(groupMember.getValueAsString(locale));
 			}
 			return sb.toString();
+		}
+		
+		// returns the title portion of the valueComplex
+		// which is everything before the first bar '|' character.
+		if (getValueComplex() != null) {
+			String[] valueComplex = getValueComplex().split("\\|");
+			for (int i = 0; i < valueComplex.length; i++) {
+				if (!"".equals(valueComplex[i])) {
+					return valueComplex[i].trim();
+				}
+			}
 		}
 		
 		return "";
@@ -981,6 +975,24 @@ public class Obs implements java.io.Serializable {
 			return "obs id is null";
 		
 		return "Obs #" + obsId.toString();
+	}
+	
+	/**
+	 * @since 1.5
+	 * @see org.openmrs.OpenmrsObject#getId()
+	 */
+	public Integer getId() {
+		return getObsId();
+		
+	}
+	
+	/**
+	 * @since 1.5
+	 * @see org.openmrs.OpenmrsObject#setId(java.lang.Integer)
+	 */
+	public void setId(Integer id) {
+		setObsId(id);
+		
 	}
 	
 }

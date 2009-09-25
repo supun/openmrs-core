@@ -20,29 +20,40 @@ import static org.junit.Assert.assertNotSame;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
-import java.util.Collection;
+import java.io.ByteArrayInputStream;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.InputStream;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.Date;
-import java.util.HashSet;
-import java.util.Iterator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.Vector;
 
+import org.junit.Assert;
 import org.junit.Test;
 import org.openmrs.Concept;
 import org.openmrs.Encounter;
 import org.openmrs.Location;
-import org.openmrs.MimeType;
 import org.openmrs.Obs;
 import org.openmrs.Order;
 import org.openmrs.Patient;
 import org.openmrs.Person;
+import org.openmrs.User;
 import org.openmrs.api.context.Context;
+import org.openmrs.api.impl.ObsServiceImpl;
+import org.openmrs.obs.ComplexData;
+import org.openmrs.obs.ComplexObsHandler;
+import org.openmrs.obs.handler.ImageHandler;
+import org.openmrs.obs.handler.TextHandler;
 import org.openmrs.test.BaseContextSensitiveTest;
+import org.openmrs.test.Verifies;
+import org.openmrs.util.OpenmrsConstants;
+import org.openmrs.util.OpenmrsUtil;
 import org.openmrs.util.OpenmrsConstants.PERSON_TYPE;
-import org.openmrs.validator.ObsValidator;
-import org.springframework.validation.BindException;
-import org.springframework.validation.Errors;
 
 /**
  * TODO clean up and add tests for all methods in ObsService
@@ -50,6 +61,8 @@ import org.springframework.validation.Errors;
 public class ObsServiceTest extends BaseContextSensitiveTest {
 	
 	protected static final String INITIAL_OBS_XML = "org/openmrs/api/include/ObsServiceTest-initial.xml";
+	
+	protected static final String COMPLEX_OBS_XML = "org/openmrs/api/include/ObsServiceTest-complex.xml";
 	
 	/**
 	 * Creates then updates an obs
@@ -73,10 +86,9 @@ public class ObsServiceTest extends BaseContextSensitiveTest {
 		Order order1 = null;
 		Concept concept1 = conceptService.getConcept(1);
 		Patient patient1 = new Patient(2);
-		Encounter encounter1 = (Encounter) es.getEncounter(1);
+		Encounter encounter1 = es.getEncounter(1);
 		Date datetime1 = new Date();
 		Location location1 = locationService.getLocation(1);
-		Integer groupId1 = new Integer(1);
 		Integer valueGroupId1 = new Integer(5);
 		Date valueDatetime1 = new Date();
 		Concept valueCoded1 = conceptService.getConcept(2);
@@ -117,8 +129,7 @@ public class ObsServiceTest extends BaseContextSensitiveTest {
 		Order order2 = null;
 		Concept concept2 = conceptService.getConcept(2);
 		Patient patient2 = new Patient(1);
-		System.out.println("patient2: " + patient2.getPatientId());
-		Encounter encounter2 = (Encounter) es.getEncounter(2);
+		Encounter encounter2 = es.getEncounter(2);
 		Date datetime2 = new Date();
 		Location location2 = locationService.getLocation(1);
 		Integer valueGroupId2 = new Integer(3);
@@ -158,9 +169,7 @@ public class ObsServiceTest extends BaseContextSensitiveTest {
 		// the saved obs should NOT have the new values
 		//assertFalse(o1ToUpdate.getValueNumeric().equals(valueNumeric2));
 		// make sure the dateCreated 
-		
 		Obs o3 = obsService.getObs(o1ToUpdateSaved.getObsId());
-		System.out.println("o3.isComplex? " + o3.isComplexObs());
 		
 		//o1ToUpdateSaved should equal o3 and neither should equal o1
 		assertTrue(o1ToUpdateSaved.equals(o3));
@@ -211,6 +220,7 @@ public class ObsServiceTest extends BaseContextSensitiveTest {
 		
 		// a voided obs shouldn't be passed through to the database
 		obs.setVoided(Boolean.TRUE);
+		obs.setVoidedBy(new User(1));
 		String reason = "Testing voiding a voided obs";
 		Obs notVoidedObs = obsService.voidObs(obs, reason);
 		// we should get back the same obs as we passed in for a create
@@ -235,87 +245,6 @@ public class ObsServiceTest extends BaseContextSensitiveTest {
 		assertTrue(reason.equals(voidedObsFetched.getVoidReason()));
 		assertTrue(voidedObs.getObsId().equals(obs.getObsId()));
 		assertTrue(voidedObs.getObsId().equals(voidedObs.getObsId()));
-		
-	}
-	
-	/**
-	 * Creates then updates a complex obs
-	 * 
-	 * @throws Exception
-	 */
-	@Test
-	public void shouldComplexObsCreateUpdateDelete() throws Exception {
-		
-		// we don't have any complex obs in the system yet
-	}
-	
-	/**
-	 * TODO
-	 * 
-	 * @throws Exception
-	 */
-	@Test
-	public void shouldMimeType() throws Exception {
-		
-		ObsService obsService = Context.getObsService();
-		
-		//testing equals()/hashcode() for mimetype /////////// 
-		
-		Collection<MimeType> mimeTypes = new HashSet<MimeType>();
-		
-		MimeType m1 = new MimeType();
-		MimeType m2 = new MimeType();
-		m1.setMimeType("test1");
-		m2.setMimeType("test2");
-		mimeTypes.add(m1);
-		mimeTypes.add(m2);
-		
-		assertTrue("Both types should have been added", mimeTypes.size() == 2);
-		assertTrue("The first mimetype should be in the list", mimeTypes.contains(m1));
-		////////////////////////////////////////
-		
-		//testing creation
-		
-		MimeType mimeType = new MimeType();
-		
-		mimeType.setMimeType("testing");
-		mimeType.setDescription("desc");
-		
-		obsService.saveMimeType(mimeType);
-		
-		MimeType newMimeType = obsService.getMimeType(mimeType.getMimeTypeId());
-		assertNotNull(newMimeType);
-		
-		mimeTypes = obsService.getAllMimeTypes();
-		
-		//make sure we get a list
-		assertNotNull(mimeTypes);
-		
-		boolean found = false;
-		for (Iterator<MimeType> i = mimeTypes.iterator(); i.hasNext();) {
-			MimeType mimeType2 = i.next();
-			assertNotNull(mimeType);
-			//check .equals function
-			assertTrue(mimeType.equals(mimeType2) == (mimeType.getMimeTypeId().equals(mimeType2.getMimeTypeId())));
-			//mark found flag
-			if (mimeType.equals(mimeType2))
-				found = true;
-		}
-		
-		//assert that the new mimeType was returned in the list
-		assertTrue(found);
-		
-		//check update
-		newMimeType.setMimeType("another test");
-		obsService.saveMimeType(newMimeType);
-		
-		MimeType newerMimeType = obsService.getMimeType(newMimeType.getMimeTypeId());
-		assertTrue(newerMimeType.getMimeType().equals(newMimeType.getMimeType()));
-		
-		//check deletion
-		obsService.purgeMimeType(newerMimeType);
-		
-		assertNull(obsService.getMimeType(newMimeType.getMimeTypeId()));
 		
 	}
 	
@@ -356,79 +285,6 @@ public class ObsServiceTest extends BaseContextSensitiveTest {
 		// and the obs that was returned
 		assertNotSame(updatedObs.getDateCreated(), o.getDateCreated());
 		
-	}
-	
-	/**
-	 * Auto generated method comment
-	 * 
-	 * @throws Exception
-	 */
-	@Test
-	public void shouldObsValidator() throws Exception {
-		executeDataSet(INITIAL_OBS_XML);
-		ConceptService conceptService = Context.getConceptService();
-		Concept numeric = conceptService.getConcept(1);
-		ObsValidator validator = new ObsValidator();
-		
-		Obs obs = new Obs();
-		
-		// set the required properties
-		obs.setPerson(new Person(1));
-		obs.setObsDatetime(new Date());
-		
-		Errors errors = new BindException(obs, "obs");
-		validator.validate(obs, errors);
-		assertTrue("Should have errors: no question", errors.hasErrors());
-		
-		obs.setConcept(numeric);
-		errors = new BindException(obs, "obs");
-		validator.validate(obs, errors);
-		assertTrue("Should have errors: no value", errors.hasErrors());
-		
-		obs.setValueText("This is text");
-		errors = new BindException(obs, "obs");
-		validator.validate(obs, errors);
-		assertTrue("Should have errors: no numeric value", errors.hasErrors());
-		
-		obs.setValueNumeric(350d);
-		errors = new BindException(obs, "obs");
-		validator.validate(obs, errors);
-		assertFalse("Should have no errors.  But has: " + errors, errors.hasErrors());
-		
-		Person p = new Person(1);
-		
-		Obs parent = new Obs();
-		parent.setPerson(p);
-		parent.setConcept(numeric);
-		parent.setValueNumeric(350d);
-		Obs child = new Obs();
-		child.setPerson(p);
-		parent.addGroupMember(child);
-		errors = new BindException(parent, "obs");
-		validator.validate(parent, errors);
-		assertTrue("Should have errors: child is bad", errors.hasErrors());
-		
-		child.setConcept(numeric);
-		child.setValueNumeric(125d);
-		errors = new BindException(parent, "obs");
-		validator.validate(parent, errors);
-		assertFalse("Should have no errors", errors.hasErrors());
-		
-		child.addGroupMember(parent);
-		errors = new BindException(parent, "obs");
-		validator.validate(parent, errors);
-		assertTrue("Should have errors: cycle in graph", errors.hasErrors());
-		
-		child.removeGroupMember(parent);
-		Obs grandChild = new Obs();
-		grandChild.setPerson(p);
-		grandChild.setConcept(numeric);
-		grandChild.setValueNumeric(77d);
-		child.addGroupMember(grandChild);
-		grandChild.addGroupMember(parent);
-		errors = new BindException(parent, "obs");
-		validator.validate(parent, errors);
-		assertTrue("Should have errors: cycle in graph", errors.hasErrors());
 	}
 	
 	/**
@@ -851,6 +707,7 @@ public class ObsServiceTest extends BaseContextSensitiveTest {
 		child2.setPerson(new Patient(2));
 		
 		oParent.addGroupMember(child2);
+		//oParent.setRequiredData(new OpenmrsObject.DefaultRequiredDataHelper(Context.getAuthenticatedUser(), new Date()));
 		
 		List<Obs> obs4 = os.findObsByGroupId(oParent.getObsId());
 		
@@ -885,6 +742,76 @@ public class ObsServiceTest extends BaseContextSensitiveTest {
 	}
 	
 	/**
+	 * This method gets observations and only fetches obs that are for patients
+	 * 
+	 * @see ObsService#getObservations(List, List, List, List, List, List, List, Integer, Integer,
+	 *      Date, Date, boolean)
+	 */
+	@Test
+	@Verifies(value = "should compare dates using lte and gte", method = "getObservations(List<QPerson;>,List<QEncounter;>,List<QConcept;>,List<QConcept;>,List<QPERSON_TYPE;>,List<QLocation;>,List<QString;>,Integer,Integer,Date,Date,null)")
+	public void getObservations_shouldCompareDatesUsingLteAndGte() throws Exception {
+		executeDataSet(INITIAL_OBS_XML);
+		
+		ObsService os = Context.getObsService();
+		DateFormat df = new SimpleDateFormat("yyyy-MM-dd");
+		
+		// Test 1, No bounderies
+		Date sd = df.parse("2006-02-01");
+		Date ed = df.parse("2006-02-20");
+		List<Obs> obs = os.getObservations(null, null, null, null, null, null, null, null, null, sd, ed, false);
+		assertEquals(8, obs.size());
+		
+		// Test 2, From boundary
+		sd = df.parse("2006-02-13");
+		ed = df.parse("2006-02-20");
+		obs = os.getObservations(null, null, null, null, null, null, null, null, null, sd, ed, false);
+		assertEquals(4, obs.size());
+		
+		// Test 3, To boundary
+		sd = df.parse("2006-02-01");
+		ed = df.parse("2006-02-15");
+		obs = os.getObservations(null, null, null, null, null, null, null, null, null, sd, ed, false);
+		assertEquals(7, obs.size());
+		
+		// Test 4, Both Boundaries
+		sd = df.parse("2006-02-11");
+		ed = new SimpleDateFormat("yyyy-MM-dd-hh-mm").parse("2006-02-11-11-59");
+		obs = os.getObservations(null, null, null, null, null, null, null, null, null, sd, ed, false);
+		assertEquals(1, obs.size());
+		
+		// Test 5, Outside before
+		sd = df.parse("2006-02-01");
+		ed = df.parse("2006-02-08");
+		obs = os.getObservations(null, null, null, null, null, null, null, null, null, sd, ed, false);
+		assertEquals(0, obs.size());
+		
+		// Test 6, Outside After
+		sd = df.parse("2006-02-17");
+		ed = df.parse("2006-02-20");
+		obs = os.getObservations(null, null, null, null, null, null, null, null, null, sd, ed, false);
+		assertEquals(0, obs.size());
+	}
+	
+	/**
+	 * Uses the OpenmrsUtil.lastSecondOfDay(Date) method to get all observations for a given day
+	 * 
+	 * @throws Exception
+	 */
+	@Test
+	public void shouldGetObservationsOnDay() throws Exception {
+		executeDataSet(INITIAL_OBS_XML);
+		
+		ObsService os = Context.getObsService();
+		DateFormat df = new SimpleDateFormat("yyyy-MM-dd");
+		
+		Date sd = df.parse("2006-02-13");
+		Date ed = df.parse("2006-02-13");
+		List<Obs> obs = os.getObservations(null, null, null, null, null, null, null, null, null, sd, OpenmrsUtil
+		        .lastSecondOfDay(ed), false);
+		assertEquals(1, obs.size());
+	}
+	
+	/**
 	 * This method gets observations and only fetches obs that are for users
 	 * 
 	 * @throws Exception
@@ -907,4 +834,319 @@ public class ObsServiceTest extends BaseContextSensitiveTest {
 		assertEquals(2, obs.size());
 		//os.getObservations(null, null, questions, null, personTypes, null, "obs.valueDatetime asc", null, null, null, null, false);
 	}
+	
+	/**
+	 * @see {@link ObsService#getComplexObs(Integer,String)}
+	 */
+	@Test
+	@Verifies(value = "should fill in complex data object for complex obs", method = "getComplexObs(Integer,String)")
+	public void getComplexObs_shouldFillInComplexDataObjectForComplexObs() throws Exception {
+		executeDataSet(COMPLEX_OBS_XML);
+		
+		ObsService os = Context.getObsService();
+		
+		Obs complexObs = os.getComplexObs(44, OpenmrsConstants.RAW_VIEW);
+		
+		Assert.assertNotNull(complexObs);
+		Assert.assertTrue(complexObs.isComplex());
+		Assert.assertNotNull(complexObs.getValueComplex());
+		Assert.assertNotNull(complexObs.getComplexData());
+	}
+	
+	/**
+	 * @see {@link ObsService#getComplexObs(Integer,String)}
+	 */
+	@Test
+	@Verifies(value = "should not fail with null view", method = "getComplexObs(Integer,String)")
+	public void getComplexObs_shouldNotFailWithNullView() throws Exception {
+		executeDataSet(COMPLEX_OBS_XML);
+		
+		ObsService os = Context.getObsService();
+		
+		os.getComplexObs(44, null);
+	}
+	
+	/**
+	 * @see {@link ObsService#getComplexObs(Integer,String)}
+	 */
+	@Test
+	@Verifies(value = "should return normal obs for non complex obs", method = "getComplexObs(Integer,String)")
+	public void getComplexObs_shouldReturnNormalObsForNonComplexObs() throws Exception {
+		executeDataSet(COMPLEX_OBS_XML);
+		
+		ObsService os = Context.getObsService();
+		
+		Obs normalObs = os.getComplexObs(7, OpenmrsConstants.RAW_VIEW);
+		
+		Assert.assertFalse(normalObs.isComplex());
+	}
+	
+	/**
+	 * @see {@link ObsService#getHandler(String)}
+	 */
+	@Test
+	@Verifies(value = "should have default image and text handlers registered by spring", method = "getHandler(String)")
+	public void getHandler_shouldHaveDefaultImageAndTextHandlersRegisteredBySpring() throws Exception {
+		ObsService os = Context.getObsService();
+		ComplexObsHandler imgHandler = os.getHandler("ImageHandler");
+		Assert.assertNotNull(imgHandler);
+		
+		ComplexObsHandler textHandler = os.getHandler("TextHandler");
+		Assert.assertNotNull(textHandler);
+	}
+	
+	/**
+	 * @see {@link ObsService#getHandler(String)}
+	 */
+	@Test
+	@Verifies(value = "should get handler with matching key", method = "getHandler(String)")
+	public void getHandler_shouldGetHandlerWithMatchingKey() throws Exception {
+		ObsService os = Context.getObsService();
+		ComplexObsHandler handler = os.getHandler("ImageHandler");
+		Assert.assertNotNull(handler);
+		Assert.assertTrue(handler instanceof ImageHandler);
+	}
+	
+	/**
+	 * @see {@link ObsService#getHandlers()}
+	 */
+	@Test
+	@Verifies(value = "should never return null", method = "getHandlers()")
+	public void getHandlers_shouldNeverReturnNull() throws Exception {
+		Assert.assertNotNull(Context.getObsService().getHandlers());
+		
+		// test our current implementation without it being initialized by spring
+		Assert.assertNotNull(new ObsServiceImpl().getHandlers());
+	}
+	
+	/**
+	 * @see {@link ObsService#registerHandler(String,ComplexObsHandler)}
+	 */
+	@Test
+	@Verifies(value = "should register handler with the given key", method = "registerHandler(String,ComplexObsHandler)")
+	public void registerHandler_shouldRegisterHandlerWithTheGivenKey() throws Exception {
+		ObsService os = Context.getObsService();
+		
+		os.registerHandler("DummyHandler", new ImageHandler());
+		
+		ComplexObsHandler dummyHandler = os.getHandler("DummyHandler");
+		Assert.assertNotNull(dummyHandler);
+	}
+	
+	/**
+	 * @see {@link ObsService#registerHandler(String,String)}
+	 */
+	@Test
+	@Verifies(value = "should load handler and register key", method = "registerHandler(String,String)")
+	public void registerHandler_shouldLoadHandlerAndRegisterKey() throws Exception {
+		ObsService os = Context.getObsService();
+		
+		// name it something other than what we used in the previous test
+		os.registerHandler("DummyHandler2", "org.openmrs.obs.handler.ImageHandler");
+		
+		ComplexObsHandler dummyHandler = os.getHandler("DummyHandler2");
+		Assert.assertNotNull(dummyHandler);
+	}
+	
+	/**
+	 * @see {@link ObsService#removeHandler(String)}
+	 */
+	@Test
+	@Verifies(value = "should not fail with invalid key", method = "removeHandler(String)")
+	public void removeHandler_shouldNotFailWithInvalidKey() throws Exception {
+		Context.getObsService().removeHandler("SomeRandomHandler");
+	}
+	
+	/**
+	 * @see {@link ObsService#removeHandler(String)}
+	 */
+	@Test
+	@Verifies(value = "should remove handler with matching key", method = "removeHandler(String)")
+	public void removeHandler_shouldRemoveHandlerWithMatchingKey() throws Exception {
+		ObsService os = Context.getObsService();
+		
+		// add the handler and make sure its there
+		os.registerHandler("DummyHandler3", "org.openmrs.obs.handler.ImageHandler");
+		ComplexObsHandler dummyHandler = os.getHandler("DummyHandler3");
+		Assert.assertNotNull(dummyHandler);
+		
+		// now remove the handler and make sure its gone
+		os.removeHandler("DummyHandler3");
+		ComplexObsHandler dummyHandlerAgain = os.getHandler("DummyHandler3");
+		Assert.assertNull(dummyHandlerAgain);
+	}
+	
+	/**
+	 * @see {@link ObsService#saveObs(Obs,String)}
+	 */
+	@Test
+	@Verifies(value = "should create new file from complex data for new obs", method = "saveObs(Obs,String)")
+	public void saveObs_shouldCreateNewFileFromComplexDataForNewObs() throws Exception {
+		executeDataSet(COMPLEX_OBS_XML);
+		ObsService os = Context.getObsService();
+		ConceptService cs = Context.getConceptService();
+		AdministrationService as = Context.getAdministrationService();
+		
+		// make sure the file isn't there to begin with
+		File complexObsDir = OpenmrsUtil.getDirectoryInApplicationDataDirectory(as
+		        .getGlobalProperty(OpenmrsConstants.GLOBAL_PROPERTY_COMPLEX_OBS_DIR));
+		File createdFile = new File(complexObsDir, "nameOfFile.txt");
+		if (createdFile.exists())
+			createdFile.delete();
+		
+		// the complex data to put onto an obs that will be saved
+		InputStream inputStream = new ByteArrayInputStream("This is a string to save to a file".getBytes());
+		ComplexData complexData = new ComplexData("nameOfFile.txt", inputStream);
+		
+		// must fetch the concept instead of just new Concept(8473) because the attributes on concept are checked
+		// this is a concept mapped to the text handler
+		Concept questionConcept = cs.getConcept(8474);
+		
+		Obs obsToSave = new Obs(new Person(1), questionConcept, new Date(), new Location(1));
+		obsToSave.setComplexData(complexData);
+		
+		try {
+			os.saveObs(obsToSave, null);
+			
+			// make sure the file appears now after the save
+			Assert.assertTrue(createdFile.exists());
+		}
+		finally {
+			// we always have to delete this inside the same unit test because it is outside the
+			// database and hence can't be "rolled back" like everything else
+			createdFile.delete();
+		}
+	}
+	
+	/**
+	 * @see {@link ObsService#saveObs(Obs,String)}
+	 */
+	@Test
+	@Verifies(value = "should not overwrite file when updating a complex obs", method = "saveObs(Obs,String)")
+	public void saveObs_shouldNotOverwriteFileWhenUpdatingAComplexObs() throws Exception {
+		executeDataSet(COMPLEX_OBS_XML);
+		ObsService os = Context.getObsService();
+		ConceptService cs = Context.getConceptService();
+		AdministrationService as = Context.getAdministrationService();
+		
+		// Create the file that was supposedly put there by another obs
+		File complexObsDir = OpenmrsUtil.getDirectoryInApplicationDataDirectory(as
+		        .getGlobalProperty(OpenmrsConstants.GLOBAL_PROPERTY_COMPLEX_OBS_DIR));
+		File previouslyCreatedFile = new File(complexObsDir, "nameOfFile.txt");
+		InputStream inputStream = new ByteArrayInputStream("a string to save to a file".getBytes());
+		OpenmrsUtil.copyFile(inputStream, new FileOutputStream(previouslyCreatedFile));
+		inputStream.close();
+		
+		// the file we'll be creating...defining it here so we can delete it in a finally block
+		File newComplexFile = null;
+		try {
+			
+			long oldFileSize = previouslyCreatedFile.length();
+			
+			// now add a new file to this obs and update it
+			// ...then make sure the original file is still there
+			
+			// the complex data to put onto an obs that will be saved
+			InputStream inputStream2 = new ByteArrayInputStream("diff string to save to a file with the same name"
+			        .getBytes());
+			ComplexData complexData = new ComplexData("nameOfFile.txt", inputStream2);
+			
+			// must fetch the concept instead of just new Concept(8473) because the attributes on concept are checked
+			// this is a concept mapped to the text handler
+			Concept questionConcept = cs.getConcept(8474);
+			
+			Obs obsToSave = new Obs(new Person(1), questionConcept, new Date(), new Location(1));
+			
+			obsToSave.setComplexData(complexData);
+			
+			os.saveObs(obsToSave, null);
+			
+			// make sure the old file still appears now after the save
+			Assert.assertEquals(oldFileSize, previouslyCreatedFile.length());
+			
+			String valueComplex = obsToSave.getValueComplex();
+			String filename = valueComplex.substring(valueComplex.indexOf("|") + 1).trim();
+			newComplexFile = new File(complexObsDir, filename);
+			// make sure the file appears now after the save
+			Assert.assertTrue(newComplexFile.length() > oldFileSize);
+		}
+		finally {
+			// clean up the files we created
+			newComplexFile.delete();
+			try {
+				previouslyCreatedFile.delete();
+			}
+			catch (Throwable t) {
+				// pass 
+			}
+		}
+		
+	}
+	
+	/**
+	 * @see {@link ObsService#setHandlers(Map<QString;QComplexObsHandler;>)}
+	 */
+	@Test
+	@Verifies(value = "should add new handlers with new keys", method = "setHandlers(Map<QString;QComplexObsHandler;>)")
+	public void setHandlers_shouldAddNewHandlersWithNewKeys() throws Exception {
+		ObsService os = Context.getObsService();
+		
+		Map<String, ComplexObsHandler> handlers = new HashMap<String, ComplexObsHandler>();
+		handlers.put("DummyHandler4", new ImageHandler());
+		handlers.put("DummyHandler5", new TextHandler());
+		
+		// set the handlers and make sure they're there
+		os.setHandlers(handlers);
+		
+		ComplexObsHandler dummyHandler4 = os.getHandler("DummyHandler4");
+		Assert.assertNotNull(dummyHandler4);
+		
+		ComplexObsHandler dummyHandler5 = os.getHandler("DummyHandler5");
+		Assert.assertNotNull(dummyHandler5);
+	}
+	
+	/**
+	 * @see {@link ObsService#setHandlers(Map<QString;QComplexObsHandler;>)}
+	 */
+	@Test
+	@Verifies(value = "should override handlers with same key", method = "setHandlers(Map<QString;QComplexObsHandler;>)")
+	public void setHandlers_shouldOverrideHandlersWithSameKey() throws Exception {
+		ObsService os = Context.getObsService();
+		
+		Map<String, ComplexObsHandler> handlers = new HashMap<String, ComplexObsHandler>();
+		handlers.put("DummyHandlerToOverride", new ImageHandler());
+		
+		// set the handlers and make sure they're there
+		os.setHandlers(handlers);
+		
+		ComplexObsHandler dummyHandlerToOverride = os.getHandler("DummyHandlerToOverride");
+		Assert.assertTrue(dummyHandlerToOverride instanceof ImageHandler);
+		
+		// now override that key and make sure the new class is stored
+		
+		Map<String, ComplexObsHandler> handlersAgain = new HashMap<String, ComplexObsHandler>();
+		handlersAgain.put("DummyHandlerToOverride", new TextHandler());
+		
+		os.setHandlers(handlersAgain);
+		
+		ComplexObsHandler dummyHandlerToOverrideAgain = os.getHandler("DummyHandlerToOverride");
+		Assert.assertTrue(dummyHandlerToOverrideAgain instanceof TextHandler);
+		
+	}
+	
+	/**
+	 * @see {@link ObsService#saveObs(Obs,String)}
+	 */
+	@Test
+	@Verifies(value = "should void the given obs in the database", method = "saveObs(Obs,String)")
+	public void saveObs_shouldVoidTheGivenObsInTheDatabase() throws Exception {
+		Obs obs = Context.getObsService().getObs(7);
+		obs.setValueNumeric(1.0);
+		Context.getObsService().saveObs(obs, "just testing");
+		
+		// fetch the obs from the database again
+		obs = Context.getObsService().getObs(7);
+		Assert.assertTrue(obs.isVoided());
+	}
+	
 }

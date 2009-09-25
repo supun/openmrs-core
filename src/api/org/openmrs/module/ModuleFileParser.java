@@ -19,6 +19,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.StringReader;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.IdentityHashMap;
 import java.util.List;
@@ -38,6 +39,7 @@ import org.openmrs.Privilege;
 import org.openmrs.util.OpenmrsUtil;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
+import org.w3c.dom.NamedNodeMap;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.xml.sax.EntityResolver;
@@ -54,6 +56,18 @@ public class ModuleFileParser {
 	private File moduleFile = null;
 	
 	/**
+	 * List out all of the possible version numbers for config files that openmrs has DTDs for.
+	 * These are usually stored at http://resources.openmrs.org/doctype/config-x.x.dt
+	 */
+	private static List<String> validConfigVersions = new ArrayList<String>();
+	
+	static {
+		validConfigVersions.add("1.0");
+		validConfigVersions.add("1.1");
+		validConfigVersions.add("1.2");
+	}
+	
+	/**
 	 * Constructor
 	 * 
 	 * @param moduleFile the module (jar)file that will be parsed
@@ -66,12 +80,6 @@ public class ModuleFileParser {
 			throw new ModuleException("Module file does not have the correct .omod file extension", moduleFile.getName());
 		
 		this.moduleFile = moduleFile;
-	}
-	
-	private List<String> validConfigVersions() {
-		List<String> versions = new Vector<String>();
-		versions.add("1.0");
-		return versions;
 	}
 	
 	/**
@@ -157,7 +165,7 @@ public class ModuleFileParser {
 			
 			String configVersion = rootNode.getAttribute("configVersion");
 			
-			if (!validConfigVersions().contains(configVersion))
+			if (!validConfigVersions.contains(configVersion))
 				throw new ModuleException("Invalid config version: " + configVersion, moduleFile.getName());
 			
 			String name = getElement(rootNode, configVersion, "name");
@@ -211,7 +219,7 @@ public class ModuleFileParser {
 			module.setRequireDatabaseVersion(getElement(rootNode, configVersion, "require_database_version"));
 			module.setRequireOpenmrsVersion(getElement(rootNode, configVersion, "require_version"));
 			module.setUpdateURL(getElement(rootNode, configVersion, "updateURL"));
-			module.setRequiredModules(getRequiredModules(rootNode, configVersion));
+			module.setRequiredModulesMap(getRequiredModules(rootNode, configVersion));
 			
 			module.setAdvicePoints(getAdvice(rootNode, configVersion, module));
 			module.setExtensionNames(getExtensions(rootNode, configVersion));
@@ -266,14 +274,15 @@ public class ModuleFileParser {
 	/**
 	 * load in required modules list
 	 * 
-	 * @param root
-	 * @param version
-	 * @return
+	 * @param root element in the xml doc object
+	 * @param version of the config file
+	 * @return map from module package name to required version
+	 * @since 1.5
 	 */
-	private List<String> getRequiredModules(Element root, String version) {
+	private Map<String, String> getRequiredModules(Element root, String version) {
 		NodeList requiredModulesParents = root.getElementsByTagName("require_modules");
 		
-		List<String> packageNames = new Vector<String>();
+		Map<String, String> packageNamesToVersion = new HashMap<String, String>();
 		
 		// TODO test require_modules section
 		if (requiredModulesParents.getLength() > 0) {
@@ -284,14 +293,16 @@ public class ModuleFileParser {
 			int i = 0;
 			while (i < requiredModules.getLength()) {
 				Node n = requiredModules.item(i);
-				if (n != null && "require_module".equals(n.getNodeName()))
-					packageNames.add(n.getTextContent());
-				
+				if (n != null && "require_module".equals(n.getNodeName())) {
+					NamedNodeMap attributes = n.getAttributes();
+					Node versionNode = attributes.getNamedItem("version");
+					String reqVersion = versionNode == null ? null : versionNode.getNodeValue();
+					packageNamesToVersion.put(n.getTextContent(), reqVersion);
+				}
 				i++;
 			}
 		}
-		
-		return packageNames;
+		return packageNamesToVersion;
 	}
 	
 	/**

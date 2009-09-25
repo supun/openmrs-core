@@ -27,7 +27,8 @@ import org.springframework.transaction.annotation.Transactional;
  * Contains methods pertaining to Users in the system Use:<br/>
  * 
  * <pre>
- *   List<User> users = Context.getUserService().getAllUsers();
+ * 
+ * List&lt;User&gt; users = Context.getUserService().getAllUsers();
  * </pre>
  * 
  * @see org.openmrs.api.context.Context
@@ -40,15 +41,19 @@ public interface UserService extends OpenmrsService {
 	 * 
 	 * @param user
 	 * @param password
-	 * @returns a User object
+	 * @return a User object
 	 * @throws APIException
+	 * @should create new user with basic elements
+	 * @should should create user who is patient already
+	 * @should update users username
+	 * @should grant new roles in roles list to user
 	 */
 	@Authorized( { OpenmrsConstants.PRIV_ADD_USERS, OpenmrsConstants.PRIV_EDIT_USERS })
 	@Logging(ignoredArgumentIndexes = { 1 })
 	public User saveUser(User user, String password) throws APIException;
 	
 	/**
-	 * @see {@link #saveUser(User, String)}
+	 * @see #saveUser(User, String)
 	 * @deprecated replaced by {@link #saveUser(User, String)}
 	 */
 	@Authorized( { OpenmrsConstants.PRIV_ADD_USERS })
@@ -66,12 +71,16 @@ public interface UserService extends OpenmrsService {
 	@Authorized( { OpenmrsConstants.PRIV_VIEW_USERS })
 	public User getUser(Integer userId) throws APIException;
 	
+	@Transactional(readOnly = true)
+	public User getUserByUuid(String uuid) throws APIException;
+	
 	/**
 	 * Get user by username (user's login identifier)
 	 * 
 	 * @param username user's identifier used for authentication
 	 * @return requested user
 	 * @throws APIException
+	 * @should get user by username
 	 */
 	@Transactional(readOnly = true)
 	@Authorized( { OpenmrsConstants.PRIV_VIEW_USERS })
@@ -80,7 +89,7 @@ public interface UserService extends OpenmrsService {
 	/**
 	 * true/false if username or systemId is already in db in username or system_id columns
 	 * 
-	 * @param User to compare
+	 * @param user User to compare
 	 * @return boolean
 	 * @throws APIException
 	 */
@@ -91,7 +100,7 @@ public interface UserService extends OpenmrsService {
 	/**
 	 * Get users by role granted
 	 * 
-	 * @param Role role that the Users must have to be returned
+	 * @param role Role that the Users must have to be returned
 	 * @return users with requested role
 	 * @throws APIException
 	 */
@@ -104,7 +113,7 @@ public interface UserService extends OpenmrsService {
 	 * 
 	 * @param user
 	 * @throws APIException
-	 * @see {@link #saveUser(User, String)}
+	 * @see #saveUser(User, String)
 	 * @deprecated replaced by {@link #saveUser(User, String)}
 	 */
 	@Authorized( { OpenmrsConstants.PRIV_EDIT_USERS })
@@ -220,7 +229,7 @@ public interface UserService extends OpenmrsService {
 	/**
 	 * Save the given role in the database
 	 * 
-	 * @param Role to update
+	 * @param role Role to update
 	 * @return the saved role
 	 * @throws APIException
 	 */
@@ -230,7 +239,7 @@ public interface UserService extends OpenmrsService {
 	/**
 	 * Complete remove a role from the database
 	 * 
-	 * @param Role to delete from the database
+	 * @param role Role to delete from the database
 	 * @throws APIException
 	 */
 	@Authorized( { OpenmrsConstants.PRIV_PURGE_ROLES })
@@ -239,7 +248,7 @@ public interface UserService extends OpenmrsService {
 	/**
 	 * Save the given privilege in the database
 	 * 
-	 * @param Privilege to update
+	 * @param privilege Privilege to update
 	 * @return the saved privilege
 	 * @throws APIException
 	 */
@@ -249,7 +258,7 @@ public interface UserService extends OpenmrsService {
 	/**
 	 * Complete remove a privilege from the database
 	 * 
-	 * @param Privilege to delete
+	 * @param privilege Privilege to delete
 	 * @throws APIException
 	 */
 	@Authorized( { OpenmrsConstants.PRIV_PURGE_PRIVILEGES })
@@ -258,11 +267,14 @@ public interface UserService extends OpenmrsService {
 	/**
 	 * Returns role object with given string role
 	 * 
-	 * @return Role
+	 * @return Role object for specified string
 	 * @throws APIException
 	 */
 	@Transactional(readOnly = true)
 	public Role getRole(String r) throws APIException;
+	
+	@Transactional(readOnly = true)
+	public Role getRoleByUuid(String uuid) throws APIException;
 	
 	/**
 	 * Returns Privilege in the system with given String privilege
@@ -272,6 +284,9 @@ public interface UserService extends OpenmrsService {
 	 */
 	@Transactional(readOnly = true)
 	public Privilege getPrivilege(String p) throws APIException;
+	
+	@Transactional(readOnly = true)
+	public Privilege getPrivilegeByUuid(String uuid) throws APIException;
 	
 	/**
 	 * @deprecated use {@link #getAllUsers()}
@@ -295,10 +310,10 @@ public interface UserService extends OpenmrsService {
 	 * ** Restricted to Super User access**
 	 * 
 	 * @param u user
-	 * @param pw2 new password
+	 * @param pw new password
 	 * @throws APIException
 	 */
-	@Authorized( { OpenmrsConstants.PRIV_EDIT_USERS })
+	@Authorized( { OpenmrsConstants.PRIV_EDIT_USER_PASSWORDS })
 	@Logging(ignoredArgumentIndexes = { 1 })
 	public void changePassword(User u, String pw) throws APIException;
 	
@@ -308,17 +323,52 @@ public interface UserService extends OpenmrsService {
 	 * @param pw current password
 	 * @param pw2 new password
 	 * @throws APIException
+	 * @should match on correctly hashed sha1 stored password
+	 * @should match on incorrectly hashed sha1 stored password
+	 * @should match on sha512 hashed password
+	 * @should be able to update password multiple times
 	 */
-	@Logging(ignoredArgumentIndexes = { 1 })
+	@Logging(ignoredArgumentIndexes = { 0, 1 })
 	public void changePassword(String pw, String pw2) throws APIException;
+	
+	/**
+	 * Changes the current user's password directly. This is most useful if migrating users from
+	 * other systems and you want to retain the existing passwords. This method will simply save the
+	 * passed hashed password and salt directly to the database.
+	 * 
+	 * @param user the user whose password you want to change
+	 * @param hashedPassword - the <em>already hashed</em> password to store
+	 * @param salt - the salt which should be used with this hashed password
+	 * @throws APIException
+	 * @since 1.5
+	 * @should successfullySaveToTheDatabase
+	 */
+	@Authorized( { OpenmrsConstants.PRIV_EDIT_USER_PASSWORDS })
+	public void changeHashedPassword(User user, String hashedPassword, String salt) throws APIException;
+	
+	/**
+	 * Changes the passed user's secret question and answer.
+	 * 
+	 * @param u User to change
+	 * @param question
+	 * @param answer
+	 * @throws APIException
+	 * @since 1.5
+	 * @should change the passed user's secrete question and answer
+	 */
+	@Authorized( { OpenmrsConstants.PRIV_EDIT_USER_PASSWORDS })
+	@Logging(ignoredArgumentIndexes = { 1, 2 })
+	public void changeQuestionAnswer(User u, String question, String answer) throws APIException;
 	
 	/**
 	 * Changes the current user's secret question and answer.
 	 * 
 	 * @param pw user's password
-	 * @param question
-	 * @param answer
+	 * @param q question
+	 * @param a answer
 	 * @throws APIException
+	 * @should match on correctly hashed stored password
+	 * @should match on incorrectly hashed stored password
 	 */
 	@Logging(ignoreAllArgumentValues = true)
 	public void changeQuestionAnswer(String pw, String q, String a) throws APIException;
@@ -326,7 +376,7 @@ public interface UserService extends OpenmrsService {
 	/**
 	 * Compares <code>answer</code> against the <code>user</code>'s secret answer.
 	 * 
-	 * @param user
+	 * @param u user
 	 * @param answer
 	 * @throws APIException
 	 */
@@ -369,7 +419,7 @@ public interface UserService extends OpenmrsService {
 	 * @param givenName
 	 * @param familyName
 	 * @param includeVoided
-	 * @return
+	 * @return List<User> object of users matching criteria
 	 */
 	@Transactional(readOnly = true)
 	@Authorized( { OpenmrsConstants.PRIV_VIEW_USERS })
@@ -384,6 +434,7 @@ public interface UserService extends OpenmrsService {
 	
 	/**
 	 * Adds the <code>key</code>/<code>value</code> pair to the given <code>user</code>.
+	 * <p>
 	 * <b>Implementations of this method should handle privileges</b>
 	 * 
 	 * @param user
@@ -409,6 +460,6 @@ public interface UserService extends OpenmrsService {
 	 * 
 	 * @return new system id
 	 */
-	public String generateSystemId() throws APIException;
+	String generateSystemId();
 	
 }

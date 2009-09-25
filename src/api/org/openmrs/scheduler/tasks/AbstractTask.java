@@ -1,3 +1,16 @@
+/**
+ * The contents of this file are subject to the OpenMRS Public License
+ * Version 1.0 (the "License"); you may not use this file except in
+ * compliance with the License. You may obtain a copy of the License at
+ * http://license.openmrs.org
+ *
+ * Software distributed under the License is distributed on an "AS IS"
+ * basis, WITHOUT WARRANTY OF ANY KIND, either express or implied. See the
+ * License for the specific language governing rights and limitations
+ * under the License.
+ *
+ * Copyright (C) OpenMRS, LLC.  All Rights Reserved.
+ */
 package org.openmrs.scheduler.tasks;
 
 import org.apache.commons.logging.Log;
@@ -6,16 +19,12 @@ import org.openmrs.api.AdministrationService;
 import org.openmrs.api.context.Context;
 import org.openmrs.api.context.ContextAuthenticationException;
 import org.openmrs.scheduler.SchedulerConstants;
-import org.openmrs.scheduler.SchedulerException;
 import org.openmrs.scheduler.Task;
 import org.openmrs.scheduler.TaskDefinition;
 
 /**
  * Base class for all other task classes.
- * 
- * @author Justin Miranda
  */
-@SuppressWarnings("unused")
 public abstract class AbstractTask implements Task {
 	
 	// Logger 
@@ -36,7 +45,7 @@ public abstract class AbstractTask implements Task {
 	/**
 	 * Constructor
 	 * 
-	 * @param definition the task definition
+	 * @param taskDefinition the task definition
 	 */
 	protected AbstractTask(TaskDefinition taskDefinition) {
 		initialize(taskDefinition);
@@ -55,7 +64,7 @@ public abstract class AbstractTask implements Task {
 	}
 	
 	/**
-	 * @see org.openmrs.scheduler.Task#initialize(org.openmrs.scheduler.TaskConfig)
+	 * @see org.openmrs.scheduler.Task#initialize(TaskDefinition)
 	 */
 	public void initialize(final TaskDefinition definition) {
 		this.taskDefinition = definition;

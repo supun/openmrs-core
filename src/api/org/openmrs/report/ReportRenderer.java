@@ -22,7 +22,10 @@ import java.util.Collection;
  * Takes a ReportSchema and renders it, often acting as a connector that delegates to a
  * sophisticated package like BIRT or Jasper Reports. Implementations of this class should only use
  * a no-arg constructor, since they will be instantiated by the ReportObjectService via reflection.
+ * 
+ * @deprecated see reportingcompatibility module
  */
+@Deprecated
 public interface ReportRenderer {
 	
 	/**
@@ -35,17 +38,19 @@ public interface ReportRenderer {
 	 * Returns the modes in which this report schema could be rendered.
 	 * 
 	 * @param schema
-	 * @return
+	 * @return a <code>Collection<RenderingMode></code> of all modes in which the given ReportSchema
+	 *         can be rendered
 	 */
 	public Collection<RenderingMode> getRenderingModes(ReportSchema schema);
 	
 	/**
-	 * The content-type that will be rendered Should be null if getLinkUrl() returns a non-null
-	 * value.
+	 * The content-type that will be rendered
+	 * <p>
+	 * Should be null if getLinkUrl() returns a non-null value.
 	 * 
 	 * @param schema The ReportSchema to render
 	 * @param argument Argument from the RenderingMode that the user selected
-	 * @return
+	 * @return the <code>String</code> representation of the rendered content type
 	 */
 	public String getRenderedContentType(ReportSchema schema, String argument);
 	

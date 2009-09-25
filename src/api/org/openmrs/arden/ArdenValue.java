@@ -13,17 +13,10 @@
  */
 package org.openmrs.arden;
 
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.Locale;
-
-import java.util.HashMap;
 import java.util.Iterator;
-import java.util.Vector;
-import java.util.Locale;
-import java.util.Set;
 import java.util.List;
-import java.util.Map.Entry;
+import java.util.Locale;
+import java.util.Vector;
 
 import org.openmrs.Obs;
 import org.openmrs.Patient;

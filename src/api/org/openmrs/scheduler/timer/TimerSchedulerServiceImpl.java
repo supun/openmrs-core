@@ -24,12 +24,12 @@ import java.util.Set;
 import java.util.SortedMap;
 import java.util.Timer;
 import java.util.TreeMap;
+import java.util.WeakHashMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.hibernate.ObjectNotFoundException;
 import org.openmrs.api.APIException;
-import org.openmrs.api.context.Context;
+import org.openmrs.api.impl.BaseOpenmrsService;
 import org.openmrs.scheduler.SchedulerConstants;
 import org.openmrs.scheduler.SchedulerException;
 import org.openmrs.scheduler.SchedulerService;
@@ -45,12 +45,12 @@ import org.springframework.orm.ObjectRetrievalFailureException;
 /**
  * Simple scheduler service that uses JDK timer to trigger and execute scheduled tasks.
  */
-public class TimerSchedulerServiceImpl implements SchedulerService {
+public class TimerSchedulerServiceImpl extends BaseOpenmrsService implements SchedulerService {
 	
 	/**
 	 * Logger
 	 */
-	private static Log log = LogFactory.getLog(TimerSchedulerServiceImpl.class);
+	private Log log = LogFactory.getLog(getClass());
 	
 	/**
 	 * Registered task list
@@ -60,7 +60,7 @@ public class TimerSchedulerServiceImpl implements SchedulerService {
 	/**
 	 * Scheduled Task Map
 	 */
-	private static Map<Integer, TimerSchedulerTask> scheduledTasks = new HashMap<Integer, TimerSchedulerTask>();
+	private static Map<Integer, TimerSchedulerTask> scheduledTasks = new WeakHashMap<Integer, TimerSchedulerTask>();
 	
 	/**
 	 * A single timer used to keep track of all scheduled tasks. The Timer's associated thread
@@ -70,7 +70,7 @@ public class TimerSchedulerServiceImpl implements SchedulerService {
 	 * 
 	 * @see java.util.Timer#Timer(boolean)
 	 */
-	private Timer timerScheduler = new Timer(true);
+	private Map<TaskDefinition, Timer> taskDefinitionTimerMap = new HashMap<TaskDefinition, Timer>();
 	
 	/**
 	 * Global data access object context
@@ -79,8 +79,6 @@ public class TimerSchedulerServiceImpl implements SchedulerService {
 	
 	/**
 	 * Gets the scheduler data access object.
-	 * 
-	 * @return
 	 */
 	public SchedulerDAO getSchedulerDAO() {
 		return this.schedulerDAO;
@@ -128,7 +126,7 @@ public class TimerSchedulerServiceImpl implements SchedulerService {
 		// gracefully shutdown all tasks and remove all references to the timers, scheduler
 		try {
 			shutdownAllTasks();
-			timerScheduler.cancel(); // Just a precaution - this shouldn't be necessary if shutdownAllTasks() does its job
+			cancelAllTimers(); // Just a precaution - this shouldn't be necessary if shutdownAllTasks() does its job
 		}
 		catch (APIException e) {
 			log.error("Failed to stop all tasks due to API exception", e);
@@ -137,6 +135,15 @@ public class TimerSchedulerServiceImpl implements SchedulerService {
 			scheduledTasks = null;
 		}
 		
+	}
+	
+	/**
+	 * Convenience method to stop all tasks in the {@link #taskDefinitionTimerMap}
+	 */
+	private void cancelAllTimers() {
+		for (Timer timer : taskDefinitionTimerMap.values()) {
+			timer.cancel();
+		}
 	}
 	
 	/**
@@ -161,10 +168,28 @@ public class TimerSchedulerServiceImpl implements SchedulerService {
 	}
 	
 	/**
+	 * Get the {@link Timer} that is assigned to the given {@link TaskDefinition} object. If a Timer
+	 * doesn't exist yet, one is created, added to {@link #taskDefinitionTimerMap} and then returned
+	 * 
+	 * @param taskDefinition the {@link TaskDefinition} to look for
+	 * @return the {@link Timer} associated with the given {@link TaskDefinition}
+	 */
+	private Timer getTimer(TaskDefinition taskDefinition) {
+		Timer timer;
+		if (taskDefinitionTimerMap.containsKey(taskDefinition)) {
+			timer = taskDefinitionTimerMap.get(taskDefinition);
+		} else {
+			timer = new Timer(true);
+			taskDefinitionTimerMap.put(taskDefinition, timer);
+		}
+		
+		return timer;
+	}
+	
+	/**
 	 * Schedule the given task according to the given schedule.
 	 * 
-	 * @param task the task to be scheduled
-	 * @param schedule the time and interval for the scheduled task
+	 * @param taskDefinition the task to be scheduled
 	 */
 	public Task scheduleTask(TaskDefinition taskDefinition) throws SchedulerException {
 		Task clientTask = null;
@@ -208,16 +233,16 @@ public class TimerSchedulerServiceImpl implements SchedulerService {
 						log.info("Starting task ... the task will execute for the first time at " + nextTime);
 						
 						// Schedule the task to run at a fixed rate
-						timerScheduler.scheduleAtFixedRate(schedulerTask, nextTime, repeatInterval);
+						getTimer(taskDefinition).scheduleAtFixedRate(schedulerTask, nextTime, repeatInterval);
 					} else if (repeatInterval > 0) {
 						// Start task on repeating schedule, delay for SCHEDULER_DEFAULT_DELAY seconds	
 						log.info("Delaying start time by " + SchedulerConstants.SCHEDULER_DEFAULT_DELAY + " seconds");
-						timerScheduler.scheduleAtFixedRate(schedulerTask, SchedulerConstants.SCHEDULER_DEFAULT_DELAY,
-						    repeatInterval);
+						getTimer(taskDefinition).scheduleAtFixedRate(schedulerTask,
+						    SchedulerConstants.SCHEDULER_DEFAULT_DELAY, repeatInterval);
 					} else {
 						// schedule for single execution, starting now
 						log.info("Starting one-shot task");
-						timerScheduler.schedule(schedulerTask, new Date());
+						getTimer(taskDefinition).schedule(schedulerTask, new Date());
 					}
 					
 					// Update task that has been started
@@ -233,7 +258,7 @@ public class TimerSchedulerServiceImpl implements SchedulerService {
 			}
 			catch (Exception e) {
 				log.error("Failed to schedule task " + taskDefinition.getName(), e);
-				throw new SchedulerException(e);
+				throw new SchedulerException("Failed to schedule task", e);
 			}
 		}
 		return clientTask;
@@ -242,8 +267,8 @@ public class TimerSchedulerServiceImpl implements SchedulerService {
 	/**
 	 * Stops a running task.
 	 * 
-	 * @param task the task to be stopped
-	 * @see org.openmrs.scheduler.SchedulerService#stopTask(org.openmrs.scheduler.TaskConfig)
+	 * @param taskDefinition the task to be stopped
+	 * @see org.openmrs.scheduler.SchedulerService#shutdownTask(TaskDefinition)
 	 */
 	public void shutdownTask(TaskDefinition taskDefinition) throws SchedulerException {
 		if (taskDefinition != null) {
@@ -350,16 +375,14 @@ public class TimerSchedulerServiceImpl implements SchedulerService {
 	}
 	
 	/**
-	 * Get the task with the given identifier.
+	 * Save a task in the database.
 	 * 
-	 * @param id the identifier of the task
+	 * @param task the <code>TaskDefinition</code> to save
 	 */
 	public void saveTask(TaskDefinition task) {
 		if (task.getId() != null) {
-			setChangedMetadata(task);
 			getSchedulerDAO().updateTask(task);
 		} else {
-			setCreatedMetadata(task);
 			getSchedulerDAO().createTask(task);
 		}
 	}
@@ -387,31 +410,6 @@ public class TimerSchedulerServiceImpl implements SchedulerService {
 	}
 	
 	/**
-	 * Convenience method for setting all metadata fields.
-	 * 
-	 * @param task
-	 */
-	public void setCreatedMetadata(TaskDefinition task) {
-		if (task.getCreatedBy() == null) {
-			task.setCreatedBy(Context.getAuthenticatedUser());
-		}
-		if (task.getDateCreated() == null) {
-			task.setDateCreated(new Date());
-		}
-		setChangedMetadata(task);
-	}
-	
-	/**
-	 * Convenience method for setting the changed by and changed date fields
-	 * 
-	 * @param task
-	 */
-	public void setChangedMetadata(TaskDefinition task) {
-		task.setChangedBy(Context.getAuthenticatedUser());
-		task.setDateChanged(new Date());
-	}
-	
-	/**
 	 * Get system variables.
 	 */
 	public SortedMap<String, String> getSystemVariables() {
@@ -426,7 +424,7 @@ public class TimerSchedulerServiceImpl implements SchedulerService {
 	/**
 	 * Saves and stops all active tasks
 	 * 
-	 * @returns OpenmrsMemento
+	 * @return OpenmrsMemento
 	 */
 	public OpenmrsMemento saveToMemento() {
 		
@@ -452,6 +450,7 @@ public class TimerSchedulerServiceImpl implements SchedulerService {
 	/**
 	 * 
 	 */
+	@SuppressWarnings("unchecked")
 	public void restoreFromMemento(OpenmrsMemento memento) {
 		
 		if (memento != null && memento instanceof TimerSchedulerMemento) {

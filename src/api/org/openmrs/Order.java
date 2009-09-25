@@ -31,9 +31,9 @@ import org.apache.commons.logging.LogFactory;
  * 
  * @version 1.0
  */
-public class Order implements java.io.Serializable {
+public class Order extends BaseOpenmrsData implements java.io.Serializable {
 	
-	protected final Log log = LogFactory.getLog(getClass());
+	private transient final Log log = LogFactory.getLog(getClass());
 	
 	public static final long serialVersionUID = 4334343L;
 	
@@ -57,10 +57,6 @@ public class Order implements java.io.Serializable {
 	
 	private User orderer;
 	
-	private User creator;
-	
-	private Date dateCreated;
-	
 	private Boolean discontinued = false;
 	
 	private User discontinuedBy;
@@ -70,14 +66,6 @@ public class Order implements java.io.Serializable {
 	private Concept discontinuedReason;
 	
 	private String accessionNumber;
-	
-	private Boolean voided = false;
-	
-	private User voidedBy;
-	
-	private Date dateVoided;
-	
-	private String voidReason;
 	
 	// Constructors
 	
@@ -103,8 +91,8 @@ public class Order implements java.io.Serializable {
 	 * The purpose of this method is to allow subclasses of Order to delegate a portion of their
 	 * copy() method back to the superclass, in case the base class implementation changes.
 	 * 
-	 * @param ret an Order that will have the state of <code>this</code> copied into it
-	 * @return the Order that was passed in, with state copied into it
+	 * @param target an Order that will have the state of <code>this</code> copied into it
+	 * @return Returns the Order that was passed in, with state copied into it
 	 */
 	protected Order copyHelper(Order target) {
 		target.setPatient(getPatient());
@@ -122,7 +110,7 @@ public class Order implements java.io.Serializable {
 		target.setDiscontinuedReason(getDiscontinuedReason());
 		target.setDiscontinuedBy(getDiscontinuedBy());
 		target.setAccessionNumber(getAccessionNumber());
-		target.setVoided(getVoided());
+		target.setVoided(isVoided());
 		target.setVoidedBy(getVoidedBy());
 		target.setDateVoided(getDateVoided());
 		target.setVoidReason(getVoidReason());
@@ -140,10 +128,12 @@ public class Order implements java.io.Serializable {
 			Order o = (Order) obj;
 			if (this.getOrderId() != null && o.getOrderId() != null)
 				return (this.getOrderId().equals(o.getOrderId()));
-			/*return (this.getOrderType().equals(o.getOrderType()) &&
-					this.getConcept().equals(o.getConcept()) &&
-					this.getEncounter().equals(o.getEncounter()) &&
-					this.getInstructions().matches(o.getInstructions())); */
+			/*
+			 * return (this.getOrderType().equals(o.getOrderType()) &&
+			 * this.getConcept().equals(o.getConcept()) &&
+			 * this.getEncounter().equals(o.getEncounter()) &&
+			 * this.getInstructions().matches(o.getInstructions()));
+			 */
 		}
 		return false;
 	}
@@ -192,35 +182,8 @@ public class Order implements java.io.Serializable {
 	}
 	
 	/**
-	 * @return Returns the creator.
-	 */
-	public User getCreator() {
-		return creator;
-	}
-	
-	/**
-	 * @param creator The creator to set.
-	 */
-	public void setCreator(User creator) {
-		this.creator = creator;
-	}
-	
-	/**
-	 * @return Returns the dateCreated.
-	 */
-	public Date getDateCreated() {
-		return dateCreated;
-	}
-	
-	/**
-	 * @param dateCreated The dateCreated to set.
-	 */
-	public void setDateCreated(Date dateCreated) {
-		this.dateCreated = dateCreated;
-	}
-	
-	/**
 	 * @return Returns the discontinued status.
+	 * @should get discontinued property
 	 */
 	public Boolean getDiscontinued() {
 		return discontinued;
@@ -273,71 +236,6 @@ public class Order implements java.io.Serializable {
 	 */
 	public void setDiscontinuedReason(Concept discontinuedReason) {
 		this.discontinuedReason = discontinuedReason;
-	}
-	
-	/**
-	 * @return Returns the dateVoided.
-	 */
-	public Date getDateVoided() {
-		return dateVoided;
-	}
-	
-	/**
-	 * @param dateVoided The dateVoided to set.
-	 */
-	public void setDateVoided(Date dateVoided) {
-		this.dateVoided = dateVoided;
-	}
-	
-	/**
-	 * @return Returns the voided.
-	 */
-	public Boolean getVoided() {
-		return isVoided();
-	}
-	
-	/**
-	 * Whether or not this Order has been deleted/voided from the system or not
-	 * 
-	 * @return true/false on the void status
-	 */
-	public Boolean isVoided() {
-		return voided;
-	}
-	
-	/**
-	 * @param voided The voided to set.
-	 */
-	public void setVoided(Boolean voided) {
-		this.voided = voided;
-	}
-	
-	/**
-	 * @return Returns the voidedBy.
-	 */
-	public User getVoidedBy() {
-		return voidedBy;
-	}
-	
-	/**
-	 * @param voidedBy The voidedBy to set.
-	 */
-	public void setVoidedBy(User voidedBy) {
-		this.voidedBy = voidedBy;
-	}
-	
-	/**
-	 * @return Returns the voidReason.
-	 */
-	public String getVoidReason() {
-		return voidReason;
-	}
-	
-	/**
-	 * @param voidReason The voidReason to set.
-	 */
-	public void setVoidReason(String voidReason) {
-		this.voidReason = voidReason;
 	}
 	
 	/**
@@ -445,7 +343,7 @@ public class Order implements java.io.Serializable {
 	 * @return boolean indicating whether the order was current on the input date
 	 */
 	public boolean isCurrent(Date checkDate) {
-		if (voided)
+		if (isVoided())
 			return false;
 		
 		if (checkDate == null) {
@@ -475,7 +373,7 @@ public class Order implements java.io.Serializable {
 	}
 	
 	public boolean isFuture(Date checkDate) {
-		if (voided)
+		if (isVoided())
 			return false;
 		if (checkDate == null)
 			checkDate = new Date();
@@ -494,7 +392,7 @@ public class Order implements java.io.Serializable {
 	 * @return boolean indicating whether the order was discontinued on the input date
 	 */
 	public boolean isDiscontinued(Date checkDate) {
-		if (voided)
+		if (isVoided())
 			return false;
 		if (checkDate == null)
 			checkDate = new Date();
@@ -511,14 +409,18 @@ public class Order implements java.io.Serializable {
 		
 		// guess we can't assume this has been filled correctly?
 		/*
-		if (discontinuedDate == null) { 
-			return false; 
-		} 
-		*/
+		 * if (discontinuedDate == null) { return false; }
+		 */
 		return true;
 	}
 	
-	public boolean isDiscontinued() {
+	/*
+	 * orderForm:jsp: <spring:bind path="order.discontinued" /> results in a call to
+	 * isDiscontinued() which doesn't give access to the discontinued property so renamed it to
+	 * isDiscontinuedRightNow which results in a call to getDiscontinued.
+	 * @since 1.5
+	 */
+	public boolean isDiscontinuedRightNow() {
 		return isDiscontinued(new Date());
 	}
 	
@@ -531,7 +433,7 @@ public class Order implements java.io.Serializable {
 	}
 	
 	public Integer getId() {
-		return this.orderId;
+		return getOrderId();
 	}
 	
 	/**
@@ -539,6 +441,15 @@ public class Order implements java.io.Serializable {
 	 */
 	public String toString() {
 		return "Order. orderId: " + orderId + " patient: " + patient + " orderType: " + orderType + " concept: " + concept;
+	}
+	
+	/**
+	 * @since 1.5
+	 * @see org.openmrs.OpenmrsObject#setId(java.lang.Integer)
+	 */
+	public void setId(Integer id) {
+		setOrderId(id);
+		
 	}
 	
 }

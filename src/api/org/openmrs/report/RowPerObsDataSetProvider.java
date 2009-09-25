@@ -24,8 +24,9 @@ import org.openmrs.Obs;
 import org.openmrs.api.context.Context;
 
 /**
- *
+ * @deprecated see reportingcompatibility module
  */
+@Deprecated
 public class RowPerObsDataSetProvider implements DataSetProvider {
 	
 	protected Log log = LogFactory.getLog(this.getClass());
@@ -44,7 +45,7 @@ public class RowPerObsDataSetProvider implements DataSetProvider {
 	 * @see org.openmrs.report.DataSetProvider#evaluate(org.openmrs.report.DataSetDefinition,
 	 *      org.openmrs.Cohort, org.openmrs.report.EvaluationContext)
 	 */
-	public DataSet evaluate(DataSetDefinition dataSetDefinition, Cohort inputCohort, EvaluationContext evalContext) {
+	public DataSet<?> evaluate(DataSetDefinition dataSetDefinition, Cohort inputCohort, EvaluationContext evalContext) {
 		
 		RowPerObsDataSetDefinition definition = (RowPerObsDataSetDefinition) dataSetDefinition;
 		Cohort patients = inputCohort;

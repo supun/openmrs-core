@@ -40,7 +40,9 @@ import org.openmrs.PatientIdentifier;
 import org.openmrs.PatientIdentifierType;
 import org.openmrs.Person;
 import org.openmrs.PersonAddress;
+import org.openmrs.PersonAttribute;
 import org.openmrs.PersonName;
+import org.openmrs.User;
 import org.openmrs.api.context.Context;
 import org.openmrs.api.impl.PatientServiceImpl;
 import org.openmrs.patient.IdentifierValidator;
@@ -48,6 +50,8 @@ import org.openmrs.test.BaseContextSensitiveTest;
 import org.openmrs.test.SkipBaseSetup;
 import org.openmrs.test.TestUtil;
 import org.openmrs.test.Verifies;
+import org.openmrs.util.OpenmrsConstants;
+import org.openmrs.util.OpenmrsUtil;
 
 /**
  * This class tests methods in the PatientService class TODO Add methods to test all methods in
@@ -87,10 +91,10 @@ public class PatientServiceTest extends BaseContextSensitiveTest {
 	}
 	
 	/**
-	 * @verifies {@link PatientServiceImpl#getAllIdentifierValidators()} test = should return all
-	 *           registered identifier validators
+	 * @see {@link PatientService#getAllIdentifierValidators()}
 	 */
 	@Test
+	@Verifies(value = "should return all registered identifier validators", method = "getAllIdentifierValidators()")
 	public void getAllIdentifierValidators_shouldReturnAllRegisteredIdentifierValidators() throws Exception {
 		Collection<IdentifierValidator> expectedValidators = new HashSet<IdentifierValidator>();
 		expectedValidators.add(patientService.getIdentifierValidator("org.openmrs.patient.impl.LuhnIdentifierValidator"));
@@ -145,6 +149,11 @@ public class PatientServiceTest extends BaseContextSensitiveTest {
 		assertTrue("The gender should be new", patient2.getGender().equals("F"));
 	}
 	
+	/**
+	 * Convenience method to have a Patient object with all required values filled in
+	 * 
+	 * @return a mock Patient object that can be saved
+	 */
 	private Patient createBasicPatient() {
 		Patient patient = new Patient();
 		
@@ -452,13 +461,16 @@ public class PatientServiceTest extends BaseContextSensitiveTest {
 		patients = patientService.getPatients(null, null, types);
 		assertEquals(2, patients.size());
 		
+		// make sure we can search a padded identifier
+		patients = patientService.getPatients(null, "00000001234", null, false);
+		assertEquals(1, patients.size());
 	}
 	
 	/**
-	 * @verifies {@link PatientService#purgePatientIdentifierType(PatientIdentifierType)} test =
-	 *           should delete type from database
+	 * @see {@link PatientService#purgePatientIdentifierType(PatientIdentifierType)}
 	 */
 	@Test
+	@Verifies(value = "should delete type from database", method = "purgePatientIdentifierType(PatientIdentifierType)")
 	public void purgePatientIdentifierType_shouldDeleteTypeFromDatabase() throws Exception {
 		PatientIdentifierType type = patientService.getPatientIdentifierType(1);
 		
@@ -467,10 +479,10 @@ public class PatientServiceTest extends BaseContextSensitiveTest {
 	}
 	
 	/**
-	 * @verifies {@link PatientService#savePatientIdentifierType(PatientIdentifierType)} test =
-	 *           should create new type
+	 * @see {@link PatientService#savePatientIdentifierType(PatientIdentifierType)}
 	 */
 	@Test
+	@Verifies(value = "should create new type", method = "savePatientIdentifierType(PatientIdentifierType)")
 	public void savePatientIdentifierType_shouldCreateNewType() throws Exception {
 		PatientIdentifierType patientIdentifierType = new PatientIdentifierType();
 		
@@ -486,10 +498,10 @@ public class PatientServiceTest extends BaseContextSensitiveTest {
 	}
 	
 	/**
-	 * @verifies {@link PatientService#savePatientIdentifierType(PatientIdentifierType)} test =
-	 *           should update existing type
+	 * @see {@link PatientService#savePatientIdentifierType(PatientIdentifierType)}
 	 */
 	@Test
+	@Verifies(value = "should update existing type", method = "savePatientIdentifierType(PatientIdentifierType)")
 	public void savePatientIdentifierType_shouldUpdateExistingType() throws Exception {
 		
 		PatientIdentifierType type = patientService.getPatientIdentifierType(1);
@@ -501,18 +513,82 @@ public class PatientServiceTest extends BaseContextSensitiveTest {
 	}
 	
 	/**
-	 * @see {@link PatientService#getPatients(String,String,List<QPatientIdentifierType;>,null)}
+	 * Make sure the api can handle having a User object that is also a patient and was previously
+	 * loaded via hibernate
+	 * 
+	 * @throws Exception
+	 */
+	// ignoring this test until we refactor person/patient/user
+	@Ignore
+	@Test
+	public void shouldAllowGettingPatientsThatWereCreatedByUsersWhoArePatients() throws Exception {
+		executeDataSet(USERS_WHO_ARE_PATIENTS_XML);
+		
+		// we must fetch this person first, because this person is
+		// the creator of the next.  We need to make sure hibernate isn't
+		// caching and returning different person objects when it shouldn't be
+		Patient patient2 = patientService.getPatient(2);
+		assertTrue("When getting a patient, it should be of the class patient, not: " + patient2.getClass(), patient2
+		        .getClass().equals(Patient.class));
+		
+		Patient patient3 = patientService.getPatient(3);
+		assertTrue("When getting a patient, it should be of the class patient, not: " + patient3.getClass(), patient3
+		        .getClass().equals(Patient.class));
+		
+		User user2 = Context.getUserService().getUser(2);
+		assertTrue("When getting a user, it should be of the class user, not: " + user2.getClass(), User.class
+		        .isAssignableFrom(user2.getClass()));
+		
+	}
+	
+	/**
+	 * @see {@link PatientService#getPatients(String)}
 	 */
 	@Test
-	@Verifies(value = "should search familyName2 with name", method = "getPatients(String,String,List<QPatientIdentifierType;>,null)")
-	public void getPatients_shouldSearchFamilyName2WithName() throws Exception {
-		executeDataSet("org/openmrs/api/include/PersonServiceTest-extranames.xml");
+	@Verifies(value = "should force search string to be greater than minsearchcharacters global property", method = "getPatients(String)")
+	public void getPatients_shouldForceSearchStringToBeGreaterThanMinsearchcharactersGlobalProperty() throws Exception {
+		// make sure we can get patients with the default of 3 
+		assertEquals(1, Context.getPatientService().getPatients("Colle").size());
 		
-		List<Patient> patients = patientService.getPatients("Johnson", null, null, false);
-		Assert.assertEquals(3, patients.size());
-		Assert.assertTrue(patients.contains(new Patient(2)));
-		Assert.assertTrue(patients.contains(new Patient(4)));
-		Assert.assertTrue(patients.contains(new Patient(5)));
+		Context.clearSession();
+		Context.getAdministrationService().saveGlobalProperty(
+		    new GlobalProperty(OpenmrsConstants.GLOBAL_PROPERTY_MIN_SEARCH_CHARACTERS, "4"));
+		
+		assertEquals(0, Context.getPatientService().getPatients("Col").size());
+	}
+	
+	/**
+	 * @see {@link PatientService#getPatients(String)}
+	 */
+	@Test
+	@Verifies(value = "should allow search string to be one according to minsearchcharacters global property", method = "getPatients(String)")
+	public void getPatients_shouldAllowSearchStringToBeOneAccordingToMinsearchcharactersGlobalProperty() throws Exception {
+		// make sure the default of "3" kicks in and blocks any results
+		assertEquals(0, Context.getPatientService().getPatients("Co").size());
+		
+		Context.clearSession();
+		Context.getAdministrationService().saveGlobalProperty(
+		    new GlobalProperty(OpenmrsConstants.GLOBAL_PROPERTY_MIN_SEARCH_CHARACTERS, "1"));
+		
+		assertEquals(1, Context.getPatientService().getPatients("Co").size());
+	}
+	
+	/**
+	 * @see {@link PatientService#getPatient(Integer)}
+	 */
+	@Test
+	@Verifies(value = "should return null object if patient id doesnt exist", method = "getPatient(Integer)")
+	public void getPatient_shouldReturnNullObjectIfPatientIdDoesntExist() throws Exception {
+		Assert.assertNull(Context.getPatientService().getPatient(1234512093));
+	}
+	
+	/**
+	 * @see {@link PatientServiceImpl#mergePatients(Patient,Patient)}
+	 */
+	@Test(expected = APIException.class)
+	@Verifies(value = "should not merge the same patient to itself", method = "mergePatients(Patient,Patient)")
+	public void mergePatients_shouldNotMergeTheSamePatientToItself() throws Exception {
+		Context.getPatientService().mergePatients(new Patient(2), new Patient(2));
 	}
 	
 	/**
@@ -532,21 +608,32 @@ public class PatientServiceTest extends BaseContextSensitiveTest {
 		patientService.savePatient(patient);
 		
 		Assert.assertEquals(501, patient.getPatientId().intValue());
-		TestUtil.printOutTableContents(getConnection(), "patient");
-		TestUtil.printOutTableContents(getConnection(), "patient_identifier");
-		TestUtil.printOutTableContents(getConnection(), "person");
 		Assert.assertNotNull(patientService.getPatient(501)); // make sure a new row with a patient id WAS created
 		Assert.assertNull(patientService.getPatient(503)); // make sure a new row with a new person id WASN'T created
 	}
 	
 	/**
-	 * Regression test for ticket #1375: org.hibernate.NonUniqueObjectException caused by PatientIdentifierValidator
-	 * 
-	 * Manually construct a patient with a correctly-matching patientId and patient identifier with
-	 * validator. Calling PatientService.savePatient on that patient leads to a call to
-	 * PatientIdentifierValidator.validateIdentifier which used to load the Patient for that identifier
-	 * into the hibernate session, leading to a NonUniqueObjectException when the calling saveOrUpdate
-	 * on the manually constructed Patient.
+	 * @see {@link PatientService#getPatients(String,String,List<QPatientIdentifierType;>,null)}
+	 */
+	@Test
+	@Verifies(value = "should search familyName2 with name", method = "getPatients(String,String,List<QPatientIdentifierType;>,null)")
+	public void getPatients_shouldSearchFamilyName2WithName() throws Exception {
+		executeDataSet("org/openmrs/api/include/PersonServiceTest-extranames.xml");
+		
+		List<Patient> patients = patientService.getPatients("Johnson", null, null, false);
+		Assert.assertEquals(3, patients.size());
+		Assert.assertTrue(patients.contains(new Patient(2)));
+		Assert.assertTrue(patients.contains(new Patient(4)));
+		Assert.assertTrue(patients.contains(new Patient(5)));
+	}
+	
+	/**
+	 * Regression test for ticket #1375: org.hibernate.NonUniqueObjectException caused by
+	 * PatientIdentifierValidator Manually construct a patient with a correctly-matching patientId
+	 * and patient identifier with validator. Calling PatientService.savePatient on that patient
+	 * leads to a call to PatientIdentifierValidator.validateIdentifier which used to load the
+	 * Patient for that identifier into the hibernate session, leading to a NonUniqueObjectException
+	 * when the calling saveOrUpdate on the manually constructed Patient.
 	 * 
 	 * @see {@link PatientService#savePatient(Patient)}
 	 */
@@ -561,4 +648,259 @@ public class PatientServiceTest extends BaseContextSensitiveTest {
 		patientService.savePatient(patient);
 	}
 	
+	/**
+	 * This test verifies that {@link PersonName}s are fetched correctly from the hibernate cache.
+	 * (Or really, not fetched from the cache but instead are mapped with lazy=false. For some
+	 * reason Hibernate isn't able to find objects in the cache if a parent object was the one that
+	 * loaded them)
+	 * 
+	 * @throws Exception
+	 */
+	@Test
+	public void shouldFetchNamesForPersonsThatWereFirstFetchedAsPatients() throws Exception {
+		Person person = Context.getPersonService().getPerson(2);
+		Patient patient = Context.getPatientService().getPatient(2);
+		
+		patient.getNames().size();
+		person.getNames().size();
+	}
+	
+	/**
+	 * This test verifies that {@link PersonAddress}es are fetched correctly from the hibernate
+	 * cache. (Or really, not fetched from the cache but instead are mapped with lazy=false. For
+	 * some reason Hibernate isn't able to find objects in the cache if a parent object was the one
+	 * that loaded them)
+	 * 
+	 * @throws Exception
+	 */
+	@Test
+	public void shouldFetchAddressesForPersonsThatWereFirstFetchedAsPatients() throws Exception {
+		Person person = Context.getPersonService().getPerson(2);
+		Patient patient = Context.getPatientService().getPatient(2);
+		
+		patient.getAddresses().size();
+		person.getAddresses().size();
+	}
+	
+	/**
+	 * This test verifies that {@link PersonAttribute}s are fetched correctly from the hibernate
+	 * cache. (Or really, not fetched from the cache but instead are mapped with lazy=false. For
+	 * some reason Hibernate isn't able to find objects in the cache if a parent object was the one
+	 * that loaded them)
+	 * 
+	 * @throws Exception
+	 */
+	@Test
+	public void shouldFetchPersonAttributesForPersonsThatWereFirstFetchedAsPatients() throws Exception {
+		Person person = Context.getPersonService().getPerson(2);
+		Patient patient = Context.getPatientService().getPatient(2);
+		
+		patient.getAttributes().size();
+		person.getAttributes().size();
+	}
+	
+	/**
+	 * Regression test for http://dev.openmrs.org/ticket/1375
+	 * 
+	 * @see {@link PatientService#savePatient(Patient)}
+	 */
+	@Test
+	@Verifies(value = "should not throw a NonUniqueObjectException when called with a hand constructed patient", method = "savePatient(Patient)")
+	public void savePatient_shouldNotThrowANonUniqueObjectExceptionWhenCalledWithAHandConstructedPatient() throws Exception {
+		Patient patient = new Patient();
+		patient.setGender("M");
+		patient.setPatientId(2);
+		//patient.setCreator(new User(1));
+		//patient.setDateCreated date_created="2005-09-22 00:00:00.0" changed_by="1" date_changed="2008-08-18 12:29:59.0"
+		patient.addName(new PersonName("This", "Isa", "Test"));
+		patient.addIdentifier(new PatientIdentifier("101-6", new PatientIdentifierType(1), new Location(1)));
+		Context.getPatientService().savePatient(patient);
+	}
+	
+	/**
+	 * @see {@link PatientService#isIdentifierInUseByAnotherPatient(PatientIdentifier)}
+	 */
+	@Test
+	@Verifies(value = "should ignore voided patientIdentifiers", method = "isIdentifierInUseByAnotherPatient(PatientIdentifier)")
+	public void isIdentifierInUseByAnotherPatient_shouldIgnoreVoidedPatientIdentifiers() throws Exception {
+		PatientIdentifierType pit = patientService.getPatientIdentifierType(2);
+		PatientIdentifier patientIdentifier = new PatientIdentifier("ABC123", pit, null);
+		Assert.assertFalse(patientService.isIdentifierInUseByAnotherPatient(patientIdentifier));
+	}
+	
+	/**
+	 * Regression test for http://dev.openmrs.org/ticket/790
+	 * 
+	 * @see {@link PatientService#isIdentifierInUseByAnotherPatient(PatientIdentifier)}
+	 */
+	@Test
+	@Verifies(value = "should ignore voided patients", method = "isIdentifierInUseByAnotherPatient(PatientIdentifier)")
+	public void isIdentifierInUseByAnotherPatient_shouldIgnoreVoidedPatients() throws Exception {
+		{ // patient 999 should be voided and have a non-voided identifier of XYZ
+			Patient p = patientService.getPatient(999);
+			Assert.assertNotNull(p);
+			Assert.assertTrue(p.isVoided());
+			System.out.println(p.getVoidReason());
+			boolean found = false;
+			for (PatientIdentifier id : p.getIdentifiers()) {
+				if (id.getIdentifier().equals("XYZ") && id.getIdentifierType().getId() == 2) {
+					found = true;
+					break;
+				}
+			}
+			Assert.assertTrue(found);
+		}
+		PatientIdentifierType pit = patientService.getPatientIdentifierType(2);
+		PatientIdentifier patientIdentifier = new PatientIdentifier("XYZ", pit, null);
+		Assert.assertFalse(patientService.isIdentifierInUseByAnotherPatient(patientIdentifier));
+	}
+	
+	/**
+	 * @see {@link PatientService#isIdentifierInUseByAnotherPatient(PatientIdentifier)}
+	 */
+	@Test
+	@Verifies(value = "should return false when patientIdentifier contains a patient and no other patient has this id", method = "isIdentifierInUseByAnotherPatient(PatientIdentifier)")
+	public void isIdentifierInUseByAnotherPatient_shouldReturnFalseWhenPatientIdentifierContainsAPatientAndNoOtherPatientHasThisId()
+	                                                                                                                                throws Exception {
+		PatientIdentifierType pit = patientService.getPatientIdentifierType(1);
+		PatientIdentifier patientIdentifier = new PatientIdentifier("Nobody could possibly have this identifier", pit, null);
+		patientIdentifier.setPatient(patientService.getPatient(2));
+		Assert.assertFalse(patientService.isIdentifierInUseByAnotherPatient(patientIdentifier));
+	}
+	
+	/**
+	 * @see {@link PatientService#isIdentifierInUseByAnotherPatient(PatientIdentifier)}
+	 */
+	@Test
+	@Verifies(value = "should return false when patientIdentifier does not contain a patient and no patient has this id", method = "isIdentifierInUseByAnotherPatient(PatientIdentifier)")
+	public void isIdentifierInUseByAnotherPatient_shouldReturnFalseWhenPatientIdentifierDoesNotContainAPatientAndNoPatientHasThisId()
+	                                                                                                                                 throws Exception {
+		PatientIdentifierType pit = patientService.getPatientIdentifierType(1);
+		PatientIdentifier patientIdentifier = new PatientIdentifier("Nobody could possibly have this identifier", pit, null);
+		Assert.assertFalse(patientService.isIdentifierInUseByAnotherPatient(patientIdentifier));
+	}
+	
+	/**
+	 * @see {@link PatientService#isIdentifierInUseByAnotherPatient(PatientIdentifier)}
+	 */
+	@Test
+	@Verifies(value = "should return true when patientIdentifier contains a patient and another patient has this id", method = "isIdentifierInUseByAnotherPatient(PatientIdentifier)")
+	public void isIdentifierInUseByAnotherPatient_shouldReturnTrueWhenPatientIdentifierContainsAPatientAndAnotherPatientHasThisId()
+	                                                                                                                               throws Exception {
+		PatientIdentifierType pit = patientService.getPatientIdentifierType(1);
+		PatientIdentifier patientIdentifier = new PatientIdentifier("7TU-8", pit, null);
+		patientIdentifier.setPatient(patientService.getPatient(2));
+		Assert.assertTrue(patientService.isIdentifierInUseByAnotherPatient(patientIdentifier));
+	}
+	
+	/**
+	 * @see {@link PatientService#isIdentifierInUseByAnotherPatient(PatientIdentifier)}
+	 */
+	@Test
+	@Verifies(value = "should return true when patientIdentifier does not contain a patient and a patient has this id", method = "isIdentifierInUseByAnotherPatient(PatientIdentifier)")
+	public void isIdentifierInUseByAnotherPatient_shouldReturnTrueWhenPatientIdentifierDoesNotContainAPatientAndAPatientHasThisId()
+	                                                                                                                               throws Exception {
+		PatientIdentifierType pit = patientService.getPatientIdentifierType(1);
+		PatientIdentifier patientIdentifier = new PatientIdentifier("7TU-8", pit, null);
+		Assert.assertTrue(patientService.isIdentifierInUseByAnotherPatient(patientIdentifier));
+	}
+	
+	/**
+	 * @see PatientService#mergePatients(Patient,Patient)
+	 */
+	@Test
+	@Verifies(value = "should copy nonvoided addresses to preferred patient", method = "mergePatients(Patient,Patient)")
+	public void mergePatients_shouldCopyNonvoidedAddressesToPreferredPatient() throws Exception {
+		Patient preferred = patientService.getPatient(7);
+		Patient notPreferred = patientService.getPatient(8);
+		
+		patientService.mergePatients(preferred, notPreferred);
+		
+		// make sure one of their addresses has the city of "Jabali"
+		boolean found = false;
+		for (PersonAddress pa : preferred.getAddresses()) {
+			if (pa.getCityVillage().equals("Jabali"))
+				found = true;
+		}
+		
+		Assert.assertTrue("odd, user 7 didn't get user 8's address", found);
+	}
+	
+	/**
+	 * @see PatientService#mergePatients(Patient,Patient)
+	 */
+	@Test
+	@Verifies(value = "should copy nonvoided identifiers to preferred patient", method = "mergePatients(Patient,Patient)")
+	public void mergePatients_shouldCopyNonvoidedIdentifiersToPreferredPatient() throws Exception {
+		Patient preferred = patientService.getPatient(7);
+		Patient notPreferred = patientService.getPatient(8);
+		
+		patientService.mergePatients(preferred, notPreferred);
+		
+		PatientIdentifier nonvoidedPI = new PatientIdentifier("7TU-8", new PatientIdentifierType(1), new Location(1));
+		nonvoidedPI.setPatient(preferred);
+		PatientIdentifier voidedPI = new PatientIdentifier("ABC123", new PatientIdentifierType(2), new Location(1));
+		voidedPI.setPatient(preferred);
+		
+		Assert.assertTrue(OpenmrsUtil.collectionContains(preferred.getIdentifiers(), nonvoidedPI));
+		Assert.assertFalse("The voided identifier: " + voidedPI + " should not have been moved over because it was voided",
+		    OpenmrsUtil.collectionContains(preferred.getIdentifiers(), voidedPI));
+	}
+	
+	/**
+	 * @see PatientService#mergePatients(Patient,Patient)
+	 */
+	@Test
+	@Verifies(value = "should copy nonvoided names to preferred patient", method = "mergePatients(Patient,Patient)")
+	public void mergePatients_shouldCopyNonvoidedNamesToPreferredPatient() throws Exception {
+		Patient preferred = patientService.getPatient(7);
+		Patient notPreferred = patientService.getPatient(8);
+		
+		patientService.mergePatients(preferred, notPreferred);
+		
+		// make sure one of their addresses has the first name of "Anet"
+		boolean found = false;
+		for (PersonName pn : preferred.getNames()) {
+			if (pn.getGivenName().equals("Anet"))
+				found = true;
+		}
+		
+		Assert.assertTrue("odd, user 7 didn't get user 8's names", found);
+	}
+	
+	/**
+	 * @see {@link PatientService#mergePatients(Patient,Patient)}
+	 */
+	@Test
+	@Verifies(value = "should not copy over relationships that are only between the preferred and notpreferred patient", method = "mergePatients(Patient,Patient)")
+	public void mergePatients_shouldNotCopyOverRelationshipsThatAreOnlyBetweenThePreferredAndNotpreferredPatient()
+	                                                                                                              throws Exception {
+		executeDataSet("org/openmrs/api/include/PersonServiceTest-createRelationship.xml");
+		
+		Patient preferred = patientService.getPatient(999);
+		Patient notPreferred = patientService.getPatient(2);
+		
+		patientService.mergePatients(preferred, notPreferred);
+	}
+	
+	/**
+	 * @see {@link PatientService#getPatientIdentifiers(String,List,List,List,Boolean)}
+	 */
+	@Test
+	@Verifies(value = "should return only non voided patients and patient identifiers", method = "getPatientIdentifiers(String,List<QPatientIdentifierType;>,List<QLocation;>,List<QPatient;>,Boolean)")
+	public void getPatientIdentifiers_shouldReturnOnlyNonVoidedPatientsAndPatientIdentifiers() throws Exception {
+		// sanity check. make sure there is at least one voided patient
+		Patient patient = patientService.getPatient(999);
+		Assert.assertTrue("This patient should be voided", patient.isVoided());
+		Assert.assertFalse("This test expects the patient to be voided BUT the identifier to be NONvoided",
+		    ((PatientIdentifier) (patient.getIdentifiers().toArray()[0])).isVoided());
+		
+		// now fetch all identifiers
+		List<PatientIdentifier> patientIdentifiers = patientService.getPatientIdentifiers(null, null, null, null, null);
+		for (PatientIdentifier patientIdentifier : patientIdentifiers) {
+			Assert.assertFalse("No voided identifiers should be returned", patientIdentifier.isVoided());
+			Assert.assertFalse("No identifiers of voided patients should be returned", patientIdentifier.getPatient()
+			        .isVoided());
+		}
+	}
 }

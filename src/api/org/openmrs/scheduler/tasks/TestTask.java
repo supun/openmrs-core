@@ -17,10 +17,7 @@ import java.util.Date;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.openmrs.api.AdministrationService;
 import org.openmrs.api.context.Context;
-import org.openmrs.api.context.ContextAuthenticationException;
-import org.openmrs.scheduler.SchedulerException;
 import org.openmrs.scheduler.TaskDefinition;
 
 /**
@@ -34,7 +31,7 @@ public class TestTask extends AbstractTask {
 	private Log log = LogFactory.getLog(TestTask.class);
 	
 	/**
-	 * @see org.openmrs.scheduler.tasks.AbstractTask#initialize(org.openmrs.scheduler.TaskConfig)
+	 * @see org.openmrs.scheduler.tasks.AbstractTask#initialize(TaskDefinition)
 	 */
 	public void initialize(TaskDefinition taskDefinition) {
 		log.info("Initializing task " + taskDefinition);

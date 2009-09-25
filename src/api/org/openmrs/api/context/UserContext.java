@@ -25,6 +25,7 @@ import org.openmrs.Role;
 import org.openmrs.User;
 import org.openmrs.api.APIAuthenticationException;
 import org.openmrs.api.db.ContextDAO;
+import org.openmrs.util.LocaleUtility;
 import org.openmrs.util.OpenmrsConstants;
 
 /**
@@ -56,7 +57,7 @@ public class UserContext {
 	/**
 	 * User's locale
 	 */
-	private Locale locale = Locale.US;
+	private Locale locale = null;
 	
 	/**
 	 * Cached Role given to all authenticated users
@@ -80,7 +81,7 @@ public class UserContext {
 	 * @see org.openmrs.api.context.Context#authenticate(String,String)
 	 * @param username String login name
 	 * @param password String login password
-	 * @param ContextDAO contextDAO implementation to use for authentication
+	 * @param contextDAO ContextDAO implementation to use for authentication
 	 * @return User that has been authenticated
 	 * @throws ContextAuthenticationException
 	 */
@@ -94,6 +95,20 @@ public class UserContext {
 			log.debug("Authenticated as: " + this.user);
 		
 		return this.user;
+	}
+	
+	/**
+	 * Refresh the authenticated user object in this UserContext. This should be used when updating
+	 * information in the database about the current user and it needs to be reflecting in the
+	 * (cached) {@link #getAuthenticatedUser()} User object.
+	 * 
+	 * @since 1.5
+	 */
+	public void refreshAuthenticatedUser() {
+		if (log.isDebugEnabled())
+			log.debug("Refreshing authenticated user");
+		
+		user = Context.getUserService().getUser(user.getUserId());
 	}
 	
 	/**
@@ -162,11 +177,11 @@ public class UserContext {
 	 * 
 	 * <pre>
 	 * try {
-	 *   Context.addProxyPrivilege("AAA");
+	 *   Context.addProxyPrivilege(&quot;AAA&quot;);
 	 *   Context.get*Service().methodRequiringAAAPrivilege();
 	 * }
 	 * finally {
-	 *   Context.removeProxyPrivilege("AAA");
+	 *   Context.removeProxyPrivilege(&quot;AAA&quot;);
 	 * }
 	 * </pre>
 	 * 
@@ -182,7 +197,7 @@ public class UserContext {
 	/**
 	 * Will remove one instance of privilege from the privileges that are currently proxied
 	 * 
-	 * @param String privilege
+	 * @param privilege Privilege to remove in string form
 	 */
 	public void removeProxyPrivilege(String privilege) {
 		if (log.isDebugEnabled())
@@ -203,6 +218,9 @@ public class UserContext {
 	 * @return current locale for this context
 	 */
 	public Locale getLocale() {
+		if (locale == null)
+			locale = LocaleUtility.getDefaultLocale();
+		
 		return locale;
 	}
 	

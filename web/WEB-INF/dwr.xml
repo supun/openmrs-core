@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE dwr PUBLIC "-//GetAhead Limited//DTD Direct Web Remoting 1.0//EN" "http://www.getahead.ltd.uk/dwr/dwr10.dtd">
+<!DOCTYPE dwr PUBLIC
+    "-//GetAhead Limited//DTD Direct Web Remoting 2.0//EN"
+    "http://directwebremoting.org/schema/dwr20.dtd">
 
 <dwr>
 
@@ -8,7 +10,7 @@
 	      <param name="class" value="java.util.Date"/>
 		</create>
 		
-		<convert match="org.openmrs.web.dwr.DWRException" converter="exception">
+		<convert match="java.lang.Exception" converter="exception">
 			<param name="exclude" value="stackTrace"/>
 		</convert>
 		
@@ -30,24 +32,18 @@
 		<convert converter="bean" match="org.openmrs.web.dwr.PatientProgramItem"/>
 		<convert converter="bean" match="org.openmrs.web.dwr.PatientStateItem"/>
 		<convert converter="bean" match="org.openmrs.PatientAddress"/>
-		<convert converter="bean" match="org.openmrs.Tribe"/>
 		<convert converter="bean" match="org.openmrs.notification.web.dwr.AlertListItem"/>
 		<convert converter="bean" match="org.openmrs.web.dwr.EnteredField"/>
 		<convert converter="bean" match="org.openmrs.Cohort" >
 			<param name="exclude" value="patients"/>
 		</convert>
-        <convert converter="bean" match="org.openmrs.cohort.Cohort" >
-            <param name="exclude" value="patients"/>
-        </convert>
-		<convert converter="bean" match="org.openmrs.cohort.CohortSearchHistory"/>
+
 	
 		<create creator="new" javascript="DWRPatientService">
 			<param name="class" value="org.openmrs.web.dwr.DWRPatientService" />
 			<include method="findPatients"/>
 			<include method="getPatient"/>
 			<include method="getSimilarPatients"/>
-			<include method="getTribes" />
-			<include method="findTribes" />
 			<include method="findDuplicatePatients" />
 			<include method="addIdentifier" />
 			<include method="exitPatientFromCare" />
@@ -201,27 +197,6 @@
 			<include method="getCohortsContainingPatient"/>
 		</create>
 		
-		<create creator="new" javascript="DWRCohortBuilderService">
-			<param name="class" value="org.openmrs.web.dwr.DWRCohortBuilderService" />
-			<include method="getResultCountForFilterId"/>
-			<include method="getResultCountForSearch"/>
-			<include method="getResultForSearch"/>
-			<include method="getResultCombineWithAnd"/>
-			<include method="getResultCombineWithOr"/>
-			<include method="getLastResult"/>
-			<include method="getSavedFilters"/>
-			<include method="getSavedSearches"/>
-			<include method="getSavedCohorts"/>
-			<include method="getFilterResultAsCommaSeparatedIds"/>
-			<include method="getCohortAsCommaSeparatedIds"/>
-			<include method="getSearchHistories"/>
-			<include method="saveSearchHistory"/>
-			<include method="loadSearchHistory"/>
-			<include method="getUserSearchHistory"/>
-			<include method="saveCohort"/>
-			<include method="saveHistoryElement"/>
-		</create>
-		
 		<create creator="new" javascript="DWRAdministrationService">
 			<param name="class" value="org.openmrs.web.dwr.DWRAdministrationService" />
 			<include method="getGlobalProperty"/>
@@ -249,7 +224,7 @@
 			DWRConceptService.getDrugs(Integer conceptId, boolean showConcept);
 			DWRConceptService.findDrugs(String phrase, boolean includeRetired);
 			DWREncounterService.findEncounters(String phrase, boolean includeVoided);
-			DWRPersonService.getSimilarPeople(String name, String birthdate, String age, String gender);
+			DWRPersonService.getSimilarPeople(String name, String birthdate, String age, String gender, String personType);
 			DWRUserService.findUsers(String phrase, List<String> roles, boolean includeVoided);
 			DWRUserService.getAllUsers(List<String> roles, boolean includeVoided);
 			DWRObsService.getObservations(Integer encounterId);

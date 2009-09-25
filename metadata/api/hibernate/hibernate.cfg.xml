@@ -10,6 +10,7 @@
 		
 		<!-- API -->
 		<mapping resource="org/openmrs/api/db/hibernate/Concept.hbm.xml" />
+		<mapping resource="org/openmrs/api/db/hibernate/ConceptAnswer.hbm.xml" />
 		<mapping resource="org/openmrs/api/db/hibernate/ConceptDescription.hbm.xml" />
 		<mapping resource="org/openmrs/api/db/hibernate/ConceptName.hbm.xml" />
 		<mapping resource="org/openmrs/api/db/hibernate/ConceptNameTag.hbm.xml" />
@@ -30,7 +31,6 @@
 		<mapping resource="org/openmrs/api/db/hibernate/Form.hbm.xml" />
 		<mapping resource="org/openmrs/api/db/hibernate/FormField.hbm.xml" />
 		<mapping resource="org/openmrs/api/db/hibernate/GlobalProperty.hbm.xml" />
-		<mapping resource="org/openmrs/api/db/hibernate/MimeType.hbm.xml" />
 		<mapping resource="org/openmrs/api/db/hibernate/Obs.hbm.xml" />
 		<mapping resource="org/openmrs/api/db/hibernate/Person.hbm.xml" />
 		<mapping resource="org/openmrs/api/db/hibernate/PersonAttribute.hbm.xml" />
@@ -38,17 +38,18 @@
 		<mapping resource="org/openmrs/api/db/hibernate/PersonAddress.hbm.xml" />
 		<mapping resource="org/openmrs/api/db/hibernate/PersonName.hbm.xml" />
 		<mapping resource="org/openmrs/api/db/hibernate/User.hbm.xml" />
+		<mapping resource="org/openmrs/api/db/hibernate/LoginCredential.hbm.xml" />
 		<mapping resource="org/openmrs/api/db/hibernate/Privilege.hbm.xml" />
 		<mapping resource="org/openmrs/api/db/hibernate/Role.hbm.xml" />
 		<mapping resource="org/openmrs/api/db/hibernate/Patient.hbm.xml" />
 		<mapping resource="org/openmrs/api/db/hibernate/PatientIdentifier.hbm.xml" />
 		<mapping resource="org/openmrs/api/db/hibernate/PatientIdentifierType.hbm.xml" />
-		<mapping resource="org/openmrs/api/db/hibernate/Tribe.hbm.xml" />
 		<mapping resource="org/openmrs/api/db/hibernate/Relationship.hbm.xml" />
 		<mapping resource="org/openmrs/api/db/hibernate/RelationshipType.hbm.xml" />
 		<mapping resource="org/openmrs/api/db/hibernate/OrderType.hbm.xml" />
 		<mapping resource="org/openmrs/api/db/hibernate/Order.hbm.xml" />
 		<mapping resource="org/openmrs/api/db/hibernate/Location.hbm.xml" />
+		<mapping resource="org/openmrs/api/db/hibernate/LocationTag.hbm.xml" />
 		<mapping resource="org/openmrs/api/db/hibernate/EncounterType.hbm.xml" />
 		<mapping resource="org/openmrs/api/db/hibernate/Encounter.hbm.xml" />
 		<mapping resource="org/openmrs/api/db/hibernate/Program.hbm.xml" />
@@ -57,6 +58,7 @@
 		<mapping resource="org/openmrs/api/db/hibernate/PatientProgram.hbm.xml" />
 		<mapping resource="org/openmrs/api/db/hibernate/PatientState.hbm.xml" />
 		<mapping resource="org/openmrs/api/db/hibernate/Cohort.hbm.xml" />
+		<mapping resource="org/openmrs/api/db/hibernate/SerializedObject.hbm.xml" />
 
 		<!-- HL7 -->
 		<mapping resource="org/openmrs/hl7/db/hibernate/HL7Source.hbm.xml" />

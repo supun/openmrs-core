@@ -14,16 +14,18 @@
 package org.openmrs.report;
 
 /**
- *
+ * @deprecated see reportingcompatibility module
  */
+@Deprecated
 public interface DataSetTransform {
 	
 	/**
-	 * Auto generated method comment
+	 * Auto generated method comment TODO: add detailed return comment
 	 * 
 	 * @param input
-	 * @return
+	 * @return Dataset the transformet Dataset
 	 */
+	@SuppressWarnings("unchecked")
 	public DataSet transform(DataSet input);
 	
 }

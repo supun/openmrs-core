@@ -19,7 +19,7 @@ dojo.require("dojo.validate.common");
 */
 dojo.validate.isJapaneseCurrency = function(value) {
 	var flags = {
-		symbol: "�",
+		symbol: "ï¿œ",
 		cents: false
 	};
 	return dojo.validate.isCurrency(value, flags);

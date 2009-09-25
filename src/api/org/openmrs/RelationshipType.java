@@ -13,20 +13,28 @@
  */
 package org.openmrs;
 
-import java.util.Date;
-
 /**
- * Defines a type of relationship between two people in the database. A relationship is two-way.
- * There is a name for the relationship in both directions. For example: a) physician Joe b) patient
- * Bob Joe is the "physician of" Bob <u>and</u> Bob is the patient of Joe. Once you can establish
- * one of the two relationships, you automatically know the other. ALL relationships are two-way and
- * can be defined as such. RelationshipTypes should be defined as <b>gender non-specific</b> For
- * example: A mother and her son. Instead of having a RelationshipType defined as mother-son, it
- * should be defined as Parent-child. (This avoids the duplicative types that would come out like
- * father-son, father-daughter, mother-daughter) In English, we run into a tricky RelationshipType
- * with aunts and uncles. We have chosen to define them as aunt/uncle-niece/nephew.
+ * Defines a type of relationship between two people in the database. <br/>
+ * <br/>
+ * A relationship is two-way. There is a name for the relationship in both directions. <br/>
+ * <br/>
+ * For example: <br/>
+ * a) physician Joe<br/>
+ * b) patient Bob<br/>
+ * Joe is the "physician of" Bob <u>and</u> Bob is the patient of Joe. Once you can establish one of
+ * the two relationships, you automatically know the other. <br/>
+ * <br/>
+ * ALL relationships are two-way and can be defined as such. <br/>
+ * <br/>
+ * RelationshipTypes should be defined as <b>gender non-specific</b> For example: A mother and her
+ * son. Instead of having a RelationshipType defined as mother-son, it should be defined as
+ * Parent-child. (This avoids the duplicative types that would come out like father-son,
+ * father-daughter, mother-daughter) <br/>
+ * <br/>
+ * In English, we run into a tricky RelationshipType with aunts and uncles. We have chosen to define
+ * them as aunt/uncle-niece/nephew.
  */
-public class RelationshipType implements java.io.Serializable {
+public class RelationshipType extends BaseOpenmrsMetadata implements java.io.Serializable {
 	
 	public static final long serialVersionUID = 4223L;
 	
@@ -38,15 +46,9 @@ public class RelationshipType implements java.io.Serializable {
 	
 	private String bIsToA;
 	
-	private String description;
-	
 	private Integer weight = 0;
 	
 	private Boolean preferred = false;
-	
-	private User creator;
-	
-	private Date dateCreated;
 	
 	// Constructors
 	
@@ -100,20 +102,6 @@ public class RelationshipType implements java.io.Serializable {
 	}
 	
 	/**
-	 * @return Returns the description.
-	 */
-	public String getDescription() {
-		return description;
-	}
-	
-	/**
-	 * @param description The description to set.
-	 */
-	public void setDescription(String description) {
-		this.description = description;
-	}
-	
-	/**
 	 * @return the weight
 	 */
 	public Integer getWeight() {
@@ -139,7 +127,7 @@ public class RelationshipType implements java.io.Serializable {
 	}
 	
 	/**
-	 * @param isToB the aIsToB to set
+	 * @param aisToB the aIsToB to set
 	 */
 	public void setaIsToB(String aisToB) {
 		aIsToB = aisToB;
@@ -182,38 +170,10 @@ public class RelationshipType implements java.io.Serializable {
 	}
 	
 	/**
-	 * @param isToA the bIsToA to set
+	 * @param bisToA the bIsToA to set
 	 */
 	public void setbIsToA(String bisToA) {
 		bIsToA = bisToA;
-	}
-	
-	/**
-	 * @return Returns the creator.
-	 */
-	public User getCreator() {
-		return creator;
-	}
-	
-	/**
-	 * @param creator The creator to set.
-	 */
-	public void setCreator(User creator) {
-		this.creator = creator;
-	}
-	
-	/**
-	 * @return Returns the dateCreated.
-	 */
-	public Date getDateCreated() {
-		return dateCreated;
-	}
-	
-	/**
-	 * @param dateCreated The dateCreated to set.
-	 */
-	public void setDateCreated(Date dateCreated) {
-		this.dateCreated = dateCreated;
 	}
 	
 	/**
@@ -221,6 +181,23 @@ public class RelationshipType implements java.io.Serializable {
 	 */
 	public String toString() {
 		return getaIsToB() + "/" + getbIsToA();
+	}
+	
+	/**
+	 * @since 1.5
+	 * @see org.openmrs.OpenmrsObject#getId()
+	 */
+	public Integer getId() {
+		return getRelationshipTypeId();
+	}
+	
+	/**
+	 * @since 1.5
+	 * @see org.openmrs.OpenmrsObject#setId(java.lang.Integer)
+	 */
+	public void setId(Integer id) {
+		setRelationshipTypeId(id);
+		
 	}
 	
 }

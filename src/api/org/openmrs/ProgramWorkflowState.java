@@ -14,12 +14,11 @@
 package org.openmrs;
 
 import java.io.Serializable;
-import java.util.Date;
 
 /**
  * ProgramWorkflowState
  */
-public class ProgramWorkflowState implements Serializable {
+public class ProgramWorkflowState extends BaseOpenmrsMetadata implements Serializable {
 	
 	private static final long serialVersionUID = 1L;
 	
@@ -36,16 +35,6 @@ public class ProgramWorkflowState implements Serializable {
 	private Boolean initial;
 	
 	private Boolean terminal;
-	
-	private User creator;
-	
-	private Date dateCreated;
-	
-	private User changedBy;
-	
-	private Date dateChanged;
-	
-	private Boolean retired = false;
 	
 	// ******************
 	// Constructors
@@ -68,12 +57,11 @@ public class ProgramWorkflowState implements Serializable {
 	public boolean equals(Object obj) {
 		if (obj != null && obj instanceof ProgramWorkflowState) {
 			ProgramWorkflowState p = (ProgramWorkflowState) obj;
-			if (this.getProgramWorkflowStateId() == null) {
-				return p.getProgramWorkflowStateId() == null;
+			if (this.getProgramWorkflowStateId() != null) {
+				return (this.getProgramWorkflowStateId().equals(p.getProgramWorkflowStateId()));
 			}
-			return (this.getProgramWorkflowStateId().equals(p.getProgramWorkflowStateId()));
 		}
-		return false;
+		return this == obj;
 	}
 	
 	/** @see Object#toString() */
@@ -109,22 +97,6 @@ public class ProgramWorkflowState implements Serializable {
 		this.terminal = terminal;
 	}
 	
-	public User getCreator() {
-		return creator;
-	}
-	
-	public void setCreator(User creator) {
-		this.creator = creator;
-	}
-	
-	public Date getDateCreated() {
-		return dateCreated;
-	}
-	
-	public void setDateCreated(Date dateCreated) {
-		this.dateCreated = dateCreated;
-	}
-	
 	public ProgramWorkflow getProgramWorkflow() {
 		return programWorkflow;
 	}
@@ -141,31 +113,20 @@ public class ProgramWorkflowState implements Serializable {
 		this.programWorkflowStateId = programWorkflowStateId;
 	}
 	
-	public Boolean getRetired() {
-		return retired;
+	/**
+	 * @since 1.5
+	 * @see org.openmrs.OpenmrsObject#getId()
+	 */
+	public Integer getId() {
+		return getProgramWorkflowStateId();
 	}
 	
-	public Boolean isRetired() {
-		return getRetired();
-	}
-	
-	public void setRetired(Boolean retired) {
-		this.retired = retired;
-	}
-	
-	public User getChangedBy() {
-		return changedBy;
-	}
-	
-	public void setChangedBy(User changedBy) {
-		this.changedBy = changedBy;
-	}
-	
-	public Date getDateChanged() {
-		return dateChanged;
-	}
-	
-	public void setDateChanged(Date dateChanged) {
-		this.dateChanged = dateChanged;
+	/**
+	 * @since 1.5
+	 * @see org.openmrs.OpenmrsObject#setId(java.lang.Integer)
+	 */
+	public void setId(Integer id) {
+		setProgramWorkflowStateId(id);
+		
 	}
 }

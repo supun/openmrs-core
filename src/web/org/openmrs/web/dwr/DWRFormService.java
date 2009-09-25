@@ -46,6 +46,13 @@ public class DWRFormService {
 	
 	protected final Log log = LogFactory.getLog(getClass());
 	
+	/**
+	 * Finds forms based on search text.
+	 * 
+	 * @param text the string to search on
+	 * @param includeUnpublished true/false whether to include unpublished forms
+	 * @return list of {@link FormListItem}s
+	 */
 	public List<FormListItem> findForms(String text, boolean includeUnpublished) {
 		List<FormListItem> forms = new Vector<FormListItem>();
 		
@@ -56,14 +63,24 @@ public class DWRFormService {
 		return forms;
 	}
 	
+	/**
+	 * Gets a list of FormListItems that correspond to forms. If includueUnpublished is true, all
+	 * forms are returned. If false, only published forms are returned.
+	 * 
+	 * @param includeUnpublished true/false to include unpublished forms
+	 * @return list of {@link FormListItem}s
+	 */
 	public List<FormListItem> getForms(boolean includeUnpublished) {
-		List<FormListItem> forms = new Vector<FormListItem>();
+		List<FormListItem> formListItems = new Vector<FormListItem>();
 		
-		for (Form form : Context.getFormService().getForms(!includeUnpublished)) {
-			forms.add(new FormListItem(form));
+		List<Form> forms = includeUnpublished ? Context.getFormService().getAllForms(false) : Context.getFormService()
+		        .getPublishedForms();
+		
+		for (Form form : forms) {
+			formListItems.add(new FormListItem(form));
 		}
 		
-		return forms;
+		return formListItems;
 	}
 	
 	public Field getField(Integer fieldId) {
@@ -220,7 +237,7 @@ public class DWRFormService {
 		field.setSelectMultiple(multiple);
 		
 		ff.setField(field);
-		fs.updateFormField(ff);
+		fs.saveFormField(ff);
 		
 		fieldId = ff.getField().getFieldId();
 		formFieldId = ff.getFormFieldId();
@@ -232,7 +249,7 @@ public class DWRFormService {
 	
 	public void deleteFormField(Integer id) {
 		if (Context.isAuthenticated()) {
-			Context.getFormService().deleteFormField(Context.getFormService().getFormField(id));
+			Context.getFormService().purgeFormField(Context.getFormService().getFormField(id));
 			//Context.closeSession();
 		}
 	}
@@ -297,7 +314,6 @@ public class DWRFormService {
 	 * Sorts loosely on: FieldListItems first, then concepts FieldListItems with higher number of
 	 * forms first, then lower Concepts with shorter names before longer names
 	 * 
-	 * @author bwolfe
 	 * @param <Obj>
 	 */
 	

@@ -14,9 +14,7 @@
 package org.openmrs.reporting;
 
 import java.text.DateFormat;
-import java.util.ArrayList;
 import java.util.Date;
-import java.util.List;
 import java.util.Locale;
 
 import org.openmrs.Cohort;
@@ -24,15 +22,14 @@ import org.openmrs.Program;
 import org.openmrs.api.PatientSetService;
 import org.openmrs.api.context.Context;
 import org.openmrs.report.EvaluationContext;
-import org.openmrs.report.Parameter;
 
 /**
  * Currently can only determine whether a patient was in a given program ever, or on a specific
  * date, or relative to dates
  * 
- * @author djazayeri
  * @deprecated Use @see org.openmrs.reporting.ProgramStatePatientFilter instead
  */
+@Deprecated
 public class ProgramPatientFilter extends AbstractPatientFilter implements PatientFilter {
 	
 	private Program program;

@@ -23,17 +23,12 @@ import java.util.Set;
 
 import org.openmrs.util.OpenmrsUtil;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-
 /**
  * PatientProgram
  */
-public class PatientProgram implements java.io.Serializable {
+public class PatientProgram extends BaseOpenmrsData implements java.io.Serializable {
 	
 	public static final long serialVersionUID = 0L;
-	
-	protected final Log log = LogFactory.getLog(getClass());
 	
 	// ******************
 	// Properties
@@ -50,22 +45,6 @@ public class PatientProgram implements java.io.Serializable {
 	private Date dateCompleted;
 	
 	private Set<PatientState> states = new HashSet<PatientState>();
-	
-	private User creator;
-	
-	private Date dateCreated;
-	
-	private User changedBy;
-	
-	private Date dateChanged;
-	
-	private Boolean voided = false;
-	
-	private User voidedBy;
-	
-	private Date dateVoided;
-	
-	private String voidReason;
 	
 	// ******************
 	// Constructors
@@ -319,12 +298,11 @@ public class PatientProgram implements java.io.Serializable {
 	public boolean equals(Object obj) {
 		if (obj != null && obj instanceof PatientProgram) {
 			PatientProgram p = (PatientProgram) obj;
-			if (this.getPatientProgramId() == null) {
-				return p.getPatientProgramId() == null;
+			if (this.getPatientProgramId() != null) {
+				return (this.getPatientProgramId().equals(p.getPatientProgramId()));
 			}
-			return (this.getPatientProgramId().equals(p.getPatientProgramId()));
 		}
-		return false;
+		return this == obj;
 	}
 	
 	/** @see Object#toString() */
@@ -337,28 +315,12 @@ public class PatientProgram implements java.io.Serializable {
 	// Property Access
 	// ******************
 	
-	public User getCreator() {
-		return creator;
-	}
-	
-	public void setCreator(User creator) {
-		this.creator = creator;
-	}
-	
 	public Date getDateCompleted() {
 		return dateCompleted;
 	}
 	
 	public void setDateCompleted(Date dateCompleted) {
 		this.dateCompleted = dateCompleted;
-	}
-	
-	public Date getDateCreated() {
-		return dateCreated;
-	}
-	
-	public void setDateCreated(Date dateCreated) {
-		this.dateCreated = dateCreated;
 	}
 	
 	public Date getDateEnrolled() {
@@ -393,22 +355,6 @@ public class PatientProgram implements java.io.Serializable {
 		this.program = program;
 	}
 	
-	public User getChangedBy() {
-		return changedBy;
-	}
-	
-	public void setChangedBy(User changedBy) {
-		this.changedBy = changedBy;
-	}
-	
-	public Date getDateChanged() {
-		return dateChanged;
-	}
-	
-	public void setDateChanged(Date dateChanged) {
-		this.dateChanged = dateChanged;
-	}
-	
 	public Set<PatientState> getStates() {
 		return states;
 	}
@@ -417,36 +363,20 @@ public class PatientProgram implements java.io.Serializable {
 		this.states = states;
 	}
 	
-	public Date getDateVoided() {
-		return dateVoided;
+	/**
+	 * @since 1.5
+	 * @see org.openmrs.OpenmrsObject#getId()
+	 */
+	public Integer getId() {
+		return getPatientProgramId();
 	}
 	
-	public void setDateVoided(Date dateVoided) {
-		this.dateVoided = dateVoided;
-	}
-	
-	public Boolean getVoided() {
-		return voided;
-	}
-	
-	public void setVoided(Boolean voided) {
-		this.voided = voided;
-	}
-	
-	public User getVoidedBy() {
-		return voidedBy;
-	}
-	
-	public void setVoidedBy(User voidedBy) {
-		this.voidedBy = voidedBy;
-	}
-	
-	public String getVoidReason() {
-		return voidReason;
-	}
-	
-	public void setVoidReason(String voidReason) {
-		this.voidReason = voidReason;
+	/**
+	 * @since 1.5
+	 * @see org.openmrs.OpenmrsObject#setId(java.lang.Integer)
+	 */
+	public void setId(Integer id) {
+		setPatientProgramId(id);
 	}
 	
 }

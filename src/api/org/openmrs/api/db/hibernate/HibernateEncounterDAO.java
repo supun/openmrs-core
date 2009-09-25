@@ -30,6 +30,7 @@ import org.openmrs.EncounterType;
 import org.openmrs.Form;
 import org.openmrs.Location;
 import org.openmrs.Patient;
+import org.openmrs.User;
 import org.openmrs.api.EncounterService;
 import org.openmrs.api.db.DAOException;
 import org.openmrs.api.db.EncounterDAO;
@@ -68,21 +69,21 @@ public class HibernateEncounterDAO implements EncounterDAO {
 	}
 	
 	/**
-	 * @see org.openmrs.api.db.EncounterService#deleteEncounter(org.openmrs.Encounter)
+	 * @see org.openmrs.api.EncounterService#deleteEncounter(org.openmrs.Encounter)
 	 */
 	public void deleteEncounter(Encounter encounter) throws DAOException {
 		sessionFactory.getCurrentSession().delete(encounter);
 	}
 	
 	/**
-	 * @see org.openmrs.api.db.EncounterService#getEncounter(java.lang.Integer)
+	 * @see org.openmrs.api.EncounterService#getEncounter(java.lang.Integer)
 	 */
 	public Encounter getEncounter(Integer encounterId) throws DAOException {
 		return (Encounter) sessionFactory.getCurrentSession().get(Encounter.class, encounterId);
 	}
 	
 	/**
-	 * @see org.openmrs.api.db.EncounterDAO#getEncountersByPatientId(java.lang.Integer, boolean)
+	 * @see org.openmrs.api.db.EncounterDAO#getEncountersByPatientId(java.lang.Integer)
 	 */
 	@SuppressWarnings("unchecked")
 	public List<Encounter> getEncountersByPatientId(Integer patientId) throws DAOException {
@@ -95,12 +96,13 @@ public class HibernateEncounterDAO implements EncounterDAO {
 	
 	/**
 	 * @see org.openmrs.api.db.EncounterDAO#getEncounters(org.openmrs.Patient, org.openmrs.Location,
-	 *      java.util.Date, java.util.Date, java.util.Collection, java.util.Collection, boolean)
+	 *      java.util.Date, java.util.Date, java.util.Collection, java.util.Collection,
+	 *      java.util.Collection, boolean)
 	 */
 	@SuppressWarnings("unchecked")
 	public List<Encounter> getEncounters(Patient patient, Location location, Date fromDate, Date toDate,
 	                                     Collection<Form> enteredViaForms, Collection<EncounterType> encounterTypes,
-	                                     boolean includeVoided) {
+	                                     Collection<User> providers, boolean includeVoided) {
 		Criteria crit = sessionFactory.getCurrentSession().createCriteria(Encounter.class);
 		if (patient != null && patient.getPatientId() != null) {
 			crit.add(Expression.eq("patient", patient));
@@ -119,6 +121,9 @@ public class HibernateEncounterDAO implements EncounterDAO {
 		}
 		if (encounterTypes != null && encounterTypes.size() > 0) {
 			crit.add(Expression.in("encounterType", encounterTypes));
+		}
+		if (providers != null && providers.size() > 0) {
+			crit.add(Expression.in("provider", providers));
 		}
 		if (!includeVoided) {
 			crit.add(Expression.eq("voided", false));
@@ -143,14 +148,14 @@ public class HibernateEncounterDAO implements EncounterDAO {
 	}
 	
 	/**
-	 * @see org.openmrs.api.db.EncounterService#getEncounterType(java.lang.Integer)
+	 * @see org.openmrs.api.EncounterService#getEncounterType(java.lang.Integer)
 	 */
 	public EncounterType getEncounterType(Integer encounterTypeId) throws DAOException {
 		return (EncounterType) sessionFactory.getCurrentSession().get(EncounterType.class, encounterTypeId);
 	}
 	
 	/**
-	 * @see org.openmrs.api.db.EncounterService#getEncounterType(java.lang.String)
+	 * @see org.openmrs.api.EncounterService#getEncounterType(java.lang.String)
 	 */
 	public EncounterType getEncounterType(String name) throws DAOException {
 		Criteria crit = sessionFactory.getCurrentSession().createCriteria(EncounterType.class);
@@ -196,6 +201,22 @@ public class HibernateEncounterDAO implements EncounterDAO {
 		    "select encounter_datetime from encounter where encounter_id = :encounterId");
 		sql.setInteger("encounterId", encounter.getEncounterId());
 		return (Date) sql.uniqueResult();
+	}
+	
+	/**
+	 * @see org.openmrs.api.db.EncounterDAO#getEncounterByUuid(java.lang.String)
+	 */
+	public Encounter getEncounterByUuid(String uuid) {
+		return (Encounter) sessionFactory.getCurrentSession().createQuery("from Encounter e where e.uuid = :uuid")
+		        .setString("uuid", uuid).uniqueResult();
+	}
+	
+	/**
+	 * @see org.openmrs.api.db.EncounterDAO#getEncounterTypeByUuid(java.lang.String)
+	 */
+	public EncounterType getEncounterTypeByUuid(String uuid) {
+		return (EncounterType) sessionFactory.getCurrentSession().createQuery("from EncounterType et where et.uuid = :uuid")
+		        .setString("uuid", uuid).uniqueResult();
 	}
 	
 }

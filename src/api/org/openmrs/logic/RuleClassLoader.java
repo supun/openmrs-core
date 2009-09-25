@@ -1,10 +1,6 @@
 package org.openmrs.logic;
 
-import java.util.Collection;
-import java.util.Iterator;
-
-import org.openmrs.module.ModuleClassLoader;
-import org.openmrs.module.ModuleFactory;
+import org.openmrs.util.OpenmrsClassLoader;
 
 /**
  * Class Loader that loads rule classes into ruleMap Adapted from ibm.com/developerWorks
@@ -34,29 +30,12 @@ public class RuleClassLoader extends ClassLoader {
 			}
 			catch (Exception e) {}
 		}
-		
-		// check context class loader
+		// check openmrs class loader
 		if (clas == null) {
 			try {
-				ClassLoader parent = Thread.currentThread().getContextClassLoader();
-				clas = parent.loadClass(name);
+				clas = OpenmrsClassLoader.getInstance().loadClass(name);
 			}
 			catch (Exception e) {}
-		}
-		
-		// check module class loaders
-		if (clas == null) {
-			Collection<ModuleClassLoader> moduleClassLoaders = ModuleFactory.getModuleClassLoaders();
-			
-			Iterator<ModuleClassLoader> iter = moduleClassLoaders.iterator();
-			
-			while (iter.hasNext() && clas == null) {
-				ModuleClassLoader currClassLoader = iter.next();
-				try {
-					clas = currClassLoader.loadClass(name);
-				}
-				catch (Exception e) {}
-			}
 		}
 		
 		return clas;

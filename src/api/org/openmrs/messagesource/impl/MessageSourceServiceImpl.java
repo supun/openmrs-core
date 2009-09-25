@@ -38,7 +38,7 @@ import org.springframework.context.NoSuchMessageException;
  */
 public class MessageSourceServiceImpl implements MessageSourceService {
 	
-	private static Log log = LogFactory.getLog(MessageSourceServiceImpl.class);
+	private Log log = LogFactory.getLog(getClass());
 	
 	private Set<MutableMessageSource> availableMessageSources = new HashSet<MutableMessageSource>();
 	
@@ -78,7 +78,7 @@ public class MessageSourceServiceImpl implements MessageSourceService {
 	/**
 	 * Gets the locales which are available from the current message source.
 	 * 
-	 * @see org.openmrs.message.MessageSourceService#getLocalesOfConceptNames()
+	 * @see org.openmrs.messagesource.MessageSourceService#getLocales()
 	 */
 	public Collection<Locale> getLocales() {
 		return activeMessageSource.getLocales();
@@ -88,8 +88,8 @@ public class MessageSourceServiceImpl implements MessageSourceService {
 	 * Presumes to append the messages to a message.properties file which is already being monitored
 	 * by the super ReloadableResourceBundleMessageSource. This is a blind, trusting hack.
 	 * 
-	 * @see org.openmrs.message.MessageSourceService#publishProperties(java.util.Properties,
-	 *      java.lang.String, java.lang.String, java.lang.String)
+	 * @see org.openmrs.messagesource.MessageSourceService#publishProperties(Properties, String,
+	 *      String, String, String)
 	 * @deprecated use {@link #merge(MutableMessageSource, boolean)} instead
 	 */
 	public void publishProperties(Properties props, String locale, String namespace, String name, String version) {
@@ -99,7 +99,7 @@ public class MessageSourceServiceImpl implements MessageSourceService {
 	/**
 	 * Returns all available messages.
 	 * 
-	 * @see org.openmrs.message.MessageSourceService#getPresentations()
+	 * @see org.openmrs.messagesource.MessageSourceService#getPresentations()
 	 */
 	public Collection<PresentationMessage> getPresentations() {
 		return activeMessageSource.getPresentations();
@@ -109,35 +109,35 @@ public class MessageSourceServiceImpl implements MessageSourceService {
 	 * @see org.springframework.context.MessageSource#getMessage(org.springframework.context.MessageSourceResolvable,
 	 *      java.util.Locale)
 	 */
-	public String getMessage(MessageSourceResolvable arg0, Locale arg1) {
-		return activeMessageSource.getMessage(arg0, arg1);
+	public String getMessage(MessageSourceResolvable resolvable, Locale locale) {
+		return activeMessageSource.getMessage(resolvable, locale);
 	}
 	
 	/**
 	 * @see org.springframework.context.MessageSource#getMessage(java.lang.String,
 	 *      java.lang.Object[], java.util.Locale)
 	 */
-	public String getMessage(String arg0, Object[] arg1, Locale arg2) throws NoSuchMessageException {
-		return activeMessageSource.getMessage(arg0, arg1, arg2);
+	public String getMessage(String code, Object[] args, Locale locale) throws NoSuchMessageException {
+		return activeMessageSource.getMessage(code, args, code, locale);
 	}
 	
 	/**
 	 * @see org.springframework.context.MessageSource#getMessage(java.lang.String,
 	 *      java.lang.Object[], java.lang.String, java.util.Locale)
 	 */
-	public String getMessage(String arg0, Object[] arg1, String arg2, Locale arg3) {
-		return activeMessageSource.getMessage(arg0, arg1, arg2, arg3);
+	public String getMessage(String code, Object[] args, String defaultMessage, Locale locale) {
+		return activeMessageSource.getMessage(code, args, defaultMessage, locale);
 	}
 	
 	/**
-	 * @see org.openmrs.message.MutableMessageSource#addPresentation(org.openmrs.messagesource.PresentationMessage)
+	 * @see org.openmrs.messagesource.MutableMessageSource#addPresentation(org.openmrs.messagesource.PresentationMessage)
 	 */
 	public void addPresentation(PresentationMessage message) {
 		activeMessageSource.addPresentation(message);
 	}
 	
 	/**
-	 * @see org.openmrs.message.MutableMessageSource#addPresentation(org.openmrs.messagesource.PresentationMessage)
+	 * @see org.openmrs.messagesource.MutableMessageSource#addPresentation(org.openmrs.messagesource.PresentationMessage)
 	 */
 	public void removePresentation(PresentationMessage message) {
 		activeMessageSource.removePresentation(message);
@@ -158,18 +158,9 @@ public class MessageSourceServiceImpl implements MessageSourceService {
 	}
 	
 	/**
-	 * Auto generated method comment
-	 * 
-	 * @param beanObject
-	 */
-	private void add(MutableMessageSource beanObject) {
-		availableMessageSources.add(beanObject);
-	}
-	
-	/**
 	 * Merges messages from another message source into the active (current) message source.
 	 * 
-	 * @see org.openmrs.message.MutableMessageSource#merge(org.openmrs.message.MutableMessageSource)
+	 * @see org.openmrs.messagesource.MutableMessageSource#merge(MutableMessageSource, boolean)
 	 */
 	public void merge(MutableMessageSource fromSource, boolean overwrite) {
 		activeMessageSource.merge(fromSource, overwrite);

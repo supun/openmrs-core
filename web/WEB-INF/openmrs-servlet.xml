@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <!-- Application context definition for Spring for the OpenMRS web layer. -->
-<!-- See /metadata/api/spring/applicationContext-service.xml for layer agnositic spring setup -->
+<!-- See /metadata/api/spring/applicationContext-service.xml for layer agnostic spring setup -->
 
 <beans xmlns="http://www.springframework.org/schema/beans"
        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
@@ -13,9 +13,9 @@
            http://www.springframework.org/schema/context/spring-context-2.5.xsd
            http://www.springframework.org/schema/util
            http://www.springframework.org/schema/util/spring-util-2.0.xsd">
-
+	
 	<!--  **************************  VIEW RESOLVER / CONTROLLERS  *************************  -->
-
+	
 	<bean id="jspViewResolver"
 		class="org.springframework.web.servlet.view.InternalResourceViewResolver">
 		<property name="viewClass" value="org.springframework.web.servlet.view.JstlView" />
@@ -29,9 +29,17 @@
 		<property name="maxUploadSize"><value>75000000</value></property>
 	</bean>
 	
-	<!-- So that module controllers can use annotations like @Controller and @RequestMapping -->
+	<bean id="defaultMethodParamResolver" class="org.springframework.web.servlet.mvc.multiaction.ParameterMethodNameResolver">
+		<property name="paramName"><value>method</value></property>
+		<property name="defaultMethodName"><value>handleRequest</value></property>
+	</bean>
+	
+	<!-- So that controllers can use annotations like @Controller and @RequestMapping -->
 	<bean class="org.springframework.web.servlet.mvc.annotation.DefaultAnnotationHandlerMapping"/>
-
+	
+	<!-- The default place to look for controllers that have annotations -->
+	<context:component-scan base-package="org.openmrs.web.controller" />
+	
 	<bean id="urlMapping" class="org.springframework.web.servlet.handler.SimpleUrlHandlerMapping">
 		<property name="interceptors">
 			<list>
@@ -44,7 +52,6 @@
 			<props>
 				<prop key="/admin/orders/order.list">orderList</prop>
 				<prop key="/admin/orders/orderDrug.list">orderListByPatient</prop>
-				<prop key="/admin/orders/orderPlace.form">orderPlaceByPatient</prop>
 				<prop key="/admin/orders/orderDrug.form">orderDrugForm</prop>
 				<prop key="/admin/orders/order.form">orderForm</prop>
 				<prop key="/admin/orders/orderType.list">orderTypeList</prop>
@@ -53,8 +60,9 @@
 				<prop key="admin/patients/patient.form">patientForm</prop>
 				<prop key="admin/patients/newPatient.form">newPatientForm</prop>
 				<prop key="admin/patients/mergePatients.form">mergePatientsForm</prop>
+				
 				<prop key="admin/patients/tribe.list">tribeList</prop>
-				<prop key="admin/patients/tribe.form">tribeForm</prop>
+								
 				<prop key="admin/patients/patientIdentifierType.list">patientIdentifierTypeList</prop>
 				<prop key="admin/patients/patientIdentifierType.form">patientIdentifierTypeForm</prop>
 
@@ -68,8 +76,6 @@
 				<prop key="admin/person/addPerson.htm">addPerson</prop>
 
 				<prop key="admin/observations/obs.form">obsForm</prop>
-				<prop key="admin/observations/mimeType.list">mimeTypeList</prop>
-				<prop key="admin/observations/mimeType.form">mimeTypeForm</prop>
 				<prop key="admin/observations/personObs.form">personObsForm</prop>
 
 				<prop key="admin/users/user.list">userList</prop>
@@ -106,33 +112,11 @@
 				<prop key="admin/concepts/conceptWord.form">conceptWordForm</prop>
 				<prop key="admin/concepts/conceptSetDerived.form">conceptSetDerivedForm</prop>
 
-				<prop key="admin/reports/dataExport.list">dataExportList</prop>
-				<prop key="admin/reports/dataExport.form">dataExportForm</prop>
-				<prop key="admin/reports/rowPerObsDataExport.list">rowPerObsDataExportList</prop>
-				<prop key="admin/reports/rowPerObsDataExport.form">rowPerObsDataExportForm</prop>
-				<prop key="admin/reports/reportObject.list">reportObjectList</prop>
-				<prop key="admin/reports/reportObject.form">reportObjectForm</prop>
-				<prop key="admin/reports/cohorts.list">cohortList</prop>
-				<prop key="admin/reports/patientSearch.list">patientSearchList</prop>
-				<prop key="admin/reports/patientSearch.form">patientSearchForm</prop>
-				<prop key="admin/reports/runReport.list">reportsList</prop>
-				<prop key="admin/reports/runReport.form">runReportForm</prop>
-                <prop key="admin/reports/reportData.form">reportDataForm</prop>
-                <prop key="admin/reports/reportData.list">reportDataList</prop>
-                <prop key="admin/reports/reportSchemaXml.form">reportSchemaXmlForm</prop>
-                <prop key="admin/reports/reportSchemaXml.list">reportSchemaXmlList</prop>
-                <prop key="admin/reports/reportMacros.form">reportMacrosForm</prop>
-
-				<prop key="cohortBuilder.list">cohortBuilderController</prop>
-				<prop key="cohortBuilder.form">cohortBuilderActionController</prop>
 				<prop key="migration.list">migrationController</prop>
 				<prop key="migration.form">migrationActionController</prop>
-				<prop key="nealreport.form">nealReportController</prop>
 				<prop key="options.form">optionsForm</prop>
-				<prop key="patientSummaries.form">multiplePatientSummariesList</prop>
 				<prop key="patientDashboard.form">patientDashboardForm</prop>
 				<prop key="personDashboard.form">personDashboardForm</prop>
-				<prop key="patientSet.form">patientSetFormController</prop>
 
 				<prop key="admin/forms/formSchemaDesign.form">formSchemaDesignForm</prop>
 				<prop key="admin/forms/formEdit.form">formEditForm</prop>
@@ -147,7 +131,10 @@
 				<prop key="admin/scheduler/scheduler.form">schedulerFormController</prop>
 
 				<prop key="remotecommunication/postHl7.form">postHl7FormController</prop>
-
+				<prop key="admin/hl7/hl7InError.list">hl7InErrorListController</prop>
+				<prop key="admin/hl7/hl7InQueue.list">hl7InQueueListController</prop>
+				<prop key="admin/hl7/hl7Deleted.form">hl7DeletedFormController</prop>
+				
 				<prop key="admin/programs/program.list">programList</prop>
 				<prop key="admin/programs/program.form">programForm</prop>
 				<prop key="admin/programs/conversion.list">stateConversionList</prop>
@@ -155,12 +142,9 @@
 				<prop key="admin/programs/workflow.form">workflowFormController</prop>
 				<prop key="admin/programs/patientProgram.form">patientProgramFormController</prop>
 				
-				<prop key="remotecommunication/postHl7.form">postHl7FormController</prop>
-
 				<prop key="admin/maintenance/globalProps.form">globalPropertyController</prop>
 				<prop key="admin/maintenance/serverLog.form">serverLogController</prop>
 				<!--<prop key="**/calendar.list">calendarController</prop>-->
-				<prop key="admin/maintenance/dataEntryStats.list">dataEntryStatsController</prop>
 				<prop key="admin/maintenance/implementationid.form">implementationIdFormController</prop>
 				
 				<prop key="admin/modules/module.list">moduleListController</prop>
@@ -173,13 +157,13 @@
 				<prop key="**/nameLayout.portlet">nameLayoutPortletController</prop>
 				<prop key="**/patientPrograms.portlet">patientProgramsPortletController</prop>
 				<prop key="**/personRelationships.portlet">personRelationshipsPortletController</prop>
-				<prop key="**/patientSet.portlet">patientSetPortletController</prop>
 				<prop key="**/patientRegimens.portlet">patientRegimenPortletController</prop>
 				<prop key="**/patientRegimenCurrent.portlet">patientRegimenPortletController</prop>
 				<prop key="**/patientRegimenCompleted.portlet">patientRegimenPortletController</prop>
 				<prop key="**/patientRegimenAdd.portlet">patientRegimenPortletController</prop>
 				<prop key="**/patientRegimenDiscontinued.portlet">patientRegimenPortletController</prop>
-				<prop key="**/patientSummary.portlet">patientSummaryPortletController</prop>
+				<prop key="**/patientEncounters.portlet">patientEncountersPortletController</prop>
+				<prop key="**/personFormEntry.portlet">personFormEntryPortletController</prop>
 				<!--<prop key="**/calendar.portlet">calendarPortletController</prop>-->
 
 				<prop key="**/*.portlet">portletController</prop>
@@ -194,15 +178,13 @@
 	<bean id="globalPropertyPortletController" class="org.openmrs.web.controller.GlobalPropertyPortletController" />
 	<bean id="patientProgramsPortletController" class="org.openmrs.web.controller.PatientProgramsPortletController" />
 	<bean id="personRelationshipsPortletController" class="org.openmrs.web.controller.PersonRelationshipsPortletController" />
-	<bean id="patientSetPortletController" class="org.openmrs.web.controller.PatientSetPortletController" />
 	<bean id="patientRegimenPortletController" class="org.openmrs.web.controller.RegimenPortletController" />
-	<bean id="patientSummaryPortletController" class="org.openmrs.web.controller.PatientSummaryPortletController" />
+	<bean id="patientEncountersPortletController" class="org.openmrs.web.controller.PatientEncountersPortletController" />
+	<bean id="personFormEntryPortletController" class="org.openmrs.web.controller.PersonFormEntryPortletController" />
 	<bean id="addressLayoutPortletController" class="org.openmrs.web.controller.layout.AddressLayoutPortletController" />
 	<bean id="nameLayoutPortletController" class="org.openmrs.web.controller.layout.NameLayoutPortletController" />
 	<!--<bean id="calendarPortletController" class="org.openmrs.web.controller.CalendarPortletController"/>-->
 	<bean id="springController" class="org.openmrs.web.controller.SpringController" />
-	
-	<bean id="requireNameValidator" class="org.openmrs.web.controller.RequireNameValidator"/>
 
 	<!-- =============================== -->
 	<!-- =====      Scheduler      ===== -->
@@ -217,7 +199,7 @@
 	</bean>
 	
 	
-	<bean id="taskValidator" class="org.openmrs.scheduler.web.controller.SchedulerFormValidator" />
+	<bean id="taskValidator" class="org.openmrs.validator.SchedulerFormValidator" />
 	<bean id="schedulerFormController" class="org.openmrs.scheduler.web.controller.SchedulerFormController">
 		<property name="commandName"><value>task</value></property>
 		<property name="formView"><value>/admin/scheduler/schedulerForm</value></property>
@@ -229,11 +211,37 @@
 	<!-- ** /Scheduler ** -->
 
 
+	<!-- =============================== -->
+	<!-- =====      HL7 Messages Section     ===== -->
+	<!-- =============================== -->
+
+	<!-- ** HL7 in Error List Controller ** -->
+	<bean id="hl7InErrorListController"
+		class="org.openmrs.hl7.web.controller.Hl7InErrorListController">
+		<property name="commandName"><value>errorList</value></property>
+		<property name="formView"><value>/admin/hl7/hl7InErrorList</value></property>
+		<property name="successView"><value>hl7InError.list</value></property>
+	</bean>
+	
+	<!-- ** HL7 in Queue List Controller ** -->
+	<bean id="hl7InQueueListController"
+		class="org.openmrs.hl7.web.controller.Hl7InQueueListController">
+		<property name="commandName"><value>queueList</value></property>
+		<property name="formView"><value>/admin/hl7/hl7InQueueList</value></property>
+		<property name="successView"><value>hl7InQueue.list</value></property>
+	</bean>
+		
+	<bean id="hl7DeletedFormController"
+		class="org.openmrs.hl7.web.controller.Hl7DeletedFormController">
+		<property name="commandName"><value>queueForm</value></property>
+		<property name="formView"><value>/admin/hl7/hl7DeletedForm</value></property>
+		<property name="successView"><value>hl7Deleted.form</value></property>
+	</bean>
+	<!-- ** /HL7 Messages Section** -->
+
 	<!-- ================================ -->
 	<!-- ====== Observation Sector ====== -->
 	<!-- ================================ -->
-
-	<!-- ** Mime Type ** -->
 
 	<bean id="obsValidator" class="org.openmrs.validator.ObsValidator" />
 	<bean id="obsForm" class="org.openmrs.web.controller.observation.ObsFormController">
@@ -251,31 +259,7 @@
 		<property name="successView"><value>personObs.form</value></property>
 	</bean>
 
-	<!--this is the optional method of declaring values in the constructor -->
-	<!--<bean id="mimeTypeList" class="org.openmrs.web.controller.observation.MimeTypeListController" />-->
-	<!--<bean id="mimeTypeForm" class="org.openmrs.web.controller.observation.MimeTypeFormController" />-->
-
-	<bean id="mimeTypeList" class="org.openmrs.web.controller.observation.MimeTypeListController">
-		<property name="sessionForm"><value>true</value></property>
-		<property name="commandName"><value>mimeTypeList</value></property>
-		<property name="formView"><value>/admin/observations/mimeTypeList</value></property>
-		<property name="successView"><value>mimeType.list</value></property>
-	</bean>
-
-	<!--  Validator and Form Controller for the add/edit order types page -->
-	<bean id="mimeTypeValidator" class="org.openmrs.web.controller.observation.MimeTypeValidator" />
-	<bean id="mimeTypeForm" class="org.openmrs.web.controller.observation.MimeTypeFormController">
-		<property name="sessionForm"><value>true</value></property>
-		<property name="commandName"><value>mimeType</value></property>
-		<property name="validator">
-			<ref bean="mimeTypeValidator" />
-		</property>
-		<property name="formView"><value>/admin/observations/mimeTypeForm</value></property>
-		<property name="successView"><value>mimeType.list</value></property>
-	</bean>
-	<!-- ** /Mime Type ** -->
-
-	<!-- ====== /Observation Sector ====== -->
+   	<!-- ====== /Observation Sector ====== -->
 
 	<!-- ========================== -->
 	<!-- ====== Order Sector ====== -->
@@ -294,7 +278,7 @@
 	</bean>
 
 	<!--  Validator and Form Controller for the add/edit order types page -->
-	<bean id="orderTypeValidator" class="org.openmrs.web.controller.order.OrderTypeValidator" />
+	<bean id="orderTypeValidator" class="org.openmrs.validator.OrderTypeValidator" />
 	<bean id="orderTypeForm" class="org.openmrs.web.controller.order.OrderTypeFormController">
 		<property name="sessionForm"><value>true</value></property>
 		<property name="commandName"><value>orderType</value></property>
@@ -317,9 +301,8 @@
 	</bean>
 
 	<!--  Validator and Form Controller for the add/edit order types page -->
-	<bean id="orderValidator" class="org.openmrs.web.controller.order.OrderValidator" />
+	<bean id="orderValidator" class="org.openmrs.validator.OrderValidator" />
 	<bean id="orderForm" class="org.openmrs.web.controller.order.OrderFormController">
-		<property name="sessionForm"><value>true</value></property>
 		<property name="commandName"><value>order</value></property>
 		<property name="validator">
 			<ref bean="orderValidator" />
@@ -336,9 +319,8 @@
 	</bean>
 
 	<!--  Validator and Form Controller for the add/edit order types page -->
-	<bean id="orderDrugValidator" class="org.openmrs.web.controller.order.OrderDrugValidator" />
+	<bean id="orderDrugValidator" class="org.openmrs.validator.DrugOrderValidator" />
 	<bean id="orderDrugForm" class="org.openmrs.web.controller.order.OrderDrugFormController">
-		<property name="sessionForm"><value>true</value></property>
 		<property name="commandName"><value>order</value></property>
 		<property name="validator">
 			<ref bean="orderDrugValidator" />
@@ -354,20 +336,9 @@
 		<property name="sessionForm"><value>true</value></property>
 		<property name="commandName"><value>orderDrugList</value></property>
 		<property name="formView"><value>/admin/orders/orderListByPatient</value></property>
-		<property name="successView"><value>orderByPatient.list</value></property>
+		<property name="successView"><value>orderDrug.list</value></property>
 	</bean>
 
-	<bean id="orderPlaceValidator" class="org.openmrs.web.controller.order.OrderDrugValidator" />
-	<bean id="orderPlaceByPatient"
-		class="org.openmrs.web.controller.order.OrderPlaceFormController">
-		<property name="sessionForm"><value>true</value></property>
-		<property name="commandName"><value>order</value></property>
-		<property name="validator">
-			<ref bean="orderPlaceValidator" />
-		</property>
-		<property name="formView"><value>/admin/orders/orderPlaceForm</value></property>
-		<property name="successView"><value>orderByPatient.list</value></property>
-	</bean>
 	<!-- ** /Order Placement ** -->
 	<!-- ====== /Order Sector ====== -->
 
@@ -389,25 +360,12 @@
 		<property name="successView"><value>../../patientDashboard.form</value></property>
 	</bean>
 	<!-- ** /New Patient ** -->
-
-	<!-- **  Tribe   ** -->
-	<bean id="tribeList" class="org.openmrs.web.controller.patient.TribeListController">
-		<property name="sessionForm"><value>true</value></property>
-		<property name="commandName"><value>tribeList</value></property>
+	
+	<bean id="tribeList" class="org.openmrs.web.controller.patient.TribeFormController">
+		<property name="commandName"><value>tribeForm</value></property>
 		<property name="formView"><value>/admin/patients/tribeList</value></property>
 		<property name="successView"><value>tribe.list</value></property>
 	</bean>
-	<bean id="tribeValidator" class="org.openmrs.web.controller.patient.TribeValidator" />
-	<bean id="tribeForm" class="org.openmrs.web.controller.patient.TribeFormController">
-		<property name="sessionForm"><value>true</value></property>
-		<property name="commandName"><value>tribe</value></property>
-		<property name="validator">
-			<ref bean="tribeValidator" />
-		</property>
-		<property name="formView"><value>/admin/patients/tribeForm</value></property>
-		<property name="successView"><value>tribe.list</value></property>
-	</bean>
-	<!-- ** /Tribe   ** -->
 
 	<!-- **  Patient Identifier Type   ** -->
 	<bean id="patientIdentifierTypeList"
@@ -418,7 +376,7 @@
 		<property name="successView"><value>patientIdentifierType.list</value></property>
 	</bean>
 	<bean id="patientIdentifierTypeValidator"
-		class="org.openmrs.web.controller.patient.PatientIdentifierTypeValidator" />
+		class="org.openmrs.validator.PatientIdentifierTypeValidator" />
 	<bean id="patientIdentifierTypeForm"
 		class="org.openmrs.web.controller.patient.PatientIdentifierTypeFormController">
 		<property name="sessionForm"><value>true</value></property>
@@ -493,12 +451,14 @@
 		<property name="formView"><value>/admin/person/personAttributeTypeList</value></property>
 		<property name="successView"><value>personAttributeType.list</value></property>
 	</bean>
+
+	<bean id="personAttributeTypeValidator" class="org.openmrs.validator.PersonAttributeTypeValidator" />
 	<bean id="personAttributeTypeForm"
 		class="org.openmrs.web.controller.person.PersonAttributeTypeFormController">
-		<property name="sessionForm"><value>true</value></property>
 		<property name="commandName"><value>personAttributeType</value></property>
 		<property name="formView"><value>/admin/person/personAttributeTypeForm</value></property>
 		<property name="successView"><value>personAttributeType.list</value></property>
+		<property name="validator"><ref bean="personAttributeTypeValidator" /></property>
 	</bean>
 	<!-- ** /PersonAttribute Type   ** -->
 
@@ -525,7 +485,7 @@
 		<property name="formView"><value>/admin/users/userList</value></property>
 		<property name="successView"><value>user.list</value></property>
 	</bean>
-	<bean id="userValidator" class="org.openmrs.web.controller.user.UserValidator" />
+	<bean id="userValidator" class="org.openmrs.validator.UserValidator" />
 	<bean id="userForm" class="org.openmrs.web.controller.user.UserFormController">
 		<property name="sessionForm"><value>true</value></property>
 		<property name="commandName"><value>user</value></property>
@@ -545,7 +505,7 @@
 	</bean>
 
 	<!--  Validator and Form Controller for the add/edit role page -->
-	<bean id="roleValidator" class="org.openmrs.web.controller.user.RoleValidator" />
+	<bean id="roleValidator" class="org.openmrs.validator.RoleValidator" />
 	<bean id="roleForm" class="org.openmrs.web.controller.user.RoleFormController">
 		<property name="sessionForm"><value>true</value></property>
 		<property name="commandName"><value>role</value></property>
@@ -565,7 +525,7 @@
 	</bean>
 
 	<!--  Validator and Form Controller for the add/edit privilege page -->
-	<bean id="privilegeValidator" class="org.openmrs.web.controller.user.PrivilegeValidator" />
+	<bean id="privilegeValidator" class="org.openmrs.validator.PrivilegeValidator" />
 	<bean id="privilegeForm" class="org.openmrs.web.controller.user.PrivilegeFormController">
 		<property name="sessionForm"><value>true</value></property>
 		<property name="commandName"><value>privilege</value></property>
@@ -614,7 +574,7 @@
 
 	<!--  Validator and Form Controller for the add/edit encounter types page -->
 	<bean id="encounterTypeValidator"
-		class="org.openmrs.web.controller.encounter.EncounterTypeValidator" />
+		class="org.openmrs.validator.EncounterTypeValidator" />
 	<bean id="encounterTypeForm"
 		class="org.openmrs.web.controller.encounter.EncounterTypeFormController">
 		<property name="commandName"><value>encounterType</value></property>
@@ -633,7 +593,7 @@
 	</bean>
 
 	<!--  Validator and Form Controller for the add/edit encounter types page -->
-	<bean id="locationValidator" class="org.openmrs.web.controller.encounter.LocationValidator" />
+	<bean id="locationValidator" class="org.openmrs.validator.LocationValidator" />
 	<bean id="locationForm" class="org.openmrs.web.controller.encounter.LocationFormController">
 		<property name="commandName"><value>location</value></property>
 		<property name="validator">
@@ -700,7 +660,7 @@
 
 	<!--  Validator and Form Controller for the add/edit concept types page -->
 	<bean id="conceptClassValidator"
-		class="org.openmrs.web.controller.concept.ConceptClassValidator" />
+		class="org.openmrs.validator.ConceptClassValidator" />
 	<bean id="conceptClassForm"
 		class="org.openmrs.web.controller.concept.ConceptClassFormController">
 		<property name="sessionForm"><value>true</value></property>
@@ -723,7 +683,7 @@
 
 	<!--  Validator and Form Controller for the add/edit concept types page -->
 	<bean id="conceptDatatypeValidator"
-		class="org.openmrs.web.controller.concept.ConceptDatatypeValidator" />
+		class="org.openmrs.validator.ConceptDatatypeValidator" />
 	<bean id="conceptDatatypeForm"
 		class="org.openmrs.web.controller.concept.ConceptDatatypeFormController">
 		<property name="sessionForm"><value>true</value></property>
@@ -792,189 +752,7 @@
 		<property name="formView"><value>/admin/concepts/conceptSourceForm</value></property>
 		<property name="successView"><value>conceptSource.list</value></property>
 	</bean>
-	<!--  ** /Concept Source ** -->
-	<!-- ============================ -->
-
-
-	<!-- ============================ -->
-	<!-- ===== Report Sector ===== -->
-	<!-- ============================ -->
-	
-	<!-- Run Reports -->
-	   <bean id="reportsList" class="org.openmrs.web.controller.report.ReportsListController">
-        <property name="commandName"><value>reports</value></property>
-        <property name="formView"><value>/admin/reports/runReportList</value></property>
-        <property name="successView"><value>runReport.list</value></property>
-    </bean>
-    <bean id="runReportForm" class="org.openmrs.web.controller.report.RunReportController">
-        <property name="commandName"><value>report</value></property>
-        <property name="formView"><value>/admin/reports/runReportForm</value></property>
-        <property name="successView"><value>runReport.list</value></property>
-        <property name="validator">
-		    <ref bean="runReportForm" />
-		</property>
-    </bean>
-    <bean id="reportDataForm" class="org.openmrs.web.controller.report.ReportDataFormController">
-        <property name="commandName"><value>reportData</value></property>
-        <property name="formView"><value>/admin/reports/reportDataForm</value></property>
-        <property name="successView"><value>reportData.form</value></property>
-    </bean>
-    <bean id="reportDataList" class="org.openmrs.web.controller.report.ReportDataListController">
-        <property name="commandName"><value>reportData</value></property>
-        <property name="formView"><value>/admin/reports/reportDataList</value></property>
-        <property name="successView"><value>reportData.list</value></property>
-    </bean>
-    
-    <!--  Manage reports -->
-    <bean id="reportSchemaXmlForm" class="org.openmrs.web.controller.report.ReportSchemaXmlFormController">
-        <property name="commandName"><value>reportSchemaXml</value></property>
-        <property name="formView"><value>/admin/reports/reportSchemaXmlForm</value></property>
-        <property name="successView"><value>reportSchemaXml.list</value></property>
-        <property name="validator">
-			<ref bean="reportSchemaXmlForm" />
-		</property>
-    </bean>
-    <bean id="reportSchemaXmlList" class="org.openmrs.web.controller.report.ReportSchemaXmlListController">
-        <property name="commandName"><value>reportSchemaXmlList</value></property>
-        <property name="formView"><value>/admin/reports/reportSchemaXmlList</value></property>
-        <property name="successView"><value>reportSchemaXml.list</value></property>
-    </bean>
-    <bean id="reportMacrosForm" class="org.openmrs.web.controller.report.ReportMacrosFormController">
-        <property name="commandName"><value>command</value></property>
-        <property name="formView"><value>/admin/reports/reportMacrosForm</value></property>
-        <property name="successView"><value>reportMacros.form</value></property>
-    </bean>
-    
-	<!-- ReportObject -->
-	<bean id="reportObjectList"
-		class="org.openmrs.web.controller.report.ReportObjectListController">
-		<property name="sessionForm"><value>true</value></property>
-		<property name="commandName"><value>reportObjectList</value></property>
-		<property name="formView"><value>/admin/reports/reportObjectList</value></property>
-		<property name="successView"><value>reportObject.list</value></property>
-	</bean>
-	<bean id="reportObjectValidator"
-		class="org.openmrs.web.controller.report.ReportObjectValidator" />
-	<bean id="reportObjectForm"
-		class="org.openmrs.web.controller.report.ReportObjectFormController">
-		<property name="sessionForm"><value>false</value></property>
-		<property name="commandName"><value>reportObject</value></property>
-		<property name="validator">
-			<ref bean="reportObjectValidator" />
-		</property>
-		<property name="formView"><value>/admin/reports/reportObjectForm</value></property>
-		<property name="successView"><value>reportObject.list</value></property>
-	</bean>
-
-	<!-- ** DataExport ** -->
-	<bean id="dataExportList"
-		class="org.openmrs.web.controller.report.export.DataExportListController">
-		<property name="sessionForm"><value>true</value></property>
-		<property name="commandName"><value>dataExportList</value></property>
-		<property name="formView"><value>/admin/reports/dataExportList</value></property>
-		<property name="successView"><value>dataExport.list</value></property>
-	</bean>
-
-	<bean id="dataExportForm"
-		class="org.openmrs.web.controller.report.export.DataExportFormController">
-		<property name="sessionForm"><value>true</value></property>
-		<property name="validator"><ref bean="requireNameValidator" /></property>
-		<property name="commandName"><value>dataExport</value></property>
-		<property name="formView"><value>/admin/reports/dataExportForm</value></property>
-		<property name="successView"><value>dataExport.list</value></property>
-	</bean>
-	
-	<bean id="rowPerObsDataExportList"
-		class="org.openmrs.web.controller.report.export.RowPerObsDataExportListController">
-		<property name="sessionForm"><value>true</value></property>
-		<property name="commandName"><value>dataExportList</value></property>
-		<property name="formView"><value>/admin/reports/rowPerObsDataExportList</value></property>
-		<property name="successView"><value>rowPerObsDataExport.list</value></property>
-	</bean>
-
-	<bean id="rowPerObsDataExportForm"
-		class="org.openmrs.web.controller.report.export.RowPerObsDataExportFormController">
-		<property name="sessionForm"><value>true</value></property>
-		<property name="validator"><ref bean="requireNameValidator" /></property>
-		<property name="commandName"><value>dataExport</value></property>
-		<property name="formView"><value>/admin/reports/rowPerObsDataExportForm</value></property>
-		<property name="successView"><value>rowPerObsDataExport.list</value></property>
-	</bean>
-	<!-- ** /DataExport ** -->
-	<bean id="cohortList"
-		class="org.openmrs.web.controller.report.CohortListController">
-		<property name="sessionForm"><value>true</value></property>
-		<property name="commandName"><value>cohortList</value></property>
-		<property name="formView"><value>/admin/reports/cohortList</value></property>
-		<property name="successView"><value>cohorts.list</value></property>
-	</bean>
-	<!-- ** PatientSearchManagement ** -->
-	<bean id="patientSearchList"
-		class="org.openmrs.web.controller.report.PatientSearchListController">
-		<property name="sessionForm"><value>true</value></property>
-		<property name="commandName"><value>patientSearchList</value></property>
-		<property name="formView"><value>/admin/reports/patientSearchList</value></property>
-		<property name="successView"><value>patientSearch.list</value></property>
-	</bean>
-	<bean id="patientSearchForm"
-		class="org.openmrs.web.controller.report.PatientSearchFormController">
-		<property name="sessionForm"><value>true</value></property>
-		<property name="commandName"><value>patientSearchForm</value></property>
-		<property name="formView"><value>/admin/reports/patientSearchForm</value></property>
-		<property name="successView"><value>patientSearch.list</value></property>
-	</bean>
-	
-	<!-- ============================ -->
-	
-
-	<!-- ============================ -->
-	<!-- ===== Analysis Sector ===== -->
-    <!-- ============================ -->
-	<bean id="defaultMethodParamResolver" class="org.springframework.web.servlet.mvc.multiaction.ParameterMethodNameResolver">
-		<property name="paramName"><value>method</value></property>
-		<property name="defaultMethodName"><value>handleRequest</value></property>
-	</bean>
-	<bean id="cohortBuilderController" class="org.openmrs.web.controller.analysis.CohortBuilderController">
-		<property name="formView"><value>/analysis/cohortBuilder</value></property>
-		<property name="successView"><value>cohortBuilder.list</value></property>
-		<property name="links">
-			<list>
-				<value>patientSet.form:Analysis.formEntryButton:method=setPatientSet:url=patientDashboard.form:appendPatientId=true:showPatientSet=true</value>
-				<value>nealreport.form:nealreport.ConsultReport.name:reportType=Consult Report</value>
-				<value>nealreport.form:nealreport.IncentiveReport.name:reportType=Incentive Report</value>
-				<value>nealreport.form:nealreport.ShortReport.name:reportType=Short Report</value>
-				<value>nealreport.form:nealreport.TbReport.name:reportType=TB Report</value>
-				<value>nealreport.form:nealreport.Cd4Report.name:reportType=CD4 Report</value>
-				<value>nealreport.form:nealreport.DeclineReport.name:reportType=Decline Report</value>
-				<value>nealreport.form:nealreport.Month6Report.name:reportType=Month6 Report</value>
-				<value>nealreport.form:nealreport.AlertReport.name:reportType=Alert Report</value>
-				<value>nealreport.form:nealreport.PmtctReport.name:reportType=PMTCT Report</value>
-				<value>nealreport.form:nealreport.PedReport.name:reportType=Ped Report</value>
-				<value>nealreport.form:nealreport.LongReport.name:reportType=Long Report</value>
-				<value>nealreport.form:nealreport.TracReport.name:reportType=TRAC Report</value>
-				<value>nealreport.form:nealreport.ExceptionReport.name:reportType=Exception Report</value>
-				<value>nealreport.form:nealreport.LostReport.name:reportType=Lost Report</value>
-				<value>nealreport.form:nealreport.FlatReport.name:reportType=Flat Report</value>
-				<value>nealreport.form:nealreport.FoodPatientsReport.name:reportType=Food Patients Report</value>
-				<value>nealreport.form:nealreport.AccompLeaderReport.name:reportType=Accompagnateur Leader Report</value>
-				<value>nealreport.form:nealreport.TracRegisterReport.name:reportType=Trac Register Report</value>
-				<value>nealreport.form:nealreport.ChaiReport.name:reportType=CHAI Report</value>
-				<value>nealreport.form:nealreport.DataDumpReport.name:reportType=Data Dump</value>
-			</list>
-		</property>
-	</bean>
-    <bean id="cohortBuilderActionController" class="org.springframework.web.servlet.mvc.multiaction.MultiActionController">
-		<property name="methodNameResolver"><ref bean="defaultMethodParamResolver"/></property>
-		<property name="delegate"><ref bean="cohortBuilderController"/></property>
-	</bean>
-    <!-- ============================ -->
-	
-	<!-- ================================= -->
-	<!-- ===== Neal's Reports Sector ===== -->
-	<!-- ================================= -->
-	<bean id="nealReportController"
-		class="org.openmrs.web.controller.nealreports.NealReportController" />
-	<!-- ============================ -->
+	<!--  ** /Concept Source ** -->	
 
 	<!-- ============================ -->
 	<!-- ===== Migration Sector ===== -->
@@ -1031,7 +809,6 @@
 	</bean>
 
 	<bean id="fieldForm" class="org.openmrs.web.controller.form.FieldFormController">
-		<property name="sessionForm"><value>true</value></property>
 		<property name="commandName"><value>field</value></property>
 		<property name="formView"><value>/admin/forms/fieldForm</value></property>
 		<property name="successView"><value>field.list</value></property>
@@ -1048,9 +825,8 @@
 	</bean>
 
 	<!--  Validator and Form Controller for the add/edit forms page -->
-	<bean id="fieldTypeValidator" class="org.openmrs.web.controller.form.FieldTypeValidator" />
+	<bean id="fieldTypeValidator" class="org.openmrs.validator.FieldTypeValidator" />
 	<bean id="fieldTypeForm" class="org.openmrs.web.controller.form.FieldTypeFormController">
-		<property name="sessionForm"><value>true</value></property>
 		<property name="commandName"><value>fieldType</value></property>
 		<property name="validator">
 			<ref bean="fieldTypeValidator" />
@@ -1071,7 +847,7 @@
 		<property name="formView"><value>/admin/programs/programList</value></property>
 		<property name="successView"><value>program.list</value></property>
 	</bean>
-	<bean id="programValidator" class="org.openmrs.web.controller.program.ProgramValidator" />
+	<bean id="programValidator" class="org.openmrs.validator.ProgramValidator" />
 	<bean id="programForm" class="org.openmrs.web.controller.program.ProgramFormController">
 		<property name="commandName"><value>program</value></property>
 		<property name="validator">
@@ -1105,7 +881,7 @@
 		<property name="successView"><value>conversion.list</value></property>
 	</bean>
 	<bean id="stateConversionValidator"
-		class="org.openmrs.web.controller.program.StateConversionValidator" />
+		class="org.openmrs.validator.StateConversionValidator" />
 	<bean id="stateConversionForm"
 		class="org.openmrs.web.controller.program.StateConversionFormController">
 		<property name="sessionForm"><value>true</value></property>
@@ -1148,12 +924,6 @@
 		<property name="formView"><value>/optionsForm</value></property>
 		<property name="successView"><value>options.form</value></property>
 	</bean>
-	<bean id="multiplePatientSummariesList"
-		class="org.openmrs.web.controller.patientset.MultipleSummariesController">
-		<property name="commandName"><value>patientSet</value></property>
-		<property name="formView"><value>/patientSummary</value></property>
-		<property name="successView"><value>patientSummaryies.form</value></property>
-	</bean>
 	<bean id="patientDashboardForm"
 		class="org.openmrs.web.controller.patient.PatientDashboardController">
 		<property name="sessionForm"><value>true</value></property>
@@ -1179,13 +949,6 @@
 		<property name="commandName"><value>logLines</value></property>
 		<property name="formView"><value>/admin/maintenance/serverLog</value></property>
 		<property name="successView"><value>serverLog.form</value></property>
-	</bean>
-	<bean id="dataEntryStatsController"
-		class="org.openmrs.web.controller.maintenance.DataEntryStatisticsController">
-		<property name="sessionForm"><value>true</value></property>
-		<property name="commandName"><value>command</value></property>
-		<property name="formView"><value>/admin/maintenance/dataEntryStatistics</value></property>
-		<property name="successView"><value>dataEntryStats.list</value></property>
 	</bean>
 	<bean id="implementationIdFormController"
 		class="org.openmrs.web.controller.maintenance.ImplementationIdFormController">
@@ -1242,83 +1005,6 @@
 		<property name="sessionFactory"><ref bean="sessionFactory"/></property>
 		</bean>
 	-->
-
-	<bean id="patientSetFormController"
-		class="org.springframework.web.servlet.mvc.multiaction.MultiActionController">
-		<property name="methodNameResolver">
-			<ref bean="defaultMethodParamResolver" />
-		</property>
-		<property name="delegate">
-			<bean class="org.openmrs.web.controller.patientset.PatientSetController" />
-		</property>
-	</bean>
-
-	<!--  **************************  REPORT OBJECT FACTORY CONFIGURATION  *************************  -->
-
-	<!-- Configuration for reporting module - sets up the report object factory and admin interface
-		USAGE: To add/create a report object to use in the reporting system, you need to do 3 things:
-		1) Create the class for the report object - preferably put it in org.openmrs.api.reporting.*
-		2) Create a validator for the report object (one that is used whenever somebody tries to create a 
-		new object of that type, and populate it with initial values - these values should be validated).
-		Preferably put that in the same directory mentioned above.
-		3) Register it as a module to the ReportObjectFactory below and also be sure to make a bean def
-		for the module (CALLEN)
-	-->
-
-	<bean id="reportObjectFactory" class="org.openmrs.reporting.ReportObjectFactory">
-		<property name="defaultValidator"><value>org.openmrs.web.controller.report.ReportObjectValidator</value></property>
-		<property name="modules">
-			<list>
-				<ref bean="patientCharacteristicFilterModule" />
-				<ref bean="drugOrderFilterModule" />
-				<ref bean="numericObsPatientFilterModule" />
-				<ref bean="locationFilterModule" />
-				<ref bean="textObsPatientFilterModule" />
-			</list>
-		</property>
-	</bean>
-
-	<bean id="patientCharacteristicFilterModule"
-		class="org.openmrs.reporting.ReportObjectFactoryModule">
-		<property name="name"><value>PatientCharacteristicFilter</value></property>
-		<property name="displayName"><value>Patient Characteristic Filter</value></property>
-		<property name="className"><value>org.openmrs.reporting.PatientCharacteristicFilter</value></property>
-		<property name="type"><value>Patient Filter</value></property>
-		<property name="validatorClass"><value>org.openmrs.reporting.PatientCharacteristicFilterValidator</value></property>
-	</bean>
-
-	<bean id="drugOrderFilterModule" class="org.openmrs.reporting.ReportObjectFactoryModule">
-		<property name="name"><value>DrugOrderFilter</value></property>
-		<property name="displayName"><value>Regimen Filter</value></property>
-		<property name="className"><value>org.openmrs.reporting.DrugOrderPatientFilter</value></property>
-		<property name="type"><value>Patient Filter</value></property>
-		<property name="validatorClass"><value>org.openmrs.reporting.DrugOrderPatientFilterValidator</value></property>
-	</bean>
-
-	<bean id="numericObsPatientFilterModule"
-		class="org.openmrs.reporting.ReportObjectFactoryModule">
-		<property name="name"><value>NumericObsPatientFilter</value></property>
-		<property name="displayName"><value>Numeric Observation Patient Filter</value></property>
-		<property name="className"><value>org.openmrs.reporting.NumericObsPatientFilter</value></property>
-		<property name="type"><value>Patient Filter</value></property>
-		<property name="validatorClass"><value>org.openmrs.reporting.NumericObsPatientFilterValidator</value></property>
-	</bean>
-
-	<bean id="locationFilterModule" class="org.openmrs.reporting.ReportObjectFactoryModule">
-		<property name="name"><value>LocationFilter</value></property>
-		<property name="displayName"><value>Location Filter</value></property>
-		<property name="className"><value>org.openmrs.reporting.LocationFilter</value></property>
-		<property name="type"><value>Patient Filter</value></property>
-		<property name="validatorClass"><value>org.openmrs.reporting.LocationFilterValidator</value></property>
-	</bean>
-
-	<bean id="textObsPatientFilterModule" class="org.openmrs.reporting.ReportObjectFactoryModule">
-		<property name="name"><value>TextObsPatientFilter</value></property>
-		<property name="displayName"><value>Text Observation Patient Filter</value></property>
-		<property name="className"><value>org.openmrs.reporting.TextObsPatientFilter</value></property>
-		<property name="type"><value>Patient Filter</value></property>
-		<property name="validatorClass"><value>org.openmrs.reporting.TextObsPatientFilterValidator</value></property>
-	</bean>
 
 	<!--  **************************  FIELDGEN HANDLER FACTORY CONFIGURATION  *************************  -->
 
@@ -1379,6 +1065,7 @@
 		<property name="defaultLayoutFormat"><value>US</value></property>
 		<property name="layoutTemplates">
 			<list>
+				<ref bean="addressTemplateSpain" />
 				<ref bean="addressTemplateRwanda" />
 				<ref bean="addressTemplateUS" />
 				<ref bean="addressTemplateKenya" />
@@ -1403,6 +1090,44 @@
 				<value>townshipDivision</value>
 				<value>subregion</value>
 				<value>region</value>
+			</list>
+		</property>
+	</bean>
+	
+	<bean id="addressTemplateSpain" class="org.openmrs.layout.web.address.AddressTemplate">
+		<property name="displayName"><value>Formato de Direcciones en Espana</value></property>
+		<property name="codeName"><value>spain</value></property>
+		<property name="country"><value>Spain</value></property>
+		<property name="nameMappings">
+			<props>
+				<prop key="postalCode">Location.postalCode</prop>
+				<prop key="stateProvince">Location.stateProvince</prop>
+				<prop key="cityVillage">Location.cityVillage</prop>
+				<prop key="address1">Location.address1</prop>
+				<prop key="address2">Location.address2</prop>
+				<prop key="longitude">Location.longitude</prop>
+				<prop key="latitude">Location.latitude</prop>
+				<prop key="country">Location.country</prop>
+			</props>
+		</property>
+		<property name="sizeMappings">
+			<props>
+				<prop key="postalCode">10</prop>
+				<prop key="stateProvince">10</prop>
+				<prop key="cityVillage">10</prop>
+				<prop key="address1">40</prop>
+				<prop key="address2">40</prop>
+				<prop key="longitude">10</prop>
+				<prop key="latitude">10</prop>
+				<prop key="country">10</prop>
+			</props>
+		</property>
+		<property name="lineByLineFormat">
+			<list>
+				<value>address1</value>
+				<value>address2</value>
+				<value>cityVillage stateProvince country postalCode</value>
+				<value>latitude longitude</value>
 			</list>
 		</property>
 	</bean>
@@ -1686,11 +1411,13 @@
 	</bean>
 
 	<!-- NAME LAYOUT SUPPORT -->
-
+	
+	<!-- specialTokens ordered so that the subset string 'familyName' is last -->
 	<bean id="nameSupport" class="org.openmrs.layout.web.name.NameSupport">
 		<property name="defaultLayoutFormat"><value>short</value></property>
 		<property name="layoutTemplates">
 			<list>
+				<ref bean="nameTemplateSpain" />
 				<ref bean="nameTemplateShort" />
 				<ref bean="nameTemplateLong" />
 			</list>
@@ -1701,10 +1428,36 @@
 				<value>givenName</value>
 				<value>middleName</value>
 				<value>familyNamePrefix</value>
+				<value>familyNameSuffix</value>
+				<value>familyName2</value>
+				<value>familyName</value>
+				<value>degree</value>
+			</list>
+		</property>
+	</bean>
+	
+	<bean id="nameTemplateSpain" class="org.openmrs.layout.web.name.NameTemplate">
+		<property name="displayName"><value>Formato de Nombres en Espana</value></property>
+		<property name="codeName"><value>spain</value></property>
+		<property name="nameMappings">
+			<props>
+				<prop key="givenName">PersonName.givenName</prop>
+				<prop key="familyName">PersonName.familyName</prop>
+				<prop key="familyName2">PersonName.familyName2</prop>
+			</props>
+		</property>
+		<property name="sizeMappings">
+			<props>
+				<prop key="givenName">30</prop>
+				<prop key="familyName">25</prop>
+				<prop key="familyName2">25</prop>
+			</props>
+		</property>
+		<property name="lineByLineFormat">
+			<list>
+				<value>givenName</value>
 				<value>familyName</value>
 				<value>familyName2</value>
-				<value>familyNameSuffix</value>
-				<value>degree</value>
 			</list>
 		</property>
 	</bean>
@@ -1736,7 +1489,7 @@
 	</bean>
 	
 	<bean id="nameTemplateLong" class="org.openmrs.layout.web.name.NameTemplate">
-		<property name="displayName"><value>Short Name Format</value></property>
+		<property name="displayName"><value>Long Name Format</value></property>
 		<property name="codeName"><value>long</value></property>
 		<property name="nameMappings">
 			<props>
@@ -1773,206 +1526,17 @@
 		</property>
 	</bean>
 
-
-	<!-- SUMMARY SPEC -->
-	<bean id="patientSummarySpecification"
-		class="org.openmrs.summary.web.PatientSummarySpecification">
-		<property name="specification">
-			<list>
-				<props>
-					<prop key="type">activeList</prop>
-					<prop key="headingCode">summary.problemList</prop>
-					<prop key="addConcept">name:PREVIOUS DIAGNOSIS</prop>
-					<prop key="otherGroupedConcepts">
-						name:PREVIOUS DIAGNOSIS DATE|name:PREVIOUS DIAGNOSIS COMMENTS
-					</prop>
-					<prop key="showDate">false</prop>
-					<prop key="displayStyle">table</prop>
-				</props>
-				<!-- I assume this would show the list of active problems, but I'm not sure since PIH doesn't use those -->
-				<props>
-					<prop key="type">activeList</prop>
-					<!-- <prop key="headingCode">summary.activeProblems</prop> -->
-					<prop key="addConcept">name:PROBLEM ADDED|name:PROBLEM LIST</prop>
-					<prop key="removeConcept">name:PROBLEM REMOVED</prop>
-					<prop key="showDate">true</prop>
-					<prop key="displayStyle">ol</prop>
-				</props>
-				<props>
-					<prop key="type">newlines</prop>
-					<prop key="count">2</prop>
-				</props>
-				<props>
-					<prop key="type">activeList</prop>
-					<prop key="headingCode">summary.allergies</prop>
-					<prop key="addConcept">set:name:ALLERGY TO DRUG</prop>
-					<prop key="showDate">false</prop>
-					<prop key="displayStyle">ul</prop>
-				</props>
-				<props>
-					<prop key="type">NEWCOLUMN</prop>
-				</props>
-				<props>
-					<prop key="type">currentDrugOrders</prop>
-					<prop key="headingCode">summary.currentDrugOrders</prop>
-					<prop key="whichSets">ANTIRETROVIRAL DRUGS,TUBERCULOSIS TREATMENT DRUGS,*</prop>
-				</props>
-				<!-- Indiana, you might do something like this instead to display the current regimen
-					<props>
-					<prop key="type">obsTable</prop>
-					<prop key="headingCode">summary.currentDrugOrders</prop>
-					<prop key="concepts">name:CURRENT ANTIRETROVIRAL DRUGS USED FOR TREATMENT</prop>
-					<prop key="cssClass">borderedTable</prop>
-					<prop key="showEmptyConcepts">false</prop>
-					<prop key="showConceptHeader">true</prop>
-					<prop key="showDateHeader">true</prop>
-					<prop key="orientation">vertical</prop>
-					<prop key="sort">desc</prop>
-					<prop key="limit">1</prop>
-					</props>
-				-->
-				<props>
-					<prop key="type">newlines</prop>
-					<prop key="count">1</prop>
-				</props>
-				<props>
-					<prop key="type">pastDrugOrders</prop>
-					<prop key="headingCode">summary.pastDrugOrders</prop>
-					<prop key="whichSets">ANTIRETROVIRAL DRUGS,TUBERCULOSIS TREATMENT DRUGS,*</prop>
-				</props>
-				<props>
-					<prop key="type">NEWROW</prop>
-				</props>
-				<props>
-					<prop key="type">obsTable</prop>
-					<prop key="headingCode">summary.labResults</prop>
-					<prop key="concepts">
-						name:CD4 COUNT|set:name:LABORATORY EXAMINATIONS CONSTRUCT
-					</prop>
-					<prop key="cssClass">borderedTable</prop>
-					<prop key="showEmptyConcepts">false</prop>
-					<prop key="showConceptHeader">true</prop>
-					<prop key="showDateHeader">true</prop>
-					<prop key="orientation">vertical</prop>
-					<prop key="sort">desc</prop>
-					<prop key="limit">-1</prop>
-				</props>
-				<props>
-					<prop key="type">newlines</prop>
-					<prop key="count">1</prop>
-				</props>
-				<props>
-					<prop key="type">obsTable</prop>
-					<prop key="headingCode">summary.cxrFindings</prop>
-					<prop key="concepts">name:X-RAY, CHEST|name:CHEST XRAY COMMENTS</prop>
-					<!-- <prop key="cssClass">borderedTable</prop> -->
-					<prop key="showEmptyConcepts">false</prop>
-					<prop key="showConceptHeader">false</prop>
-					<prop key="showDateHeader">true</prop>
-					<prop key="orientation">vertical</prop>
-					<prop key="sort">desc</prop>
-					<prop key="limit">-1</prop>
-				</props>
-				<props>
-					<prop key="type">newlines</prop>
-					<prop key="count">1</prop>
-				</props>
-				<props>
-					<prop key="type">obsTable</prop>
-					<prop key="headingCode">summary.vitalSigns</prop>
-					<prop key="concepts">set:name:VITAL SIGNS CONSTRUCT|set:name:VITAL SIGNS</prop>
-					<prop key="cssClass">borderedTable</prop>
-					<prop key="showEmptyConcepts">false</prop>
-					<prop key="showConceptHeader">true</prop>
-					<prop key="showDateHeader">true</prop>
-					<prop key="orientation">vertical</prop>
-					<prop key="sort">desc</prop>
-					<prop key="limit">-1</prop>
-				</props>
-				<props>
-					<prop key="type">NEWCOLUMN</prop>
-				</props>
-				<props>
-					<prop key="type">graph</prop>
-					<prop key="globalKey">concept.cd4_count</prop>
-				</props>
-				<props>
-					<prop key="type">graph</prop>
-					<prop key="globalKey">concept.weight</prop>
-					<prop key="maxRange">100</prop>
-				</props>
-				<props>
-					<prop key="type">NEWTABLE</prop>
-				</props>
-				<props>
-					<prop key="type">newlines</prop>
-					<prop key="count">1</prop>
-				</props>
-				<props>
-					<prop key="type">heading</prop>
-					<prop key="code">summary.alerts</prop>
-				</props>
-				<props>
-					<prop key="type">label</prop>
-					<prop key="code">summary.alert.noCd4In6Months</prop>
-					<prop key="showIfTrue">
-						!obsCheck
-						test:NO
-						concept:CD4 COUNT
-						timespan:last 7 months
-					</prop>
-				</props>
-				<props>
-					<prop key="type">label</prop>
-					<prop key="code">summary.alert.noCxr</prop>
-					<!-- We could define a set 'CHEST XRAY FINDINGS' that contains all concept-questions for chest xray findings
-						<prop key="showIfTrue">
-						!obsCheck
-						test:NO
-						concept:set:CHEST XRAY FINDINGS
-						</prop>
-					-->
-					<prop key="showIfTrue">
-						!and
-						!obsCheck
-						test:NO
-						concept:X-RAY, CHEST
-						!obsCheck
-						test:NO
-						concept:CHEST XRAY COMMENTS
-					</prop>
-				</props>
-			</list>
-		</property>
-	</bean>
-	
-	<!-- Add the web specific report renderers to the list of renderers available to the ReportService -->
-	<!-- A module adding renderers must this exact parent id --> 
-	<bean parent="reportServiceTarget">
-		<property name="renderers">
-			<map>
-				<entry>
-					<key><value>org.openmrs.web.report.CohortReportWebRenderer</value></key>
-					<bean class="org.openmrs.web.report.CohortReportWebRenderer"/>
-				</entry>
-			</map>
-		</property>
-	</bean>
-
-	<!-- CALENDAR SECTION -->
-
-	<!--
-		
-		<bean id="calendarSupport" class="org.openmrs.web.controller.calendar.CalendarSupport">
-		<property name="defaultConceptIdsToShow">
-		<list>
-		<value>CD4 COUNT</value>
-		<value>WEIGHT (KG)</value>
-		</list>
-		</property>
-		</bean>
-		
-	-->
+    <!--  COMPLEX OBS HANDLER SECTION -->
+    <bean parent="obsServiceTarget" >
+        <property name="handlers">
+            <map>
+                <entry>
+                    <key><value>ImageHandler</value></key>
+                    <bean class="org.openmrs.web.controller.observation.handler.WebImageHandler"/>
+                </entry>
+            </map>
+        </property>
+    </bean>
 	
 	<!-- Find/replace strings after errant 'contrl-shift-f':
 		>\r\n			<value>(.*)</value>\r\n		</property>

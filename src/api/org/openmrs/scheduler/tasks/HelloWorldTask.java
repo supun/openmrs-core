@@ -13,19 +13,12 @@
  */
 package org.openmrs.scheduler.tasks;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-
 /**
  * Implementation of a task that writes "Hello World" to a log file.
  * 
- * @author Justin Miranda
  * @version 1.0
  */
 public class HelloWorldTask extends AbstractTask {
-	
-	// Logger 
-	private static Log log = LogFactory.getLog(HelloWorldTask.class);
 	
 	// Thread
 	private Thread thread;

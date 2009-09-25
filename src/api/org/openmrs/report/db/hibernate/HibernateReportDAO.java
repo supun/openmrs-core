@@ -25,7 +25,10 @@ import org.openmrs.report.db.ReportDAO;
 
 /**
  * Hibernate specific database access methods for objects in the report package
+ * 
+ * @deprecated see reportingcompatibility module
  */
+@Deprecated
 public class HibernateReportDAO implements ReportDAO {
 	
 	protected final Log log = LogFactory.getLog(getClass());
@@ -67,7 +70,7 @@ public class HibernateReportDAO implements ReportDAO {
 	 * @see org.openmrs.report.db.ReportDAO#saveReportSchemaXml(org.openmrs.report.ReportSchemaXml)
 	 */
 	public void saveReportSchemaXml(ReportSchemaXml reportSchemaXml) {
-		sessionFactory.getCurrentSession().save(reportSchemaXml);
+		sessionFactory.getCurrentSession().saveOrUpdate(reportSchemaXml);
 	}
 	
 	/**

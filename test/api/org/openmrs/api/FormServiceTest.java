@@ -19,6 +19,7 @@ import static org.junit.Assert.assertNotSame;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
+import java.util.Date;
 import java.util.List;
 import java.util.Vector;
 
@@ -31,6 +32,7 @@ import org.openmrs.Form;
 import org.openmrs.FormField;
 import org.openmrs.api.context.Context;
 import org.openmrs.test.BaseContextSensitiveTest;
+import org.openmrs.test.Verifies;
 
 /**
  * TODO clean up and finish this test for all methods in FormService
@@ -102,98 +104,6 @@ public class FormServiceTest extends BaseContextSensitiveTest {
 		
 		formService.purgeForm(form2);
 		//formService.deleteForm(form1); //deleting a deleted form
-	}
-	
-	/**
-	 * Creates then updates a form field TODO fix and activate this test method
-	 * 
-	 * @throws Exception
-	 */
-	public void xtestFormFieldCreateUpdateDelete() throws Exception {
-		FormService formService = Context.getFormService();
-		
-		//testing creation
-		
-		List<Form> forms = formService.getAllForms();
-		assertNotNull(forms);
-		assertTrue(forms.size() > 2);
-		
-		List<Field> fields = formService.getAllFields();
-		assertNotNull(fields);
-		assertTrue(fields.size() > 2);
-		
-		FormField subFormField1 = null;
-		Form form1 = forms.get(1);
-		Field field1 = fields.get(1);
-		Integer fieldNumber1 = new Integer(1);
-		String fieldPart1 = "part1";
-		Integer pageNumber1 = new Integer(1);
-		Integer minOccurs1 = new Integer(1);
-		Integer maxOccurs1 = new Integer(1);
-		Boolean required1 = true;
-		
-		FormField formField1 = new FormField();
-		
-		formField1.setParent(subFormField1);
-		formField1.setForm(form1);
-		formField1.setField(field1);
-		formField1.setFieldNumber(fieldNumber1);
-		formField1.setFieldPart(fieldPart1);
-		formField1.setPageNumber(pageNumber1);
-		formField1.setMinOccurs(minOccurs1);
-		formField1.setMaxOccurs(maxOccurs1);
-		formField1.setRequired(required1);
-		
-		//formService.createFormField(formField1);
-		
-		//testing update
-		
-		FormField formField2 = null; //formService.getFormField(formField1.getFormFieldId());
-		
-		FormField subFormField2 = null;
-		Form form2 = forms.get(2);
-		Field field2 = fields.get(2);
-		Integer fieldNumber2 = new Integer(2);
-		String fieldPart2 = "part2";
-		Integer pageNumber2 = new Integer(2);
-		Integer minOccurs2 = new Integer(2);
-		Integer maxOccurs2 = new Integer(2);
-		Boolean required2 = false;
-		
-		formField2.setParent(subFormField2);
-		formField2.setForm(form2);
-		formField2.setField(field2);
-		formField2.setFieldNumber(fieldNumber2);
-		formField2.setFieldPart(fieldPart2);
-		formField2.setPageNumber(pageNumber2);
-		formField2.setMinOccurs(minOccurs2);
-		formField2.setMaxOccurs(maxOccurs2);
-		formField2.setRequired(required2);
-		
-		//formService.updateFormField(formField2);
-		
-		//testing correct update
-		
-		FormField formField3 = null; //formService.getFormField(formField2.getFormFieldId());
-		
-		assertTrue(formField3.equals(formField2));
-		
-		assertFalse(formField3.getParent().equals(formField1.getParent()));
-		assertFalse(formField3.getForm().equals(formField1.getForm()));
-		assertFalse(formField3.getField().equals(formField1.getField()));
-		assertFalse(formField3.getFieldNumber().equals(formField1.getFieldNumber()));
-		assertFalse(formField3.getFieldPart().equals(formField1.getFieldPart()));
-		assertFalse(formField3.getPageNumber().equals(formField1.getPageNumber()));
-		assertFalse(formField3.getMinOccurs().equals(formField1.getMinOccurs()));
-		assertFalse(formField3.getMaxOccurs().equals(formField1.getMaxOccurs()));
-		assertFalse(formField3.isRequired().equals(formField1.isRequired()));
-		
-		//testing deletion
-		
-		//formService.deleteFormField(formField3);
-		//formService.deleteFormField(formField3);
-		//assertNull(formService.getFormField(formField3.getFormFieldId()));
-		
 	}
 	
 	/**
@@ -276,54 +186,46 @@ public class FormServiceTest extends BaseContextSensitiveTest {
 	}
 	
 	/**
-	 * Tests the FormService.getFormFields(Form, Concept) and getFormFields(Form,Concept,Collection)
-	 * methods
-	 * 
-	 * @throws Exception
+	 * @see {@link FormService#getFormField(Form,Concept,Collection<QFormField;>,null)}
 	 */
 	@Test
-	public void shouldGetFormFieldsByFormAndConcept() throws Exception {
+	@Verifies(value = "should ignore formFields passed to ignoreFormFields", method = "getFormField(Form,Concept,Collection<QFormField;>,null)")
+	public void getFormField_shouldIgnoreFormFieldsPassedToIgnoreFormFields() throws Exception {
 		
 		executeDataSet(INITIAL_FIELDS_XML);
 		executeDataSet("org/openmrs/api/include/FormServiceTest-formFields.xml");
 		
-		FormService formService = Context.getFormService();
-		
-		Form form = new Form(1);
-		Concept concept = new Concept(1);
-		List<FormField> ignoreFormFields = new Vector<FormField>();
-		
-		// test that a null ignoreFormFields doens't error out
-		FormField ff = formService.getFormField(form, concept, null, false);
-		assertNotNull(ff);
-		
-		ff = formService.getFormField(form, concept);
-		assertNotNull(ff);
-		
-		// test a non existent concept
-		assertNull(formService.getFormField(form, new Concept(293934)));
-		
-		// test a non existent form
-		assertNull(formService.getFormField(new Form(12343), new Concept(293934)));
+		FormField ff = Context.getFormService().getFormField(new Form(1), new Concept(1));
+		assertNotNull(ff); // sanity check
 		
 		// test that the first formfield is ignored when a second fetch
 		// is done on the same form and same concept
+		List<FormField> ignoreFormFields = new Vector<FormField>();
 		ignoreFormFields.add(ff);
-		FormField ff2 = formService.getFormField(form, concept, ignoreFormFields, false);
+		FormField ff2 = Context.getFormService().getFormField(new Form(1), new Concept(1), ignoreFormFields, false);
 		assertNotNull(ff2);
 		assertNotSame(ff, ff2);
 		
 	}
 	
 	/**
-	 * Make sure that multiple forms are returned if a field is on a form more than once
-	 * 
-	 * @verifies {@link 
-	 *           FormService#getForms(String,Boolean,Collection<QEncounterType;>,Boolean,Collection
-	 *           <QFormField;>,Collection<QFormField;>,Collection<QField;>)} test = should get
-	 *           multiple of the same form by field
+	 * @see {@link FormService#getFormField(Form,Concept,Collection<QFormField;>,null)}
 	 */
 	@Test
+	@Verifies(value = "should not fail with null ignoreFormFields argument", method = "getFormField(Form,Concept,Collection<QFormField;>,null)")
+	public void getFormField_shouldNotFailWithNullIgnoreFormFieldsArgument() throws Exception {
+		// test that a null ignoreFormFields doesn't error out
+		FormField ff = Context.getFormService().getFormField(new Form(1), new Concept(3), null, false);
+		assertNotNull(ff);
+	}
+	
+	/**
+	 * Make sure that multiple forms are returned if a field is on a form more than once
+	 * 
+	 * @see {@link FormService#getForms(String, Boolean, java.util.Collection, Boolean, java.util.Collection, java.util.Collection, java.util.Collection) 
+	 */
+	@Test
+	@Verifies(value = "should get multiple of the same form by field", method = "getForms(String,Boolean,Collection,Boolean,Collection,Collection,Collection)")
 	public void getForms_shouldGetMultipleOfTheSameFormByField() throws Exception {
 		executeDataSet(INITIAL_FIELDS_XML);
 		executeDataSet("org/openmrs/api/include/FormServiceTest-formFields.xml");
@@ -339,9 +241,10 @@ public class FormServiceTest extends BaseContextSensitiveTest {
 	}
 	
 	/**
-	 * @verifies {@link FormService#saveFieldType(FieldType)} test = should create new field type
+	 * @see {@link FormService#saveFieldType(FieldType)}
 	 */
 	@Test
+	@Verifies(value = "should create new field type", method = "saveFieldType(FieldType)")
 	public void saveFieldType_shouldCreateNewFieldType() throws Exception {
 		FieldType fieldType = new FieldType();
 		
@@ -357,10 +260,10 @@ public class FormServiceTest extends BaseContextSensitiveTest {
 	}
 	
 	/**
-	 * @verifies {@link FormService#saveFieldType(FieldType)} test = should update existing field
-	 *           type
+	 * @see {@link FormService#saveFieldType(FieldType)}
 	 */
 	@Test
+	@Verifies(value = "should update existing field type", method = "saveFieldType(FieldType)")
 	public void saveFieldType_shouldUpdateExistingFieldType() throws Exception {
 		FormService formService = Context.getFormService();
 		
@@ -375,4 +278,78 @@ public class FormServiceTest extends BaseContextSensitiveTest {
 		Assert.assertEquals("SOME OTHER NEW NAME", refetchedFieldType.getName());
 	}
 	
+	/**
+	 * @see {@link FormService#duplicateForm(Form)}
+	 */
+	@Test
+	@Verifies(value = "should clear changed details and update creation details", method = "duplicateForm(Form)")
+	public void duplicateForm_shouldClearChangedDetailsAndUpdateCreationDetails() throws Exception {
+		FormService formService = Context.getFormService();
+		Form form = formService.getForm(1);
+		
+		Form dupForm = formService.duplicateForm(form);
+		Assert.assertNull(dupForm.getChangedBy());
+		Assert.assertNull(dupForm.getDateChanged());
+		Assert.assertEquals(Context.getAuthenticatedUser(), dupForm.getCreator());
+		long oneMinuteDelta = 60 * 1000;
+		Assert.assertEquals(new Date().getTime(), dupForm.getDateCreated().getTime(), oneMinuteDelta);
+	}
+	
+	/**
+	 * @see {@link FormService#getFormField(Form,Concept,Collection<QFormField;>,null)}
+	 */
+	@Test
+	@Verifies(value = "should simply return null for nonexistent concepts", method = "getFormField(Form,Concept,Collection<QFormField;>,null)")
+	public void getFormField_shouldSimplyReturnNullForNonexistentConcepts() throws Exception {
+		// test a non existent concept
+		assertNull(Context.getFormService().getFormField(new Form(1), new Concept(293934)));
+	}
+	
+	/**
+	 * @see {@link FormService#getFormField(Form,Concept,Collection<QFormField;>,null)}
+	 */
+	@Test
+	@Verifies(value = "should simply return null for nonexistent forms", method = "getFormField(Form,Concept,Collection<QFormField;>,null)")
+	public void getFormField_shouldSimplyReturnNullForNonexistentForms() throws Exception {
+		// test a non existent form
+		assertNull(Context.getFormService().getFormField(new Form(12343), new Concept(293934)));
+	}
+	
+	/**
+	 * @see {@link FormService#duplicateForm(Form)}
+	 */
+	@Test
+	@Verifies(value = "should give a new uuid to the duplicated form", method = "duplicateForm(Form)")
+	public void duplicateForm_shouldGiveANewUuidToTheDuplicatedForm() throws Exception {
+		FormService formService = Context.getFormService();
+		Form form = formService.getForm(1);
+		String originalUUID = form.getUuid();
+		
+		Form dupForm = formService.duplicateForm(form);
+		Assert.assertNotNull(dupForm.getUuid());
+		Assert.assertNotSame(originalUUID, dupForm.getUuid());
+	}
+	
+	/**
+	 * @see {@link FormService#saveFormField(FormField)}
+	 */
+	@Test
+	@Verifies(value = "should propagate save to the Field property on the given FormField", method = "saveFormField(FormField)")
+	public void saveFormField_shouldPropagateSaveToTheFieldPropertyOnTheGivenFormField() throws Exception {
+		// create a new Field
+		Field field = new Field();
+		field.setName("This is a new field");
+		field.setDescription("It should be saved along with the formField");
+		
+		// put that field on a new FormField.
+		FormField formField = new FormField();
+		formField.setField(field);
+		formField.setForm(new Form(1));
+		
+		// save the FormField
+		Context.getFormService().saveFormField(formField);
+		
+		// the uuid should be set by this method so that the field can be saved successfully
+		Assert.assertNotNull(field.getUuid());
+	}
 }

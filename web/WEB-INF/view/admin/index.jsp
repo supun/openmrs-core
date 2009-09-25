@@ -39,7 +39,7 @@
 				</div>
 			</openmrs:hasPrivilege>
 			
-			<openmrs:hasPrivilege privilege="View Patients,Manage Tribes,Manage Identifier Types">
+			<openmrs:hasPrivilege privilege="View Patients,Manage Identifier Types">
 				<div class="adminMenuList">
 					<h4><spring:message code="Patient.header"/></h4>
 						<%@ include file="patients/localHeader.jsp" %>
@@ -105,11 +105,11 @@
 						<%@ include file="forms/localHeader.jsp" %>
 				</div>
 			</openmrs:hasPrivilege>
-
-			<openmrs:hasPrivilege privilege="Run Reports,Manage Reports,View Reports,View Data Exports">
+			
+			<openmrs:hasPrivilege privilege="View HL7 Inbound Messages">
 				<div class="adminMenuList">
-					<h4><spring:message code="Report.header"/></h4>
-						<%@ include file="reports/localHeader.jsp" %>
+					<h4><spring:message code="Hl7Messages.header"/></h4>
+						<%@ include file="hl7/localHeader.jsp" %>
 				</div>
 			</openmrs:hasPrivilege>
 			

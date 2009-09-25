@@ -13,6 +13,7 @@
  */
 package org.openmrs.api.db;
 
+import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -25,8 +26,12 @@ import org.openmrs.test.Verifies;
 
 /**
  * This class tests the {@link ContextDAO} linked to from the Context. Currently that file is the
- * {@link HibernateContextDAO} So far we have thoroughly analyzed: public User authenticate(String,
- * String) on 21/Aug/2008
+ * {@link HibernateContextDAO}.<br/>
+ * <br/>
+ * So far we have thoroughly analyzed:
+ * <ul>
+ * <li>public User authenticate(String, String) on 21/Aug/2008</li>
+ * </ul>
  */
 public class ContextDAOTest extends BaseContextSensitiveTest {
 	
@@ -39,6 +44,7 @@ public class ContextDAOTest extends BaseContextSensitiveTest {
 	 * @throws Exception
 	 */
 	@Before
+	@Verifies(value = "should ", method = "authenticate(String,String)")
 	public void runExtraSetup() throws Exception {
 		executeDataSet("org/openmrs/api/db/include/contextDAOTest.xml");
 		
@@ -50,133 +56,141 @@ public class ContextDAOTest extends BaseContextSensitiveTest {
 	}
 	
 	/**
-	 * @verifies {@link ContextDAO#authenticate(String, String)} test = should authenticate given
-	 *           username and password
+	 * Methods in this class might authenticate with a different user, so log that user out after
+	 * this whole junit class is done.
+	 */
+	@AfterClass
+	public static void logOutAfterThisTest() {
+		Context.logout();
+	}
+	
+	/**
+	 * @see {@link ContextDAO#authenticate(String,String)}
 	 */
 	@Test
+	@Verifies(value = "should authenticateGivenUsernameAndPassword", method = "authenticate(String,String)")
 	public void authenticate_shouldAuthenticateGivenUsernameAndPassword() throws Exception {
 		User u = dao.authenticate("admin", "test");
 		Assert.assertEquals("Should be the admin user", "admin", u.getUsername());
 	}
 	
 	/**
-	 * @verifies {@link ContextDAO#authenticate(String, String)} test = should authenticate given
-	 *           systemId and password
+	 * @see {@link ContextDAO#authenticate(String,String)}
 	 */
 	@Test
+	@Verifies(value = "should authenticateGivenSystemIdAndPassword", method = "authenticate(String,String)")
 	public void authenticate_shouldAuthenticateGivenSystemIdAndPassword() throws Exception {
 		User u = dao.authenticate("1-8", "test");
 		Assert.assertEquals("Should be the 1-8 user", "1-8", u.getSystemId());
 	}
 	
 	/**
-	 * @verifies {@link ContextDAO#authenticate(String, String)} test = should authenticate given
-	 *           systemId without hyphen and password Fixed bug #982
+	 * Fixed bug #982
+	 * 
+	 * @see {@link ContextDAO#authenticate(String,String)}
 	 */
 	@Test
+	@Verifies(value = "should authenticateGivenSystemIdWithoutHyphenAndPassword", method = "authenticate(String,String)")
 	public void authenticate_shouldAuthenticateGivenSystemIdWithoutHyphenAndPassword() throws Exception {
 		User u = dao.authenticate("18", "test");
 		Assert.assertEquals("Should be the 1-8 user", "1-8", u.getSystemId());
 	}
 	
 	/**
-	 * @verifies {@link ContextDAO#authenticate(String, String)} test = should not authenticate
-	 *           given username and incorrect password
+	 * @see {@link ContextDAO#authenticate(String,String)}
 	 */
 	@Test(expected = ContextAuthenticationException.class)
+	@Verifies(value = "should notAuthenticateGivenUsernameAndIncorrectPassword", method = "authenticate(String,String)")
 	public void authenticate_shouldNotAuthenticateGivenUsernameAndIncorrectPassword() throws Exception {
 		dao.authenticate("admin", "wrong");
 	}
 	
 	/**
-	 * @verifies {@link ContextDAO#authenticate(String, String)} test = should not authenticate
-	 *           given systemId and incorrect password
+	 * @see {@link ContextDAO#authenticate(String,String)}
 	 */
 	@Test(expected = ContextAuthenticationException.class)
+	@Verifies(value = "should notAuthenticateGivenSystemIdAndIncorrectPassword", method = "authenticate(String,String)")
 	public void authenticate_shouldNotAuthenticateGivenSystemIdAndIncorrectPassword() throws Exception {
 		dao.authenticate("1-8", "wrong");
 	}
 	
 	/**
-	 * @verifies {@link ContextDAO#authenticate(String, String)} test = should not authenticate
-	 *           given incorrect username
+	 * @see {@link ContextDAO#authenticate(String,String)}
 	 */
 	@Test(expected = ContextAuthenticationException.class)
+	@Verifies(value = "should notAuthenticateGivenIncorrectUsername", method = "authenticate(String,String)")
 	public void authenticate_shouldNotAuthenticateGivenIncorrectUsername() throws Exception {
 		dao.authenticate("administrator", "test");
 	}
 	
 	/**
-	 * @verifies {@link ContextDAO#authenticate(String, String)} test = should not authenticate
-	 *           given incorrect systemId
+	 * @see {@link ContextDAO#authenticate(String,String)}
 	 */
 	@Test(expected = ContextAuthenticationException.class)
+	@Verifies(value = "should notAuthenticateGivenIncorrectSystemId", method = "authenticate(String,String)")
 	public void authenticate_shouldNotAuthenticateGivenIncorrectSystemId() throws Exception {
 		dao.authenticate("1-9", "test");
 	}
 	
 	/**
-	 * @verifies {@link ContextDAO#authenticate(String, String)} test = should not authenticate
-	 *           given null login
+	 * @see {@link ContextDAO#authenticate(String,String)}
 	 */
 	@Test(expected = ContextAuthenticationException.class)
+	@Verifies(value = "should notAuthenticateGivenNullLogin", method = "authenticate(String,String)")
 	public void authenticate_shouldNotAuthenticateGivenNullLogin() throws Exception {
 		dao.authenticate(null, "test");
 	}
 	
 	/**
-	 * @verifies {@link ContextDAO#authenticate(String, String)} test = should not authenticate
-	 *           given empty login
+	 * @see {@link ContextDAO#authenticate(String,String)}
 	 */
 	@Test(expected = ContextAuthenticationException.class)
+	@Verifies(value = "should notAuthenticateGivenEmptyLogin", method = "authenticate(String,String)")
 	public void authenticate_shouldNotAuthenticateGivenEmptyLogin() throws Exception {
 		dao.authenticate("", "test");
 	}
 	
 	/**
-	 * @verifies {@link ContextDAO#authenticate(String, String)} test = should not authenticate when
-	 *           password in database is null
+	 * @see {@link ContextDAO#authenticate(String,String)}
 	 */
 	@Test(expected = ContextAuthenticationException.class)
+	@Verifies(value = "should notAuthenticateWhenPasswordInDatabaseIsNull", method = "authenticate(String,String)")
 	public void authenticate_shouldNotAuthenticateWhenPasswordInDatabaseIsNull() throws Exception {
 		dao.authenticate("admin", null);
 	}
 	
 	/**
-	 * @verifies {@link ContextDAO#authenticate(String, String)} test = should not authenticate
-	 *           given non null password when password in database is null
+	 * @see {@link ContextDAO#authenticate(String,String)}
 	 */
 	@Test(expected = ContextAuthenticationException.class)
+	@Verifies(value = "should notAuthenticateGivenNonNullPasswordWhenPasswordInDatabaseIsNull", method = "authenticate(String,String)")
 	public void authenticate_shouldNotAuthenticateGivenNonNullPasswordWhenPasswordInDatabaseIsNull() throws Exception {
 		dao.authenticate("nullpassword", "password");
 	}
 	
 	/**
-	 * @verifies {@link ContextDAO#authenticate(String, String)} test = should not authenticate
-	 *           given null password when password in database is null
+	 * @see {@link ContextDAO#authenticate(String,String)}
 	 */
 	@Test(expected = ContextAuthenticationException.class)
+	@Verifies(value = "should notAuthenticateGivenNullPasswordWhenPasswordInDatabaseIsNull", method = "authenticate(String,String)")
 	public void authenticate_shouldNotAuthenticateGivenNullPasswordWhenPasswordInDatabaseIsNull() throws Exception {
 		dao.authenticate("nullpassword", null);
 	}
 	
 	/**
-	 * @verifies {@link ContextDAO#authenticate(String, String)} test = should not authenticate when
-	 *           password in database is empty
+	 * @see {@link ContextDAO#authenticate(String,String)}
 	 */
 	@Test(expected = ContextAuthenticationException.class)
+	@Verifies(value = "should notAuthenticateWhenPasswordInDatabaseIsEmpty", method = "authenticate(String,String)")
 	public void authenticate_shouldNotAuthenticateWhenPasswordInDatabaseIsEmpty() throws Exception {
 		dao.authenticate("emptypassword", "");
 	}
 	
 	/**
-	 * This does not use the "expected=Exception" paradigm because it is comparing the actual error
-	 * messages thrown
-	 * 
-	 * @verifies {@link ContextDAO#authenticate(String, String)} test = give identical error
-	 *           messages between username and password mismatch
+	 * @see {@link ContextDAO#authenticate(String,String)}
 	 */
 	@Test()
+	@Verifies(value = "should giveIdenticalErrorMessagesBetweenUsernameAndPasswordMismatch", method = "authenticate(String,String)")
 	public void authenticate_shouldGiveIdenticalErrorMessagesBetweenUsernameAndPasswordMismatch() throws Exception {
 		User user = dao.authenticate("admin", "test");
 		Assert.assertNotNull("This test depends on there being an admin:test user", user);
@@ -203,57 +217,13 @@ public class ContextDAOTest extends BaseContextSensitiveTest {
 		
 		Assert.assertEquals(invalidUsernameErrorMessage, invalidPasswordErrorMessage);
 	}
-
-    /**
-     * #1580: If you type your password wrong, then log in correctly, the API will not lock you out after multiple login attempts in the future
-     * @see {@link ContextDAO#authenticate(String,String)}
-     */
-	@Test(expected = ContextAuthenticationException.class)
-    @Verifies(value = "should pass regression test for 1580", method = "authenticate(String,String)")
-    public void authenticate_shouldPassRegressionTestFor1580() throws Exception {
-		// logout after the base setup
-		Context.logout();
-		
-		// first we fail a login attempt
-		try {
-			dao.authenticate("admin", "not the right password");
-			Assert.fail("Not sure why this username/password combo worked");
-		} catch (ContextAuthenticationException authException) {
-			// pass
-		}
-		
-		// next we log in correctly
-		try {
-			dao.authenticate("admin", "test");
-		}
-		catch (ContextAuthenticationException authException) {
-			Assert.fail("There must be an admin:test user for this test to run properly");
-		}
-		Context.logout();
-		
-		for (int x = 1; x <= 5; x++) {
-			// now we fail several login attempts 
-			try {
-				dao.authenticate("admin", "not the right password");
-				Assert.fail("Not sure why this username/password combo worked");
-			}
-			catch (ContextAuthenticationException authException) {
-				// pass
-			}
-		}
-		
-		// those were the first five, now the sixth request 
-		// (with the same user and right pw) should fail
-		dao.authenticate("admin", "test");
-    }
 	
 	/**
-	 * @verifies {@link ContextDAO#authenticate(String, String)} test = lockout user after five
-	 *           failed attempts
-	 * @throws Exception
+	 * @see {@link ContextDAO#authenticate(String,String)}
 	 */
-	@Test(expected = ContextAuthenticationException.class)
-	public void authenticate_shouldLockoutUserAfterFiveFailedAttempts() throws Exception {
+    @Test
+    @Verifies(value = "should lockout user after eight failed attempts", method = "authenticate(String,String)")
+    public void authenticate_shouldLockoutUserAfterEightFailedAttempts() throws Exception {
 		// logout after the base setup
 		Context.logout();
 		
@@ -268,7 +238,7 @@ public class ContextDAOTest extends BaseContextSensitiveTest {
 		}
 		Context.logout();
 		
-		for (int x = 1; x <= 5; x++) {
+		for (int x = 1; x <= 7; x++) {
 			// try to authenticate with a proper 
 			try {
 				dao.authenticate("admin", "not the right password");
@@ -279,8 +249,73 @@ public class ContextDAOTest extends BaseContextSensitiveTest {
 			}
 		}
 		
-		// those were the first five, now the sixth request 
+		// those were the first seven, now the eigth request 
 		// (with the same user and right pw) should fail
 		dao.authenticate("admin", "test");
 	}
+	
+	/**
+	 * @see {@link ContextDAO#authenticate(String,String)}
+	 */
+	@Test
+	@Verifies(value = "should authenticateWithCorrectHashedPassword", method = "authenticate(String,String)")
+	public void authenticate_shouldAuthenticateWithCorrectHashedPassword() throws Exception {
+		dao.authenticate("correct", "test");
+	}
+	
+	/**
+	 * @see {@link ContextDAO#authenticate(String,String)}
+	 */
+	@Test
+	@Verifies(value = "should authenticateWithIncorrectHashedPassword", method = "authenticate(String,String)")
+	public void authenticate_shouldAuthenticateWithIncorrectHashedPassword() throws Exception {
+		dao.authenticate("incorrect", "test");
+	}
+	
+	/**
+	 * #1580: If you type your password wrong, then log in correctly, the API will not lock you out
+	 * after multiple login attempts in the future
+	 * 
+	 * @see {@link ContextDAO#authenticate(String,String)}
+	 */
+	@Test(expected = ContextAuthenticationException.class)
+	@Verifies(value = "should pass regression test for 1580", method = "authenticate(String,String)")
+	public void authenticate_shouldPassRegressionTestFor1580() throws Exception {
+		// logout after the base setup
+		Context.logout();
+		
+		// first we fail a login attempt
+		try {
+			dao.authenticate("admin", "not the right password");
+			Assert.fail("Not sure why this username/password combo worked");
+		}
+		catch (ContextAuthenticationException authException) {
+			// pass
+		}
+		
+		// next we log in correctly
+		try {
+			dao.authenticate("admin", "test");
+		}
+		catch (ContextAuthenticationException authException) {
+			Assert.fail("There must be an admin:test user for this test to run properly");
+		}
+		Context.logout();
+		
+		for (int x = 1; x <= 8; x++) {
+			// now we fail several login attempts 
+			try {
+				dao.authenticate("admin", "not the right password");
+				Assert.fail("Not sure why this username/password combo worked");
+			}
+			catch (ContextAuthenticationException authException) {
+				// pass
+			}
+		}
+		
+		// those were the first eight, now the ninth request 
+		// (with the same user and right pw) should fail
+		dao.authenticate("admin", "test");
+	}
+	
 }

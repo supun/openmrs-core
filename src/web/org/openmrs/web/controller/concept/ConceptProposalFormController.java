@@ -32,7 +32,6 @@ import org.openmrs.Concept;
 import org.openmrs.ConceptProposal;
 import org.openmrs.ConceptWord;
 import org.openmrs.User;
-import org.openmrs.api.AdministrationService;
 import org.openmrs.api.ConceptService;
 import org.openmrs.api.context.Context;
 import org.openmrs.notification.Alert;
@@ -123,7 +122,6 @@ public class ConceptProposalFormController extends SimpleFormController {
 			String finalText = cp.getFinalText();
 			
 			ConceptService cs = Context.getConceptService();
-			AdministrationService as = Context.getAdministrationService();
 			AlertService alertService = Context.getAlertService();
 			
 			// find the mapped concept
@@ -132,7 +130,7 @@ public class ConceptProposalFormController extends SimpleFormController {
 				c = cs.getConcept(Integer.valueOf(request.getParameter("conceptId")));
 			
 			// all of the proposals to map
-			List<ConceptProposal> allProposals = cs.findMatchingConceptProposals(cp.getOriginalText());
+			List<ConceptProposal> allProposals = cs.getConceptProposals(cp.getOriginalText());
 			
 			// The users to be alerted of this change
 			Set<User> uniqueProposers = new HashSet<User>();
@@ -142,7 +140,7 @@ public class ConceptProposalFormController extends SimpleFormController {
 				uniqueProposers.add(conceptProposal.getCreator());
 				conceptProposal.setFinalText(finalText);
 				conceptProposal.setState(cp.getState());
-				as.mapConceptProposalToConcept(conceptProposal, c);
+				cs.mapConceptProposalToConcept(conceptProposal, c);
 			}
 			
 			String msg = "";
@@ -220,7 +218,7 @@ public class ConceptProposalFormController extends SimpleFormController {
 			defaultVerbose = Context.getAuthenticatedUser().getUserProperty(OpenmrsConstants.USER_PROPERTY_SHOW_VERBOSE);
 			
 			// find all concept proposals with the same originalText
-			matchingProposals = cs.findMatchingConceptProposals(cp.getOriginalText());
+			matchingProposals = cs.getConceptProposals(cp.getOriginalText());
 			
 			// search on part of the originalText to find possible matching concepts
 			String phrase = cp.getOriginalText();

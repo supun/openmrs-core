@@ -19,17 +19,18 @@ import org.simpleframework.xml.Element;
 import org.simpleframework.xml.Root;
 
 /**
- * Parameters are used in a ReportSchema, LogicCriteria, and CohortFromStrategy, etc If an object is
- * parameterizable, it is willing to accept a parameter like this. Examples of a parameter would be
- * "What start date do you want to use?" The value of the parameter would be plugged in when the
- * object is evaluated.
+ * Parameters are used in a ReportSchema, LogicCriteria, and CohortFromStrategy, etc
+ * <p>
+ * If an object is parameterizable, it is willing to accept a parameter like this. Examples of a
+ * parameter would be "What start date do you want to use?" The value of the parameter would be
+ * plugged in when the object is evaluated.
  * 
- * @see ReportModel
  * @see LogicCriteria
- * @see CohortFromStrategy
  * @see Parameterizable
+ * @deprecated see reportingcompatibility module
  */
 @Root(strict = false)
+@Deprecated
 public class Parameter {
 	
 	private static final long serialVersionUID = 12020438439292929L;
@@ -68,7 +69,7 @@ public class Parameter {
 	 * @param clazz The data type of this parameter
 	 * @param defaultValue The value to fill in if nothing provided by the user
 	 */
-	public Parameter(String name, String label, Class clazz, Object defaultValue) {
+	public Parameter(String name, String label, Class<?> clazz, Object defaultValue) {
 		super();
 		this.name = name;
 		this.label = label;

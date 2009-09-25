@@ -17,14 +17,20 @@ import java.util.List;
 import java.util.Set;
 
 import org.openmrs.Person;
+import org.openmrs.PersonAddress;
 import org.openmrs.PersonAttribute;
 import org.openmrs.PersonAttributeType;
+import org.openmrs.PersonName;
 import org.openmrs.Relationship;
 import org.openmrs.RelationshipType;
 
 /**
- * Person-related database functions This is used by the PersonService. This should not be used
- * directly, but rather used through the methods on the PersonService. Use case: <code>
+ * Person-related database functions
+ * <p>
+ * This is used by the PersonService. This should not be used directly, but rather used through the
+ * methods on the PersonService.
+ * <p>
+ * Use case: <code>
  *   PersonService ps = Context.getPersonService();
  *   ps....
  *   
@@ -37,12 +43,12 @@ public interface PersonDAO {
 	
 	/**
 	 * @see org.openmrs.api.PersonService#getSimilarPeople(java.lang.String, java.lang.Integer,
-	 *      java.lang.String)
+	 *      java.lang.String, java.lang.String)
 	 */
-	public Set<Person> getSimilarPeople(String name, Integer birthyear, String gender) throws DAOException;
+	public Set<Person> getSimilarPeople(String name, Integer birthyear, String gender, String personType) throws DAOException;
 	
 	/**
-	 * @see org.openmrs.api.PersonService#getPeople(String, Boolean))
+	 * @see org.openmrs.api.PersonService#getPeople(String, Boolean)
 	 */
 	public List<Person> getPeople(String searchPhrase, Boolean dead) throws DAOException;
 	
@@ -145,4 +151,42 @@ public interface PersonDAO {
 	 * @see org.openmrs.api.PersonService#deleteRelationshipType(org.openmrs.RelationshipType)
 	 */
 	public void deleteRelationshipType(RelationshipType relationshipType) throws DAOException;
+	
+	/**
+	 * Auto generated method comment
+	 * 
+	 * @param uuid
+	 * @return
+	 */
+	public Person getPersonByUuid(String uuid);
+	
+	public PersonAddress getPersonAddressByUuid(String uuid);
+	
+	public PersonAttribute getPersonAttributeByUuid(String uuid);
+	
+	public PersonName getPersonNameByUuid(String uuid);
+	
+	/**
+	 * Auto generated method comment
+	 * 
+	 * @param uuid
+	 * @return
+	 */
+	public Relationship getRelationshipByUuid(String uuid);
+	
+	/**
+	 * Auto generated method comment
+	 * 
+	 * @param uuid
+	 * @return
+	 */
+	public RelationshipType getRelationshipTypeByUuid(String uuid);
+	
+	/**
+	 * Auto generated method comment
+	 * 
+	 * @param uuid
+	 * @return
+	 */
+	public PersonAttributeType getPersonAttributeTypeByUuid(String uuid);
 }

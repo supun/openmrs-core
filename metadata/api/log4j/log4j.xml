@@ -21,11 +21,6 @@
 		<level value="WARN" />
 	</logger>
 	
-	<!-- Hide unnecessary errors logged by Hibernate during unit testing -->
-	<logger name="org.hibernate.tool.hbm2ddl.SchemaExport">
-		<level value="FATAL" />
-	</logger>
-	
 	<logger name="org.hibernate">
 		<level value="ERROR" />
 	</logger>
@@ -49,7 +44,7 @@
 		DEBUG == log all setters & log all getters & log execution time
 	-->
 	<logger name="org.openmrs.api">
-		<level value="WARN" />
+		<level value="INFO" />
 	</logger>
 
 	<logger name="org.apache.fop">

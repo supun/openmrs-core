@@ -15,7 +15,6 @@ package org.openmrs.reporting;
 
 import java.util.Calendar;
 import java.util.Date;
-import java.util.GregorianCalendar;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -31,6 +30,10 @@ import org.openmrs.api.context.Context;
 import org.openmrs.report.EvaluationContext;
 import org.openmrs.util.OpenmrsUtil;
 
+/**
+ * @deprecated see reportingcompatibility module
+ */
+@Deprecated
 public class ProgramStatePatientFilter extends CachingPatientFilter {
 	
 	private Program program;
@@ -74,8 +77,8 @@ public class ProgramStatePatientFilter extends CachingPatientFilter {
 	public String getDescription() {
 		StringBuilder ret = new StringBuilder();
 		
-		boolean currentlyCase = withinLastDays != null && withinLastDays == 0
-		        && (withinLastMonths == null || withinLastMonths == 0);
+		//boolean currentlyCase = withinLastDays != null && withinLastDays == 0
+		//       && (withinLastMonths == null || withinLastMonths == 0);
 		
 		ret.append("Patients in program ");
 		
@@ -145,7 +148,7 @@ public class ProgramStatePatientFilter extends CachingPatientFilter {
 	private Date fromDateHelper() {
 		Date ret = null;
 		if (withinLastDays != null || withinLastMonths != null) {
-			Calendar gc = new GregorianCalendar();
+			Calendar gc = Calendar.getInstance();
 			if (withinLastDays != null)
 				gc.add(Calendar.DAY_OF_MONTH, -withinLastDays);
 			if (withinLastMonths != null)
@@ -160,7 +163,7 @@ public class ProgramStatePatientFilter extends CachingPatientFilter {
 	private Date toDateHelper() {
 		Date ret = null;
 		if (untilDaysAgo != null || untilMonthsAgo != null) {
-			Calendar gc = new GregorianCalendar();
+			Calendar gc = Calendar.getInstance();
 			if (untilDaysAgo != null)
 				gc.add(Calendar.DAY_OF_MONTH, -untilDaysAgo);
 			if (untilMonthsAgo != null)

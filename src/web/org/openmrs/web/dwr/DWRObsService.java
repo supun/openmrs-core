@@ -24,6 +24,7 @@ import javax.servlet.http.HttpServletRequest;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.directwebremoting.WebContextFactory;
 import org.openmrs.Concept;
 import org.openmrs.Encounter;
 import org.openmrs.Location;
@@ -31,8 +32,6 @@ import org.openmrs.Obs;
 import org.openmrs.Person;
 import org.openmrs.api.context.Context;
 import org.openmrs.util.OpenmrsUtil;
-
-import uk.ltd.getahead.dwr.WebContextFactory;
 
 /**
  *
@@ -126,7 +125,7 @@ public class DWRObsService {
 			}
 			catch (ParseException e) {
 				log.error("Error parsing date ... " + obsDate);
-				throw new DWRException("Observation date has format error: " + obsDate);
+				throw e;
 			}
 		}
 		
@@ -171,7 +170,7 @@ public class DWRObsService {
 				}
 				catch (ParseException e) {
 					log.warn("Date value has format error: " + obsDateValue, e);
-					throw new DWRException("Date value: '" + obsDateValue + "' has format error: " + e.getMessage());
+					throw e;
 				}
 			}
 			obs.setValueDatetime(obsDateValue) ;

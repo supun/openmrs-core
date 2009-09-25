@@ -32,7 +32,6 @@ import org.openmrs.web.WebConstants;
 import org.springframework.beans.propertyeditors.CustomNumberEditor;
 import org.springframework.validation.BindException;
 import org.springframework.validation.Errors;
-import org.springframework.validation.ObjectError;
 import org.springframework.web.bind.ServletRequestDataBinder;
 import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.mvc.SimpleFormController;
@@ -78,7 +77,7 @@ public class PatientIdentifierTypeFormController extends SimpleFormController {
 			
 			identifierType.setCheckDigit(identifierType.hasValidator());
 			
-			Context.getAdministrationService().updatePatientIdentifierType(identifierType);
+			Context.getPatientService().savePatientIdentifierType(identifierType);
 			httpSession.setAttribute(WebConstants.OPENMRS_MSG_ATTR, "PatientIdentifierType.saved");
 			toReturn = new ModelAndView(new RedirectView(getSuccessView()));
 			

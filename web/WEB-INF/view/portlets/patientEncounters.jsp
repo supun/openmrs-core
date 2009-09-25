@@ -1,27 +1,85 @@
 <%@ include file="/WEB-INF/template/include.jsp" %>
 <openmrs:htmlInclude file="/scripts/easyAjax.js" />
 
+<openmrs:htmlInclude file="/scripts/jquery/jquery-1.3.2.min.js" />
+<openmrs:htmlInclude file="/scripts/jquery/dataTables/css/dataTables.css" />
+<openmrs:htmlInclude file="/scripts/jquery/dataTables/js/jquery.dataTables.min.js" />
+
+<openmrs:htmlInclude file="/scripts/jquery-ui/js/jquery-ui-1.7.2.custom.min.js" />
+<openmrs:htmlInclude file="/scripts/jquery-ui/css/redmond/jquery-ui-1.7.2.custom.css" />
+
+<script type="text/javascript">
+	var $j = jQuery.noConflict(); 
+</script>
+
 <%--
 Parameters
 	model.num == \d  limits the number of encounters shown to the value given
 	model.hideHeader == 'true' hides the 'All Encounter' header above the table listing
+	model.hideFormEntry == 'true' does not show the "Enter Forms" popup no matter what the gp has
+	model.formEntryReturnUrl == what URL to return to when a form has been cancelled or successfully filled out
 --%>
 
 <div id="encounterPortlet">
 
-	<openmrs:globalProperty var="viewEncounterWhere" key="dashboard.encounters.viewWhere" defaultValue="newWindow"/>
+	<openmrs:globalProperty var="enableFormEntryInEncounters" key="FormEntry.enableOnEncounterTab" defaultValue="false"/>
+	
+	<div id="displayEncounterPopup"> 
+ 		        <div id="displayEncounterPopupLoading"><spring:message code="general.loading"/></div> 
+ 		        <iframe id="displayEncounterPopupIframe" width="100%" height="100%" marginWidth="0" marginHeight="0" frameBorder="0" scrolling="auto"></iframe> 
+ 		</div> 
+ 		 
+ 		<script type="text/javascript"> 
+			$j(document).ready(function() { 
+				$j('#displayEncounterPopup').dialog({ 
+					title: 'dynamic', 
+					autoOpen: false, 
+					draggable: false, 
+					resizable: false, 
+					width: '95%', 
+					modal: true, 
+					open: function(a, b) { $j('#displayEncounterPopupLoading').show(); } 
+				});
+				$j("#displayEncounterPopupIframe").load(function() { $j('#displayEncounterPopupLoading').hide(); });
+			}); 
+ 		 
+			function loadUrlIntoEncounterPopup(title, urlToLoad) { 
+				$j("#displayEncounterPopupIframe").attr("src", urlToLoad); 
+				$j('#displayEncounterPopup') 
+					.dialog('option', 'title', title) 
+					.dialog('option', 'height', $j(window).height() - 50)  
+					.dialog('open'); 
+			}
+ 	</script>
 
-	<%--
-	<openmrs:hasPrivilege privilege="Add Forms">
-		<div id="encounterForms">
-			<div class="boxHeader">Forms</div>
-			<div class="box">
-				<openmrs:portlet url="patientFormsSelect" id="patientDashboardFormsSelect" patientId="${patient.patientId}"/>
-				<br/>
-			</div>
-		</div>
-	</openmrs:hasPrivilege>
-	--%>
+	<c:if test="${enableFormEntryInEncounters && !model.hideFormEntry}">
+		<openmrs:hasPrivilege privilege="Form Entry">
+			<div id="formEntryDialog">
+				<openmrs:portlet url="personFormEntry" personId="${patient.personId}" id="encounterTabFormEntryPopup" parameters="showLastThreeEncounters=false|returnUrl=${model.formEntryReturnUrl}"/>
+ 			</div>
+
+			<button class="showFormEntryDialog" style="margin-left: 2em; margin-bottom: 0.5em"><spring:message code="FormEntry.fillOutForm"/></button>
+			
+			<script type="text/javascript">
+				$j(document).ready(function() {
+					$j("#formEntryDialog").dialog({
+						title: '<spring:message code="FormEntry.fillOutForm" javaScriptEscape="true"/>',
+						autoOpen: false,
+						draggable: false,
+						resizable: false,
+						width: '90%',
+						modal: true
+					})
+					$j("#displayEncounterPopupIframe").load(function() { $j('#displayEncounterPopupLoading').hide(); });
+				});
+
+				$j('button.showFormEntryDialog').click(function() {
+					$j('#formEntryDialog').dialog('open');
+				});
+			</script>
+
+ 		</openmrs:hasPrivilege>
+ 	</c:if>
 	
 	<openmrs:hasPrivilege privilege="View Encounters">
 		<openmrs:globalProperty key="dashboard.encounters.showViewLink" var="showViewLink" defaultValue="false"/>
@@ -33,7 +91,7 @@ Parameters
 					<c:if test="${fn:length(model.patientEncounters) > 0}">
 						<c:if test="${empty model.hideHeader}">
 							<tr>
-								<th colspan="8" class="tableTitle">All Encounters</th>
+								<th colspan="8" class="tableTitle"><spring:message code="Portlet.patientEncounter.allEncounter"/></th>
 							</tr>
 						</c:if>
 						<tr>
@@ -52,19 +110,31 @@ Parameters
 						</tr>
 						<openmrs:forEachEncounter encounters="${model.patientEncounters}" sortBy="encounterDatetime" descending="true" var="enc" num="${model.num}">
 							<tr class="<c:choose><c:when test="${count % 2 == 0}">evenRow</c:when><c:otherwise>oddRow</c:otherwise></c:choose>">
-								<c:set var="showLink" value="${fn:length(enc.allObs) > 0 && showViewLink == 'true'}"/>	
 								<td class="encounterEdit" align="center">
 									<c:if test="${showEditLink == 'true'}">
 										<openmrs:hasPrivilege privilege="Edit Encounters">
-											<a href="${pageContext.request.contextPath}/admin/encounters/encounter.form?encounterId=${enc.encounterId}">
+											<c:set var="editUrl" value="${pageContext.request.contextPath}/admin/encounters/encounter.form?encounterId=${enc.encounterId}"/>
+											<c:if test="${ model.formToEditUrlMap[enc.form] != null }">
+												<c:url var="editUrl" value="${model.formToEditUrlMap[enc.form]}">
+													<c:param name="encounterId" value="${enc.encounterId}"/>
+												</c:url>
+											</c:if>
+											<a href="${editUrl}">
 												<img src="${pageContext.request.contextPath}/images/edit.gif" title="<spring:message code="general.edit"/>" border="0" align="top" />
 											</a>
 										</openmrs:hasPrivilege>
 									</c:if>
 								</td>
 								<td class="encounterView" align="center">
-									<c:if test="${showLink}">
-										<a href="#encounterId=${enc.encounterId}" onClick="handleGetObservations('${enc.encounterId}'); return false;">
+									<c:if test="${showViewLink}">
+										<c:set var="viewEncounterUrl" value="${pageContext.request.contextPath}/admin/encounters/encounterDisplay.list?encounterId=${enc.encounterId}"/>
+										<c:if test="${ model.formToViewUrlMap[enc.form] != null }">
+											<c:url var="viewEncounterUrl" value="${model.formToViewUrlMap[enc.form]}">
+												<c:param name="encounterId" value="${enc.encounterId}"/>
+												<c:param name="inPopup" value="true"/>
+											</c:url>
+										</c:if>
+										<a href="javascript:void(0)" onClick="loadUrlIntoEncounterPopup('<openmrs:format encounter="${enc}"/>', '${viewEncounterUrl}'); return false;">
 											<img src="${pageContext.request.contextPath}/images/file.gif" title="<spring:message code="general.view"/>" border="0" align="top" />
 										</a>
 									</c:if>
@@ -90,78 +160,6 @@ Parameters
 		</div>
 	</openmrs:hasPrivilege>
 	
-	<%--
-	<openmrs:hasPrivilege privilege="View Observations">
-		<div id="encounterListObs" >
-			<div class="boxHeader"><spring:message code="Obs" /></div>		
-			<div class="box">
-				<table  cellspacing="0" cellpadding="2" class="patientEncounters">
-					<thead>
-						<tr>
-							<th>Encounter</th>
-							<th>Concept</th>
-							<th>Value</th>
-							<th>Obs Datetime</th>
-						</tr>
-					
-					</thead>
-					<tbody id="obsTable">
-					</tbody>
-				</table>			
-			</div>
-		</div>
-	</openmrs:hasPrivilege>
-	--%>
-
-	<%--
-	<openmrs:hasPrivilege privilege="Add Observations,Edit Observations">
-		<div id="encounterAddObs" >
-			<div class="boxHeader"><spring:message code="Obs.add" /></div>		
-			<div class="box">
-				<form method="post" id="obsForm">
-					<input type="hidden" id="patientId" name="patientId" value="${model.patientId}" />
-					<table  cellspacing="0" cellpadding="2" class="patientEncounters">
-	
-						<tr>
-							<td>
-								<spring:message code="Obs.encounter"/>
-								<select id="encounterId" name="encounterId">
-									<openmrs:forEachEncounter encounters="${model.patientEncounters}" sortBy="encounterDatetime" descending="true" var="enc">
-										<option value='${enc.encounterId}'>
-											Encounter #${enc.encounterId} 
-											(
-											<openmrs:formatDate date="${enc.encounterDatetime}" type="small" />
-									 		@ ${enc.location.name}
-									 		)
-									 	</option>
-									</openmrs:forEachEncounter>							
-								</select>
-							</td>
-							<td>
-								<spring:message code="Obs.concept"/>
-								<% -- <openmrs:fieldGen type="org.openmrs.Concept" formFieldName="conceptId" val="" parameters="noBind=true|fieldLength=12" /> -- %>
-								<select id="conceptId" name="conceptId">
-									<option value="<openmrs:globalProperty key="concept.weight" defaultValue="" />"><spring:message code="Patient.weight"/></option>
-									<option value="<openmrs:globalProperty key="concept.cd4_count" defaultValue="" />"><spring:message code="Patient.cd4"/></option>
-								</select>
-							</td>
-							<td>
-								<spring:message code="general.value"/>
-								<openmrs:fieldGen type="java.lang.String" formFieldName="valueText" val="" parameters="noBind=true|fieldLength=12" />
-							</td>							
-							<td>
-								<spring:message code="Obs.datetime"/>
-								<openmrs:fieldGen type="java.util.Date" formFieldName="obsDate" val="" parameters="noBind=true" />
-							</td>							
-							<td><input type="button" value="<spring:message code="general.add"/>" onClick="handleAddObs('encounterId', 'conceptId', 'valueText', 'obsDate')"></td>
-						</tr>									
-					</table>
-				</form>
-			</div>
-		</div>
-	</openmrs:hasPrivilege>
-	--%>
-	
 	<openmrs:htmlInclude file="/dwr/interface/DWRObsService.js" />
 	<openmrs:htmlInclude file="/dwr/interface/DWRPatientService.js" />
 	<openmrs:htmlInclude file="/dwr/engine.js" />
@@ -183,7 +181,6 @@ Parameters
 			<%--
 			DWRObsService.getObservations(encounterId, handleRefreshObsData);
 			document.getElementById("encounterId").value = encounterId;
-			--%>
 			<c:choose>
 				<c:when test="${viewEncounterWhere == 'newWindow'}">
 					var formWindow = window.open('${pageContext.request.contextPath}/admin/encounters/encounterDisplay.list?encounterId=' + encounterId, '${enc.encounterId}', 'toolbar=no,width=800,height=600,resizable=yes,scrollbars=yes');
@@ -197,6 +194,8 @@ Parameters
 					window.location = '${pageContext.request.contextPath}/admin/encounters/encounterDisplay.list?encounterId=' + encounterId;
 				</c:otherwise>
 			</c:choose>
+			--%>
+			loadUrlIntoEncounterPopup('Test title', '${pageContext.request.contextPath}/admin/encounters/encounterDisplay.list?encounterId=' + encounterId);
 		}
 
 		<%--
@@ -206,12 +205,13 @@ Parameters
 		--%>
 
 		function handleRefreshTable(id, data, func) {
-			DWRUtil.removeAllRows(id);
-			DWRUtil.addRows(id, data, func, {
+			dwr.util.removeAllRows(id);
+			dwr.util.addRows(id, data, func, {
 				cellCreator:function(options) {
 				    var td = document.createElement("td");
 				    return td;
-				}
+				},
+				escapeHtml:false
 			});
 		}
 
@@ -227,10 +227,10 @@ Parameters
 		}
 		
 		function handleAddObs(encounterField, conceptField, valueTextField, obsDateField) {
-			var encounterId = DWRUtil.getValue($(encounterField));
-			var conceptId = DWRUtil.getValue($(conceptField));
-			var valueText = DWRUtil.getValue($(valueTextField));
-			var obsDate = DWRUtil.getValue($(obsDateField));
+			var encounterId = dwr.util.getValue($(encounterField));
+			var conceptId = dwr.util.getValue($(conceptField));
+			var valueText = dwr.util.getValue($(valueTextField));
+			var obsDate = dwr.util.getValue($(obsDateField));
 			var patientId = ${model.patient.patientId};			
 			//alert("Adding obs for encounter (" + encounterId + "): " + conceptId + " = " + valueText + " " + obsDate);  
 			DWRObsService.createObs(patientId, encounterId, conceptId, valueText, obsDate);

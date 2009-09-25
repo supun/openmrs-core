@@ -50,6 +50,9 @@ public interface AlertService extends OpenmrsService {
 	 * @param alert the Alert object to save
 	 * @return The saved alert object
 	 * @throws APIException
+	 * @should save simple alert with one user
+	 * @should save alerts by role
+	 * @should assign uuid to alert
 	 */
 	@Authorized(OpenmrsConstants.PRIV_MANAGE_ALERTS)
 	public Alert saveAlert(Alert alert) throws APIException;
@@ -113,7 +116,7 @@ public interface AlertService extends OpenmrsService {
 	/**
 	 * Find all alerts for a user that have not expired
 	 * 
-	 * @param User
+	 * @param user
 	 * @return alerts that are unread _or_ read that have not expired
 	 * @see #getAlerts(User, boolean, boolean)
 	 * @throws APIException

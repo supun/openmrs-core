@@ -14,17 +14,18 @@
 package org.openmrs;
 
 import java.util.Collections;
-import java.util.Date;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
+import org.openmrs.api.APIException;
 import org.openmrs.api.context.Context;
 
 /**
- * Location
- * 
- * @version 1.0
+ * A Location object usually represents a physical place care has taken place. A hospital, a room, a
+ * clinic, a district, etc are all examples of Locations.
  */
-public class Location implements java.io.Serializable, Attributable<Location> {
+public class Location extends BaseOpenmrsMetadata implements java.io.Serializable, Attributable<Location> {
 	
 	public static final long serialVersionUID = 455634L;
 	
@@ -33,10 +34,6 @@ public class Location implements java.io.Serializable, Attributable<Location> {
 	// Fields
 	
 	private Integer locationId;
-	
-	private String name;
-	
-	private String description;
 	
 	private String address1;
 	
@@ -64,17 +61,11 @@ public class Location implements java.io.Serializable, Attributable<Location> {
 	
 	private String subregion;
 	
-	private User creator;
+	private Location parentLocation;
 	
-	private Date dateCreated;
+	private Set<Location> childLocations;
 	
-	private User retiredBy;
-	
-	private Boolean retired = Boolean.FALSE;
-	
-	private Date dateRetired;
-	
-	private String retireReason;
+	private Set<LocationTag> tags;
 	
 	// Constructors
 	
@@ -99,19 +90,19 @@ public class Location implements java.io.Serializable, Attributable<Location> {
 			if (this.getLocationId() != null && loc.getLocationId() != null)
 				return (this.getLocationId().equals(loc.getLocationId()));
 			/*
-			return (this.getName().equals(loc.getName()) &&
-					this.getDescription().equals(loc.getDescription()) &&
-					this.getAddress1().equals(loc.getAddress1()) &&
-					this.getAddress2().equals(loc.getAddress2()) &&
-					this.getCityVillage().equals(loc.getCityVillage()) &&
-					this.getStateProvince().equals(loc.getStateProvince()) &&
-					this.getPostalCode().equals(loc.getPostalCode()) &&
-					this.getCountry().equals(loc.getCountry()) &&
-					this.getLatitude().equals(loc.getLatitude()) &&
-					this.getLongitude().equals(loc.getLongitude()));
-			*/
+			 * return (this.getName().equals(loc.getName()) &&
+			 * this.getDescription().equals(loc.getDescription()) &&
+			 * this.getAddress1().equals(loc.getAddress1()) &&
+			 * this.getAddress2().equals(loc.getAddress2()) &&
+			 * this.getCityVillage().equals(loc.getCityVillage()) &&
+			 * this.getStateProvince().equals(loc.getStateProvince()) &&
+			 * this.getPostalCode().equals(loc.getPostalCode()) &&
+			 * this.getCountry().equals(loc.getCountry()) &&
+			 * this.getLatitude().equals(loc.getLatitude()) &&
+			 * this.getLongitude().equals(loc.getLongitude()));
+			 */
 		}
-		return false;
+		return obj == this;
 	}
 	
 	public int hashCode() {
@@ -179,48 +170,6 @@ public class Location implements java.io.Serializable, Attributable<Location> {
 	}
 	
 	/**
-	 * @return Returns the creator.
-	 */
-	public User getCreator() {
-		return creator;
-	}
-	
-	/**
-	 * @param creator The creator to set.
-	 */
-	public void setCreator(User creator) {
-		this.creator = creator;
-	}
-	
-	/**
-	 * @return Returns the dateCreated.
-	 */
-	public Date getDateCreated() {
-		return dateCreated;
-	}
-	
-	/**
-	 * @param dateCreated The dateCreated to set.
-	 */
-	public void setDateCreated(Date dateCreated) {
-		this.dateCreated = dateCreated;
-	}
-	
-	/**
-	 * @return Returns the description.
-	 */
-	public String getDescription() {
-		return description;
-	}
-	
-	/**
-	 * @param description The description to set.
-	 */
-	public void setDescription(String description) {
-		this.description = description;
-	}
-	
-	/**
 	 * @return Returns the latitude.
 	 */
 	public String getLatitude() {
@@ -263,20 +212,6 @@ public class Location implements java.io.Serializable, Attributable<Location> {
 	}
 	
 	/**
-	 * @return Returns the name.
-	 */
-	public String getName() {
-		return name;
-	}
-	
-	/**
-	 * @param name The name to set.
-	 */
-	public void setName(String name) {
-		this.name = name;
-	}
-	
-	/**
 	 * @return Returns the postalCode.
 	 */
 	public String getPostalCode() {
@@ -305,7 +240,7 @@ public class Location implements java.io.Serializable, Attributable<Location> {
 	}
 	
 	public String toString() {
-		return name;
+		return getName();
 	}
 	
 	/**
@@ -432,59 +367,203 @@ public class Location implements java.io.Serializable, Attributable<Location> {
 	}
 	
 	/**
-	 * @return the retiredBy
+	 * @return Returns the parentLocation.
+	 * @since 1.5
 	 */
-	public User getRetiredBy() {
-		return retiredBy;
+	public Location getParentLocation() {
+		return parentLocation;
 	}
 	
 	/**
-	 * @param retiredBy the retiredBy to set
+	 * @param parentLocationId The parentLocation to set.
+	 * @since 1.5
 	 */
-	public void setRetiredBy(User retiredBy) {
-		this.retiredBy = retiredBy;
+	public void setParentLocation(Location parentLocationId) {
+		this.parentLocation = parentLocationId;
 	}
 	
 	/**
-	 * @return the retired
+	 * @return Returns the childLocations.
+	 * @since 1.5
 	 */
-	public Boolean getRetired() {
-		return retired;
+	public Set<Location> getChildLocations() {
+		return childLocations;
 	}
 	
 	/**
-	 * @param retired the retired to set
+	 * Returns all childLocations where child.locationId = this.locationId.
+	 * 
+	 * @param includeRetired specifies whether or not to include voided childLocations
+	 * @return Returns a Set<Location> of all the childLocations.
+	 * @since 1.5
+	 * @should return a set of locations
 	 */
-	public void setRetired(Boolean retired) {
-		this.retired = retired;
+	public Set<Location> getChildLocations(boolean includeRetired) {
+		Set<Location> ret = new HashSet<Location>();
+		if (includeRetired)
+			ret = getChildLocations();
+		else if (getChildLocations() != null) {
+			for (Location l : getChildLocations()) {
+				if (!l.isRetired())
+					ret.add(l);
+			}
+		}
+		return ret;
 	}
 	
 	/**
-	 * @return the dateRetired
+	 * @param childLocations The childLocations to set.
+	 * @since 1.5
 	 */
-	public Date getDateRetired() {
-		return dateRetired;
+	public void setChildLocations(Set<Location> childLocations) {
+		this.childLocations = childLocations;
 	}
 	
 	/**
-	 * @param dateRetired the dateRetired to set
+	 * @param child The child location to add.
+	 * @since 1.5
+	 * @should return null given null parameter
+	 * @should throw APIException given same object as child
+	 * @should throw APIException if child already in hierarchy
 	 */
-	public void setDateRetired(Date dateRetired) {
-		this.dateRetired = dateRetired;
+	public void addChildLocation(Location child) {
+		if (child == null)
+			return;
+		
+		if (getChildLocations() == null)
+			childLocations = new HashSet<Location>();
+		
+		if (child.equals(this))
+			throw new APIException("A location cannot be its own child!");
+		
+		// Traverse all the way up (down?) to the root, then check whether the child is already
+		// anywhere in the tree
+		Location root = this;
+		while (root.getParentLocation() != null)
+			root = root.getParentLocation();
+		
+		if (isInHierarchy(child, root))
+			throw new APIException("Location hierarchy loop detected! You cannot add: '" + child + "' to the parent: '"
+			        + this
+			        + "' because it is in the parent hierarchy somewhere already and a location cannot be its own parent.");
+		
+		child.setParentLocation(this);
+		childLocations.add(child);
 	}
 	
 	/**
-	 * @return the retireReason
+	 * Checks whether 'location' is a member of the tree starting at 'root'.
+	 * 
+	 * @param location The location to be tested.
+	 * @param root Location node from which to start the testing (down in the hierarchy).
+	 * @since 1.5
+	 * @should return false given any null parameter
+	 * @should return true given same object in both parameters
+	 * @should return true given location that is already somewhere in hierarchy
+	 * @should return false given location that is not in hierarchy
+	 * @should should find location in hierarchy
 	 */
-	public String getRetireReason() {
-		return retireReason;
+	public static Boolean isInHierarchy(Location location, Location root) {
+		if (location == null || root == null)
+			return false;
+		if (root.equals(location))
+			return true;
+		if (root.getChildLocations() != null) {
+			for (Location l : root.getChildLocations())
+				return isInHierarchy(location, l);
+		}
+		
+		return false;
 	}
 	
 	/**
-	 * @param retireReason the retireReason to set
+	 * @param child The child location to remove.
+	 * @since 1.5
 	 */
-	public void setRetireReason(String retireReason) {
-		this.retireReason = retireReason;
+	public void removeChildLocation(Location child) {
+		if (getChildLocations() != null)
+			childLocations.remove(child);
+	}
+	
+	/**
+	 * @return Returns the tags which have been attached to this Location.
+	 * @since 1.5
+	 */
+	public Set<LocationTag> getTags() {
+		return tags;
+	}
+	
+	/**
+	 * Set the tags which are attached to this Location.
+	 * 
+	 * @param tags The tags to set.
+	 * @since 1.5
+	 */
+	public void setTags(Set<LocationTag> tags) {
+		this.tags = tags;
+	}
+	
+	/**
+	 * Attaches a tag to the Location.
+	 * 
+	 * @param tag The tag to add.
+	 * @since 1.5
+	 */
+	public void addTag(LocationTag tag) {
+		if (getTags() == null)
+			tags = new HashSet<LocationTag>();
+		if (tag != null && !tags.contains(tag))
+			tags.add(tag);
+	}
+	
+	/**
+	 * Remove the tag from the Location.
+	 * 
+	 * @param tag The tag to remove.
+	 * @since 1.5
+	 */
+	public void removeTag(LocationTag tag) {
+		if (getTags() != null)
+			tags.remove(tag);
+	}
+	
+	/**
+	 * Checks whether the Location has a particular tag.
+	 * 
+	 * @param tagToFind the string of the tag for which to check
+	 * @return true if the tags include the specified tag, false otherwise
+	 * @since 1.5
+	 * @should not fail given null parameter
+	 * @should return false given empty string parameter
+	 */
+	public Boolean hasTag(String tagToFind) {
+		if (tagToFind != null && getTags() != null) {
+			for (LocationTag locTag : getTags()) {
+				if (locTag.getTag().equals(tagToFind)) {
+					return true;
+				}
+			}
+		}
+		
+		return false;
+	}
+	
+	/**
+	 * @since 1.5
+	 * @see org.openmrs.OpenmrsObject#getId()
+	 */
+	public Integer getId() {
+		
+		return getLocationId();
+	}
+	
+	/**
+	 * @since 1.5
+	 * @see org.openmrs.OpenmrsObject#setId(java.lang.Integer)
+	 */
+	public void setId(Integer id) {
+		setLocationId(id);
+		
 	}
 	
 }

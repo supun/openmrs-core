@@ -30,6 +30,7 @@ import org.openmrs.Person;
 import org.openmrs.api.PersonService;
 import org.openmrs.api.context.Context;
 import org.openmrs.web.dwr.PersonListItem;
+import org.springframework.util.StringUtils;
 import org.springframework.validation.BindException;
 import org.springframework.web.bind.ServletRequestUtils;
 import org.springframework.web.servlet.ModelAndView;
@@ -154,9 +155,13 @@ public class AddPersonController extends SimpleFormController {
 				if (gender.length() < 1)
 					gender = null;
 				
+				if (!StringUtils.hasLength(personType)) {
+					personType = "person";
+				}
+				
 				personList = new Vector<PersonListItem>();
-				for (Person p : ps.getSimilarPeople(name, d, gender)) {
-					personList.add(new PersonListItem(p));
+				for (Person p : ps.getSimilarPeople(name, d, gender, personType)) {
+					personList.add(PersonListItem.createBestMatch(p));
 				}
 			}
 			
@@ -208,10 +213,11 @@ public class AddPersonController extends SimpleFormController {
 	 * @param request
 	 * @return url string
 	 * @throws ServletException
-	 * @throws UnsupportedEncodingException 
+	 * @throws UnsupportedEncodingException
 	 */
 	private String getPersonURL(String personId, String personType, String viewType, HttpServletRequest request)
-	                                                                                                            throws ServletException, UnsupportedEncodingException {
+	                                                                                                            throws ServletException,
+	                                                                                                            UnsupportedEncodingException {
 		if ("patient".equals(personType)) {
 			if ("edit".equals(viewType))
 				return request.getContextPath() + PATIENT_EDIT_URL + getParametersForURL(personId, personType);
@@ -231,11 +237,12 @@ public class AddPersonController extends SimpleFormController {
 	 * @param personId
 	 * @param personType
 	 * @return
-	 * @throws UnsupportedEncodingException 
+	 * @throws UnsupportedEncodingException
 	 */
 	private String getParametersForURL(String personId, String personType) throws UnsupportedEncodingException {
 		if ("".equals(personId))
-			return "?addName=" + URLEncoder.encode(name, "UTF-8") + "&addBirthdate=" + birthdate + "&addAge=" + age + "&addGender=" + gender;
+			return "?addName=" + URLEncoder.encode(name, "UTF-8") + "&addBirthdate=" + birthdate + "&addAge=" + age
+			        + "&addGender=" + gender;
 		else {
 			if ("patient".equals(personType))
 				return "?patientId=" + personId;

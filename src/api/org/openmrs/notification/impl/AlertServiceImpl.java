@@ -60,7 +60,7 @@ public class AlertServiceImpl extends BaseOpenmrsService implements Serializable
 	 * @deprecated
 	 */
 	public void createAlert(Alert alert) throws APIException {
-		saveAlert(alert);
+		Context.getAlertService().saveAlert(alert);
 	}
 	
 	/**
@@ -95,15 +95,16 @@ public class AlertServiceImpl extends BaseOpenmrsService implements Serializable
 	 * @deprecated
 	 */
 	public void createAlert(String text, User user) throws APIException {
-		saveAlert(new Alert(text, user));
+		Context.getAlertService().saveAlert(new Alert(text, user));
 	}
 	
 	/**
 	 * @see org.openmrs.notification.AlertService#createAlert(java.lang.String,
 	 *      java.util.Collection)
+	 * @deprecated
 	 */
 	public void createAlert(String text, Collection<User> users) throws APIException {
-		saveAlert(new Alert(text, users));
+		Context.getAlertService().saveAlert(new Alert(text, users));
 	}
 	
 	/**
@@ -118,7 +119,7 @@ public class AlertServiceImpl extends BaseOpenmrsService implements Serializable
 	 * @deprecated
 	 */
 	public void updateAlert(Alert alert) throws APIException {
-		saveAlert(alert);
+		Context.getAlertService().saveAlert(alert);
 	}
 	
 	/**
@@ -133,7 +134,7 @@ public class AlertServiceImpl extends BaseOpenmrsService implements Serializable
 	 * @deprecated
 	 */
 	public void markAlertRead(Alert alert) throws APIException {
-		saveAlert(alert.markAlertRead());
+		Context.getAlertService().saveAlert(alert.markAlertRead());
 	}
 	
 	/**
@@ -180,6 +181,7 @@ public class AlertServiceImpl extends BaseOpenmrsService implements Serializable
 	
 	/**
 	 * @see org.openmrs.notification.AlertService#getAlerts()
+	 * @deprecated
 	 */
 	public List<Alert> getAlerts() throws APIException {
 		return getAlertsByUser(null);

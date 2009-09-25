@@ -16,17 +16,14 @@ package org.openmrs.web.dwr;
 import javax.servlet.ServletConfig;
 import javax.servlet.ServletException;
 
+import org.directwebremoting.servlet.DwrServlet;
 import org.openmrs.module.web.WebModuleUtil;
 import org.openmrs.util.OpenmrsClassLoader;
 
-import uk.ltd.getahead.dwr.DWRServlet;
-
 /**
  * Simply used so that we have a way we can restart the DWR HttpServlet
- * 
- * @author bwolfe
  */
-public class OpenmrsDWRServlet extends DWRServlet {
+public class OpenmrsDWRServlet extends DwrServlet {
 	
 	private static final long serialVersionUID = 121212111335789L;
 	

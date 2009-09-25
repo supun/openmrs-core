@@ -13,10 +13,7 @@
  */
 package org.openmrs.api.db.hibernate;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
+import java.io.InputStream;
 import java.util.Date;
 import java.util.Map;
 import java.util.Properties;
@@ -30,12 +27,13 @@ import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 import org.hibernate.stat.QueryStatistics;
 import org.hibernate.stat.Statistics;
-import org.openmrs.GlobalProperty;
+import org.hibernate.util.ConfigHelper;
 import org.openmrs.User;
 import org.openmrs.api.context.Context;
 import org.openmrs.api.context.ContextAuthenticationException;
 import org.openmrs.api.db.ContextDAO;
 import org.openmrs.util.OpenmrsConstants;
+import org.openmrs.util.OpenmrsUtil;
 import org.openmrs.util.Security;
 import org.springframework.orm.hibernate3.SessionFactoryUtils;
 import org.springframework.orm.hibernate3.SessionHolder;
@@ -112,9 +110,11 @@ public class HibernateContextDAO implements ContextDAO {
 			if (lockoutTime != null) {
 				// unlock them after 5 mins, otherwise reset the timestamp 
 				// to now and make them wait another 5 mins 
-				if (new Date().getTime() - lockoutTime > 300000)
+				if (new Date().getTime() - lockoutTime > 300000) {
 					candidateUser.setUserProperty(OpenmrsConstants.USER_PROPERTY_LOGIN_ATTEMPTS, "0");
-				else {
+					candidateUser.removeUserProperty(OpenmrsConstants.USER_PROPERTY_LOCKOUT_TIMESTAMP);
+					saveUserProperties(candidateUser);
+				} else {
 					candidateUser.setUserProperty(OpenmrsConstants.USER_PROPERTY_LOCKOUT_TIMESTAMP, String
 					        .valueOf(new Date().getTime()));
 					throw new ContextAuthenticationException(
@@ -128,10 +128,8 @@ public class HibernateContextDAO implements ContextDAO {
 			String saltOnRecord = (String) session.createSQLQuery("select salt from users where user_id = ?").addScalar(
 			    "salt", Hibernate.STRING).setInteger(0, candidateUser.getUserId()).uniqueResult();
 			
-			String hashedPassword = Security.encodeString(password + saltOnRecord);
-			
 			// if the username and password match, hydrate the user and return it
-			if (hashedPassword != null && hashedPassword.equals(passwordOnRecord)) {
+			if (passwordOnRecord != null && Security.hashMatches(passwordOnRecord, password + saltOnRecord)) {
 				// hydrate the user object
 				candidateUser.getAllRoles().size();
 				candidateUser.getUserProperties().size();
@@ -155,7 +153,7 @@ public class HibernateContextDAO implements ContextDAO {
 				
 				attempts++;
 				
-				if (attempts >= 5) {
+				if (attempts >= 8) {
 					// set the user as locked out at this exact time
 					candidateUser.setUserProperty(OpenmrsConstants.USER_PROPERTY_LOCKOUT_TIMESTAMP, String
 					        .valueOf(new Date().getTime()));
@@ -227,7 +225,7 @@ public class HibernateContextDAO implements ContextDAO {
 	public void closeSession() {
 		log.debug("HibernateContext: closing Hibernate Session");
 		if (!participate) {
-			log.debug("Unbinding session from synchronization mangaer (" + sessionFactory.hashCode() + ")");
+			log.debug("Unbinding session from synchronization manager (" + sessionFactory.hashCode() + ")");
 			
 			if (TransactionSynchronizationManager.hasResource(sessionFactory)) {
 				Object value = TransactionSynchronizationManager.unbindResource(sessionFactory);
@@ -276,120 +274,23 @@ public class HibernateContextDAO implements ContextDAO {
 		
 		if (sessionFactory != null) {
 			
-			// session is closed by spring on session end
-			
 			log.debug("Closing any open sessions");
-			// closeSession();
-			log.debug("Shutting down threadLocalSession factory");
+			closeSession();
 			
-			// sessionFactory.close();
+			log.debug("Shutting down threadLocalSession factory");
+			if (!sessionFactory.isClosed())
+				sessionFactory.close();
+			
 			log.debug("The threadLocalSession has been closed");
 			
-			log.debug("Setting static variables to null");
-			// sessionFactory = null;
 		} else
 			log.error("SessionFactory is null");
 		
 	}
 	
 	/**
-	 * Compares core data against the current database and inserts data into the database where
-	 * necessary
+	 * Convenience method to print out the hibernate cache usage stats to the log
 	 */
-	public void checkCoreDataset() {
-		PreparedStatement psSelect;
-		PreparedStatement psInsert;
-		PreparedStatement psUpdate;
-		Map<String, String> map;
-		
-		// setting core roles
-		try {
-			Connection conn = sessionFactory.getCurrentSession().connection();
-			
-			// Ticket #900 - Made explicit reference to columns
-			psSelect = conn.prepareStatement("SELECT role, description FROM role WHERE UPPER(role) = UPPER(?)");
-			psInsert = conn.prepareStatement("INSERT INTO role (role, description) VALUES (?, ?)");
-			
-			map = OpenmrsConstants.CORE_ROLES();
-			for (String role : map.keySet()) {
-				psSelect.setString(1, role);
-				ResultSet result = psSelect.executeQuery();
-				if (!result.next()) {
-					psInsert.setString(1, role);
-					psInsert.setString(2, map.get(role));
-					psInsert.execute();
-				}
-			}
-			
-			conn.commit();
-		}
-		catch (Exception e) {
-			log.error("Error while setting core roles for openmrs system", e);
-		}
-		
-		// setting core privileges
-		try {
-			Connection conn = sessionFactory.getCurrentSession().connection();
-			
-			// Ticket #900 - Made explicit reference to columns
-			psSelect = conn
-			        .prepareStatement("SELECT privilege, description FROM privilege WHERE UPPER(privilege) = UPPER(?)");
-			psInsert = conn.prepareStatement("INSERT INTO privilege (privilege, description) VALUES (?, ?)");
-			
-			map = OpenmrsConstants.CORE_PRIVILEGES();
-			for (String priv : map.keySet()) {
-				psSelect.setString(1, priv);
-				ResultSet result = psSelect.executeQuery();
-				if (!result.next()) {
-					psInsert.setString(1, priv);
-					psInsert.setString(2, map.get(priv));
-					psInsert.execute();
-				}
-			}
-			
-			conn.commit();
-		}
-		catch (SQLException e) {
-			log.error("Error while setting core privileges", e);
-		}
-		
-		// setting core global properties
-		try {
-			Connection conn = sessionFactory.getCurrentSession().connection();
-			
-			// Ticket #900 - Made explicit reference to columns
-			psSelect = conn
-			        .prepareStatement("SELECT property, property_value, description FROM global_property WHERE UPPER(property) = UPPER(?)");
-			psInsert = conn
-			        .prepareStatement("INSERT INTO global_property (property, property_value, description) VALUES (?, ?, ?)");
-			// this update should only be temporary until everyone has the new global property description code 
-			psUpdate = conn
-			        .prepareStatement("UPDATE global_property SET description = ? WHERE UPPER(property) = UPPER(?) AND description IS null");
-			
-			for (GlobalProperty gp : OpenmrsConstants.CORE_GLOBAL_PROPERTIES()) {
-				psSelect.setString(1, gp.getProperty());
-				ResultSet result = psSelect.executeQuery();
-				if (!result.next()) {
-					psInsert.setString(1, gp.getProperty());
-					psInsert.setString(2, gp.getPropertyValue());
-					psInsert.setString(3, gp.getDescription());
-					psInsert.execute();
-				} else {
-					// should only be temporary 
-					psUpdate.setString(1, gp.getDescription());
-					psUpdate.setString(2, gp.getProperty());
-					psUpdate.execute();
-				}
-			}
-			
-			conn.commit();
-		}
-		catch (SQLException e) {
-			log.error("Error while setting core global properties", e);
-		}
-		
-	}
-	
 	private void showUsageStatistics() {
 		if (sessionFactory.getStatistics().isStatisticsEnabled()) {
 			log.debug("Getting query statistics: ");
@@ -407,8 +308,47 @@ public class HibernateContextDAO implements ContextDAO {
 		}
 	}
 	
-	public void closeDatabaseConnection() {
-		sessionFactory.close();
+	/**
+	 * Takes the default properties defined in /metadata/api/hibernate/hibernate.default.properties
+	 * and merges it into the user-defined runtime properties
+	 * 
+	 * @see org.openmrs.api.db.ContextDAO#mergeDefaultRuntimeProperties(java.util.Properties)
+	 */
+	public void mergeDefaultRuntimeProperties(Properties runtimeProperties) {
+		
+		// loop over runtime properties and precede each with "hibernate" if
+		// it isn't already
+		for (Object key : runtimeProperties.keySet()) {
+			String prop = (String) key;
+			String value = (String) runtimeProperties.get(key);
+			log.trace("Setting property: " + prop + ":" + value);
+			if (!prop.startsWith("hibernate") && !runtimeProperties.containsKey("hibernate." + prop))
+				runtimeProperties.setProperty("hibernate." + prop, value);
+		}
+		
+		// load in the default hibernate properties from hibernate.default.properties
+		InputStream propertyStream = null;
+		try {
+			Properties props = new Properties();
+			propertyStream = ConfigHelper.getResourceAsStream("/hibernate.default.properties");
+			OpenmrsUtil.loadProperties(props, propertyStream);
+			
+			// add in all default properties that don't exist in the runtime 
+			// properties yet
+			for (Map.Entry<Object, Object> entry : props.entrySet()) {
+				if (!runtimeProperties.containsKey(entry.getKey()))
+					runtimeProperties.put(entry.getKey(), entry.getValue());
+			}
+		}
+		finally {
+			try {
+				propertyStream.close();
+			}
+			catch (Throwable t) {
+				// pass 
+			}
+		}
+		
 	}
 	
 }

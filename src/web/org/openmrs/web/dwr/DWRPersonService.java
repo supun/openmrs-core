@@ -17,8 +17,8 @@ import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
-import java.util.GregorianCalendar;
 import java.util.List;
+import java.util.Set;
 import java.util.Vector;
 
 import org.apache.commons.logging.Log;
@@ -32,26 +32,41 @@ import org.openmrs.api.PatientService;
 import org.openmrs.api.PersonService;
 import org.openmrs.api.UserService;
 import org.openmrs.api.context.Context;
+import org.springframework.util.StringUtils;
 
+/**
+ * DWR methods for ajaxy effects on {@link Person} objects.
+ */
 public class DWRPersonService {
 	
 	protected final Log log = LogFactory.getLog(getClass());
 	
 	/**
+	 * Searches for Person records that have a name similar ot the given name, a birthdate that is
+	 * null or within a few years of the given birthdate, and a gender that matches. <br/>
+	 * <br/>
+	 * To prevent creating "Users that are Patients": <br/>
+	 * <br/>
+	 * If personType is user, only Person objects and User objects are returned (No patients). <br/>
+	 * <br/>
+	 * If personType is patient, only Person objects and Patient objects are returned (No users). <br/>
+	 * <br/>
+	 * If personType is person, both User objects and Patient objects are returned.
+	 * 
 	 * @param name
 	 * @param birthyear
 	 * @param age
 	 * @param gender
+	 * @param personType either user, patient, person, or empty.
 	 * @return
 	 */
-	public List<?> getSimilarPeople(String name, String birthdate, String age, String gender) {
+	public List<?> getSimilarPeople(String name, String birthdate, String age, String gender, String personType) {
 		Vector<Object> personList = new Vector<Object>();
 		
 		Integer userId = Context.getAuthenticatedUser().getUserId();
 		log.info(userId + "|" + name + "|" + birthdate + "|" + age + "|" + gender);
 		
 		PersonService ps = Context.getPersonService();
-		List<Person> persons = new Vector<Person>();
 		
 		Integer d = null;
 		birthdate = birthdate.trim();
@@ -81,11 +96,16 @@ public class DWRPersonService {
 		if (gender.length() < 1)
 			gender = null;
 		
-		persons.addAll(ps.getSimilarPeople(name, d, gender));
+		if (!StringUtils.hasLength(personType)) {
+			personType = "person";
+		}
+		
+		Set<Person> persons = ps.getSimilarPeople(name, d, gender, personType);
+		
 		
 		personList = new Vector<Object>(persons.size());
 		for (Person p : persons) {
-			personList.add(new PersonListItem(p));
+			personList.add(PersonListItem.createBestMatch(p));
 		}
 		
 		return personList;
@@ -107,7 +127,10 @@ public class DWRPersonService {
 	 * @param searchPhrase partial name or partial identifier
 	 * @param includeVoided true/false whether to include the voided objects
 	 * @param roles if not null, restricts search to only users and only users with these roles
-	 * @return list of PersonListItem s that match the given searchPhrase
+	 * @return list of PersonListItem s that match the given searchPhrase. The PersonListItems
+	 *         contain as much information as possible about the matching persons, e.g. considering
+	 *         whether they are patients or users, which for example is useful for displaying
+	 *         patient identifiers in PersonSearch-widgets.
 	 * @should match on patient identifiers
 	 * @should allow null roles parameter
 	 */
@@ -132,7 +155,7 @@ public class DWRPersonService {
 				}
 			
 			for (Person p : us.getUsers(searchPhrase, roleList, includeVoided)) {
-				personList.add(new PersonListItem(p));
+				personList.add(PersonListItem.createBestMatch(p));
 			}
 			
 		} else {
@@ -140,14 +163,14 @@ public class DWRPersonService {
 			// if no roles were given, search for normal people
 			PersonService ps = Context.getPersonService();
 			for (Person p : ps.getPeople(searchPhrase, null)) {
-				personList.add(new PersonListItem(p));
+				personList.add(PersonListItem.createBestMatch(p));
 			}
 			
 			// also search on patient identifier if the query contains a number
 			if (searchPhrase.matches(".*\\d+.*")) {
 				PatientService patientService = Context.getPatientService();
 				for (Patient p : patientService.getPatients(null, searchPhrase, null, false)) {
-					personList.add(new PersonListItem(p));
+					personList.add(PersonListItem.createBestMatch(p));
 				}
 			}
 			
@@ -207,8 +230,8 @@ public class DWRPersonService {
 			return new String("Birthdate cannot be parsed.");
 		}
 		p.setGender(gender);
-		Person person = Context.getPersonService().createPerson(p);
-		return new PersonListItem(person);
+		Person person = Context.getPersonService().savePerson(p);
+		return PersonListItem.createBestMatch(person);
 	}
 	
 	/**
@@ -217,7 +240,7 @@ public class DWRPersonService {
 	 */
 	public PersonListItem getPerson(Integer personId) {
 		Person p = Context.getPersonService().getPerson(personId);
-		return new PersonListItem(p);
+		return PersonListItem.createBestMatch(p);
 	}
 	
 	/**
@@ -236,7 +259,7 @@ public class DWRPersonService {
 		} else
 			dateformat = new String("MM/dd/yyyy");
 		df.applyPattern(dateformat);
-		Calendar cal = new GregorianCalendar();
+		Calendar cal = Calendar.getInstance();
 		cal.clear(Calendar.HOUR);
 		cal.clear(Calendar.MINUTE);
 		cal.clear(Calendar.SECOND);

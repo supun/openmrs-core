@@ -19,8 +19,8 @@ import java.text.DateFormat;
 import java.text.ParseException;
 import java.util.Calendar;
 import java.util.Date;
-import java.util.GregorianCalendar;
 import java.util.List;
+import java.util.Locale;
 import java.util.Vector;
 
 import javax.servlet.ServletException;
@@ -117,6 +117,7 @@ public class SummaryServlet extends HttpServlet {
 	private Cohort getPatientSet(HttpServletRequest request, HttpServletResponse response) throws ServletException,
 	                                                                                      IOException {
 		
+		Locale locale = Context.getLocale();
 		DateFormat dateFormat = Context.getDateFormat();
 		String startDateString = ServletRequestUtils.getStringParameter(request, "startDate", "");
 		String endDateString = ServletRequestUtils.getStringParameter(request, "endDate", "");
@@ -128,7 +129,7 @@ public class SummaryServlet extends HttpServlet {
 		// get patients according to start/end "Return Visit Date"
 		if ((startDateString.length() != 0) || (endDateString.length() != 0)) {
 			Concept c = Context.getConceptService().getConcept(new Integer("5096")); // RETURN VISIT DATE
-			Calendar cal = new GregorianCalendar();
+			Calendar cal = Calendar.getInstance();
 			Date startDate;
 			Date endDate;
 			

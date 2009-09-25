@@ -13,34 +13,16 @@
  */
 package org.openmrs;
 
-import java.util.Date;
-
 /**
  * An EncounterType defines how a certain kind of {@link Encounter}.
  * 
  * @see Encounter
  */
-public class EncounterType implements java.io.Serializable {
+public class EncounterType extends BaseOpenmrsMetadata implements java.io.Serializable {
 	
 	public static final long serialVersionUID = 789L;
 	
 	private Integer encounterTypeId;
-	
-	private String name;
-	
-	private String description;
-	
-	private Date dateCreated;
-	
-	private User creator;
-	
-	private User retiredBy;
-	
-	private Boolean retired = Boolean.FALSE;
-	
-	private Date dateRetired;
-	
-	private String retireReason;
 	
 	// Constructors
 	
@@ -48,7 +30,11 @@ public class EncounterType implements java.io.Serializable {
 	public EncounterType() {
 	}
 	
-	/** constructor with id */
+	/**
+	 * Constructor with id
+	 * 
+	 * @should set encounter type id with given parameter
+	 */
 	public EncounterType(Integer encounterTypeId) {
 		this.encounterTypeId = encounterTypeId;
 	}
@@ -61,8 +47,8 @@ public class EncounterType implements java.io.Serializable {
 	 * @param description a short description of why this encounter type exists
 	 */
 	public EncounterType(String name, String description) {
-		this.name = name;
-		this.description = description;
+		setName(name);
+		setDescription(description);
 	}
 	
 	/**
@@ -70,6 +56,10 @@ public class EncounterType implements java.io.Serializable {
 	 * 
 	 * @param obj
 	 * @return boolean true/false whether or not they are the same objects
+	 * @should have equal encounter type objects by encounter type id
+	 * @should not have equal encounter type objects by encounterTypeId
+	 * @should have equal encounter type objects with no encounterTypeId
+	 * @should not have equal encounter type objects when one has null encounterTypeId
 	 */
 	public boolean equals(Object obj) {
 		if (obj == null || !(obj instanceof EncounterType))
@@ -84,6 +74,7 @@ public class EncounterType implements java.io.Serializable {
 	
 	/**
 	 * @see java.lang.Object#hashCode()
+	 * @should get hashCode even with null attributes
 	 */
 	public int hashCode() {
 		if (this.getEncounterTypeId() == null)
@@ -92,48 +83,6 @@ public class EncounterType implements java.io.Serializable {
 	}
 	
 	// Property accessors
-	
-	/**
-	 * @return Returns the creator.
-	 */
-	public User getCreator() {
-		return creator;
-	}
-	
-	/**
-	 * @param creator The creator to set.
-	 */
-	public void setCreator(User creator) {
-		this.creator = creator;
-	}
-	
-	/**
-	 * @return Returns the dateCreated.
-	 */
-	public Date getDateCreated() {
-		return dateCreated;
-	}
-	
-	/**
-	 * @param dateCreated The dateCreated to set.
-	 */
-	public void setDateCreated(Date dateCreated) {
-		this.dateCreated = dateCreated;
-	}
-	
-	/**
-	 * @return Returns the description.
-	 */
-	public String getDescription() {
-		return description;
-	}
-	
-	/**
-	 * @param description The description to set.
-	 */
-	public void setDescription(String description) {
-		this.description = description;
-	}
 	
 	/**
 	 * @return Returns the encounterTypeId.
@@ -150,84 +99,20 @@ public class EncounterType implements java.io.Serializable {
 	}
 	
 	/**
-	 * @return Returns the name.
+	 * @since 1.5
+	 * @see org.openmrs.OpenmrsObject#getId()
 	 */
-	public String getName() {
-		return name;
+	public Integer getId() {
+		return getEncounterTypeId();
 	}
 	
 	/**
-	 * @param name The name to set.
+	 * @since 1.5
+	 * @see org.openmrs.OpenmrsObject#setId(java.lang.Integer)
 	 */
-	public void setName(String name) {
-		this.name = name;
-	}
-	
-	public String toString() {
-		return name;
-	}
-	
-	/**
-	 * @return the retiredBy
-	 */
-	public User getRetiredBy() {
-		return retiredBy;
-	}
-	
-	/**
-	 * @param retiredBy the retiredBy to set
-	 */
-	public void setRetiredBy(User retiredBy) {
-		this.retiredBy = retiredBy;
-	}
-	
-	/**
-	 * @return the retired status
-	 */
-	public Boolean getRetired() {
-		return isRetired();
-	}
-	
-	/**
-	 * @return the retired status
-	 */
-	public Boolean isRetired() {
-		return retired;
-	}
-	
-	/**
-	 * @param retired the retired to set
-	 */
-	public void setRetired(Boolean retired) {
-		this.retired = retired;
-	}
-	
-	/**
-	 * @return the dateRetired
-	 */
-	public Date getDateRetired() {
-		return dateRetired;
-	}
-	
-	/**
-	 * @param dateRetired the dateRetired to set
-	 */
-	public void setDateRetired(Date dateRetired) {
-		this.dateRetired = dateRetired;
-	}
-	
-	/**
-	 * @return the retireReason
-	 */
-	public String getRetireReason() {
-		return retireReason;
-	}
-	
-	/**
-	 * @param retireReason the retireReason to set
-	 */
-	public void setRetireReason(String retireReason) {
-		this.retireReason = retireReason;
+	public void setId(Integer id) {
+		setEncounterTypeId(id);
+		
 	}
 	
 }

@@ -34,24 +34,6 @@
 	</servlet-mapping>
 	
 	<servlet>
-		<servlet-name>timelineGraphServlet</servlet-name>
-		<servlet-class>org.openmrs.web.servlet.TimelineGraphServlet</servlet-class>
-	</servlet>
-	<servlet-mapping>
-		<servlet-name>timelineGraphServlet</servlet-name>
-		<url-pattern>/timelineGraphServlet</url-pattern>
-	</servlet-mapping>
-	
-	<servlet>
-		<servlet-name>pieChartServlet</servlet-name>
-		<servlet-class>org.openmrs.web.servlet.PieChartServlet</servlet-class>
-	</servlet>
-	<servlet-mapping>
-		<servlet-name>pieChartServlet</servlet-name>
-		<url-pattern>/pieChartServlet</url-pattern>
-	</servlet-mapping>
-	
-	<servlet>
 		<servlet-name>displayChartServlet</servlet-name>
 		<servlet-class>org.openmrs.web.servlet.DisplayChartServlet</servlet-class>
 	</servlet>
@@ -124,15 +106,15 @@
 		<servlet-name>quickReportServlet</servlet-name>
 		<url-pattern>/quickReportServlet</url-pattern>
 	</servlet-mapping>
-	
-	<servlet>
-		<servlet-name>dataExportServlet</servlet-name>
-		<servlet-class>org.openmrs.web.servlet.DataExportServlet</servlet-class>
-	</servlet>
-	<servlet-mapping>
-		<servlet-name>dataExportServlet</servlet-name>
-		<url-pattern>/dataExportServlet</url-pattern>
-	</servlet-mapping>
+
+    <servlet>
+        <servlet-name>complexObsServlet</servlet-name>
+        <servlet-class>org.openmrs.web.servlet.ComplexObsServlet</servlet-class>
+    </servlet>
+    <servlet-mapping>
+        <servlet-name>complexObsServlet</servlet-name>
+        <url-pattern>/complexObsServlet</url-pattern>
+    </servlet-mapping>
 	
 	<servlet>
 		<servlet-name>sampleFlowsheetServlet</servlet-name>
@@ -152,17 +134,22 @@
 		<url-pattern>/concept/*</url-pattern>
 	</servlet-mapping>
 	
-	<listener>	
-		<listener-class>org.springframework.web.util.Log4jConfigListener</listener-class>
-	</listener>
-
 	<listener>
-		<listener-class>org.openmrs.web.Listener</listener-class>
-		<!--  extends ContextLoaderListener -->
+		<listener-class>net.sf.ehcache.constructs.web.ShutdownListener</listener-class>
+		<!-- Should go before Listener so that during webapp shutdown it comes after hibernate shutdown last -->
 	</listener>
 	
 	<listener>
 		<listener-class>org.springframework.web.util.IntrospectorCleanupListener</listener-class>
+	</listener>
+	
+	<listener>
+		<listener-class>org.directwebremoting.servlet.EfficientShutdownServletContextListener</listener-class>
+	</listener>
+	
+	<listener>
+		<listener-class>org.openmrs.web.Listener</listener-class>
+		<!--  extends ContextLoaderListener -->
 	</listener>
 	
 	<servlet>
@@ -189,39 +176,78 @@
 		<url-pattern>/dwr/*</url-pattern>
 	</servlet-mapping>
 
-	<!--  Should be the first filter -->
+	<!--  Should be the first filter so that if setup is needed, all requests go
+	      through this filter first-->
+	<filter>
+        <filter-name>InitializationFilter</filter-name>
+        <filter-class>org.openmrs.web.filter.initialization.InitializationFilter</filter-class>
+    </filter>
+    <filter-mapping>
+		<filter-name>InitializationFilter</filter-name> 
+		<url-pattern>/*</url-pattern> 
+	</filter-mapping>
+	<!--  End first filter -->
+	<!--  Should be the second filter so that if any database updates are needed, they can be run by an admin-->
+	<filter>
+        <filter-name>UpdateFilter</filter-name>
+        <filter-class>org.openmrs.web.filter.update.UpdateFilter</filter-class>
+    </filter>
+    <filter-mapping>
+		<filter-name>UpdateFilter</filter-name> 
+		<url-pattern>/*</url-pattern> 
+	</filter-mapping>
+	<!--  End second filter -->
+	<filter>
+		<filter-name>charsetFilter</filter-name>
+		<filter-class>org.springframework.web.filter.CharacterEncodingFilter</filter-class>
+		<init-param>
+			<param-name>encoding</param-name>
+			<param-value>UTF-8</param-value>
+		</init-param>
+		<init-param>
+			<param-name>forceEncoding</param-name>
+			<param-value>true</param-value>
+		</init-param>
+	</filter>
+	<filter-mapping>
+		<filter-name>charsetFilter</filter-name> 
+		<url-pattern>/*</url-pattern> 
+	</filter-mapping>
+	
+	<!--  Should be the second filter so that all requests are first wrapped by a 
+	      hibernate filter (to help with lazy loading) -->
 	<filter>
         <filter-name>HibernateFilter</filter-name>
         <filter-class>org.springframework.orm.hibernate3.support.OpenSessionInViewFilter</filter-class>
     </filter>
-    <!--  End first filter -->
-      <filter> 
-            <filter-name>charsetFilter</filter-name> 
-            <filter-class>org.springframework.web.filter.CharacterEncodingFilter</filter-class> 
-            <init-param> 
-                    <param-name>encoding</param-name> 
-                    <param-value>UTF-8</param-value> 
-            </init-param> 
-            <init-param> 
-                    <param-name>forceEncoding</param-name> 
-                    <param-value>true</param-value> 
-            </init-param> 
-    </filter> 
-    <filter-mapping> 
-            <filter-name>charsetFilter</filter-name>  
-            <url-pattern>/*</url-pattern>  
-    </filter-mapping> 
-	<filter-mapping>
+    <filter-mapping>
 		<filter-name>HibernateFilter</filter-name> 
-		<url-pattern>/*</url-pattern> 
+		<url-pattern>/*</url-pattern>
+		<dispatcher>ERROR</dispatcher>
+		<dispatcher>FORWARD</dispatcher>
+		<dispatcher>REQUEST</dispatcher>
 	</filter-mapping>
+	<!--  End second filter -->
 	
 	<filter>
 		<filter-name>OpenmrsFilter</filter-name> 
-		<filter-class>org.openmrs.web.OpenmrsFilter</filter-class> 
+		<filter-class>org.openmrs.web.filter.OpenmrsFilter</filter-class> 
 	</filter>
 	<filter-mapping>
 		<filter-name>OpenmrsFilter</filter-name> 
+		<url-pattern>/*</url-pattern>
+		<dispatcher>ERROR</dispatcher>
+		<dispatcher>FORWARD</dispatcher>
+		<dispatcher>REQUEST</dispatcher>
+		<dispatcher>INCLUDE</dispatcher>
+	</filter-mapping>
+	
+	<filter>
+		<filter-name>ModuleFilter</filter-name> 
+		<filter-class>org.openmrs.module.web.filter.ModuleFilter</filter-class> 
+	</filter>
+	<filter-mapping>
+		<filter-name>ModuleFilter</filter-name> 
 		<url-pattern>/*</url-pattern> 
 	</filter-mapping>
 
@@ -298,31 +324,31 @@
        			classpath*:/moduleApplicationContext.xml
 	        </param-value>
 	    </init-param>
-		<load-on-startup>1</load-on-startup>
+		<!-- Don't use "load-on-startup" in case initial setup wizard is needed -->
 	</servlet>
 
 	<servlet>
 		<servlet-name>openmrs_static_content</servlet-name>
 		<servlet-class>org.springframework.web.servlet.DispatcherServlet</servlet-class>
-		<load-on-startup>3</load-on-startup>
+		<!-- Don't use "load-on-startup" in case initial setup wizard is needed -->
 	</servlet>
 	
-	<!-- Gives acess to servlets within modules -->
+	<!-- Gives access to servlets within modules -->
 	<servlet>
 		<servlet-name>module_servlet</servlet-name>
 		<servlet-class>org.openmrs.module.web.ModuleServlet</servlet-class>
-		<load-on-startup>2</load-on-startup>
+		<!-- Don't "load-on-startup" in case initial setup wizard is needed -->
 	</servlet>
 	<servlet-mapping>
  		<servlet-name>module_servlet</servlet-name>
  		<url-pattern>/moduleServlet/*</url-pattern>
 	</servlet-mapping>
 	
-	<!-- Gives acess to resources within modules -->
+	<!-- Gives access to resources within modules -->
 	<servlet>
 		<servlet-name>module_resources</servlet-name>
 		<servlet-class>org.openmrs.module.web.ModuleResourcesServlet</servlet-class>
-		<load-on-startup>2</load-on-startup>
+		<!-- Don't "load-on-startup" in case initial setup wizard is needed -->
 	</servlet>
 	<servlet-mapping>
  		<servlet-name>module_resources</servlet-name>

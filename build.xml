@@ -3,7 +3,7 @@
 <!-- ** Ant build script for OpenMRS                          ** -->
 <!-- **                                                       ** -->
 <!-- *********************************************************** -->
-<project name="OpenMRS-1.4.x" default="dist">
+<project name="OpenMRS-1.5.x" default="dist">
 
 	<tstamp>
 		<format property="timestamp" pattern="MMM dd yyyy hh:mm aa" />
@@ -85,22 +85,7 @@
 	<!-- *********************************************************** -->
 	<!-- **                     TARGETS                           ** -->
 	<!-- *********************************************************** -->
-	<target name="init" description="initialization">
-		
-		<!-- Discover code and database versions via regular expressions -->
-		<loadfile srcfile="${openmrs.database.version.expected.filename}" property="diffFileInput" />
-		<propertyregex property="openmrs.database.version.expected"
-			input="${diffFileInput}"
-			regexp="${openmrs.database.version.expected.regexp}"
-			select="\1"
-			defaultValue="${openmrs.version.major}.${openmrs.version.minor}.0.00" 
-			casesensitive="false" />
-        <echo>openmrs.database.version.expected: ${openmrs.database.version.expected}</echo>
-		<propertyregex property="openmrs.database.version.expected.short"
-			input="${openmrs.database.version.expected}"
-			regexp="${openmrs.version.major}\.${openmrs.version.minor}\.${openmrs.version.maintenance}\.([0-9][0-9]+)"
-			select="\1"
-			defaultValue="00" />
+	<target name="init" description="initialization done before most compile/packaging targets">
 		
 		<loadfile srcfile="${openmrs.version.revision.filename}" property="repositoryFileInput" />
 		<if>
@@ -124,10 +109,13 @@
 		</if>
 		<property 
 			name="openmrs.version.long" 
-			value="${openmrs.version.major}.${openmrs.version.minor}.${openmrs.version.maintenance}.${openmrs.database.version.expected.short} ${openmrs.version.suffix} Build ${openmrs.version.revision}"/>
+			value="${openmrs.version.major}.${openmrs.version.minor}.${openmrs.version.maintenance} ${openmrs.version.suffix} Build ${openmrs.version.revision}"/>
 		<property 
 			name="openmrs.version.short" 
-			value="${openmrs.version.major}.${openmrs.version.minor}.${openmrs.version.maintenance}.${openmrs.database.version.expected.short}.${openmrs.version.revision}"/>
+			value="${openmrs.version.major}.${openmrs.version.minor}.${openmrs.version.maintenance}.${openmrs.version.revision}-${openmrs.version.suffix}"/>
+		<property 
+			name="openmrs.version.shortnumericonly" 
+			value="${openmrs.version.major}.${openmrs.version.minor}.${openmrs.version.maintenance}.${openmrs.version.revision}"/>
 		<echo message="version: ${openmrs.version.long}"/>
 		<property 
 			name="openmrs.api.name" 
@@ -156,7 +144,8 @@
 		<copy todir="${build.dir}">
 			<fileset dir="${metadata.dir}/api/hibernate" includes="**/*" />
 			<fileset dir="${metadata.dir}/api/spring" includes="applicationContext-service.xml" />
-			<fileset dir="${metadata.dir}/api/log4j" includes="log4j.*" />
+			<fileset dir="${metadata.dir}/model" includes="liquibase-update-to-latest.xml" />
+			<fileset dir="${metadata.dir}/model/archive" includes="update-to-1.4.2.01-db.mysqldiff.sql" />
 		</copy>
 		<javac destdir="${build.dir}" debug="${javac.debug}" debuglevel="${javac.debuglevel}" deprecation="${compile.deprecation}" optimize="${compile.optimize}" classpathref="api.compile.classpath">
 			<compilerarg line="${compile.arguments}" />
@@ -167,8 +156,8 @@
 	<target name="package-all" depends="package-api,package-api-tests,package-web-src"
 		description="packages api, test, and web jars for use in modules"/>
 	
-	<!-- the api package will contain test classes unless a "ant clean" is done right before -->
-	<target name="package-api" depends="compile-api" description="create api jar">
+	<!-- the api package will contain test classes unless an "ant clean" is done right before -->
+	<target name="package-api" depends="compile-api" description="create openmrs api jar">
 		<mkdir dir="${dist.dir}" />
 		<jar destfile="${dist.dir}/${openmrs.api.name}">
 			<manifest>
@@ -181,43 +170,43 @@
 					
 					<attribute name="Specification-Title" value="OpenMRS Build Version and Short Version"/>
 					<attribute name="Specification-Vendor" value="${openmrs.version.long}"/>
-					<attribute name="Specification-Version" value="${openmrs.version.short}"/>
-					
-					<attribute name="Implementation-Title" value="OpenMRS Expected Database Version"/>
-					<attribute name="Implementation-Version" value="${openmrs.database.version.expected}"/>
+					<attribute name="Specification-Version" value="${openmrs.version.shortnumericonly}"/>
 				</section>
 			</manifest>
 			<fileset dir="${build.dir}">
 				<include name="**/*"/>
 				<exclude name="**/web/**" />
 				<exclude name="junit*/" /> <!-- the junit built files -->
-				<exclude name="**/*Test.class" />
+				<exclude name="**/*Test*.class" />
 				<exclude name="**/include/" /> <!-- to skip all xml and omod files -->
 				<exclude name="**/test/" />
-				<exclude name="log4j*" />
+				<exclude name="liquibase-data/" /> <!-- to skip the liquibase starter xml files -->
+			</fileset>
+			<fileset dir="${build.dir}">
+				<!-- For spring's exclusion of tests that were accidentally put into omods -->
+				<include name="org/openmrs/util/TestTypeFilter.class" />
 			</fileset>
 		</jar>
 	</target>
 
-	<target name="javadoc-api" description="generate api documentation">
+	<target name="package-javadoc-api" description="packages api documentation into /doc/api.zip">
 		<delete dir="${doc.dir}/api" />
 		<copy todir="${doc.dir}/api">
 			<fileset file="${metadata.dir}/images/openmrs-logo-small.gif" />
 		</copy>
 		<javadoc packagenames="org.openmrs.*" destdir="${doc.dir}/api" classpathref="api.compile.classpath" author="true" version="true" windowtitle="${doc.title}" header="${doc.header}" footer="${doc.footer}" bottom="${doc.bottom}">
+			<tag name="should" scope="all" description="Behavior test descriptor for a method" /> 
 			<packageset dir="${src.dir}/api" defaultexcludes="yes">
 				<include name="org/openmrs/**" />
 				<exclude name="**/.svn" />
 			</packageset>
 		</javadoc>
-	</target>
-
-	<target name="package-javadoc-api" depends="javadoc-api" description="packages api documentation">
+		
 		<delete file="${doc.dir}/api.zip" />
 		<zip destfile="${doc.dir}/api.zip" basedir="${doc.dir}" includes="api/**" />
 	</target>
 
-	<target name="compile-api-tests" depends="package-api" description="compile api tests">
+	<target name="compile-api-tests" depends="package-api" description="compile the java files in /test/api">
 		<mkdir dir="${build.dir}" />
 		<javac srcdir="${test.dir}/api" destdir="${build.dir}" debug="${javac.debug}" debuglevel="${javac.debuglevel}" deprecation="${compile.deprecation}" optimize="${compile.optimize}" classpathref="api.test.classpath">
 			<compilerarg line="${compile.arguments}" />
@@ -236,22 +225,6 @@
 		</copy>
 		
 	</target>
-	
-	<target name="compile-web-tests" depends="compile-api-tests,compile-web" description="compile the java files in /test/api">
-		<mkdir dir="${build.dir}" />
-		<javac srcdir="${test.dir}/web" destdir="${build.dir}" debug="${javac.debug}" debuglevel="${javac.debuglevel}" deprecation="${compile.deprecation}" optimize="${compile.optimize}" classpathref="api.test.classpath">
-			<compilerarg line="${compile.arguments}" />
-		</javac>
-
-		<!-- copy the extra files to the build dir in case an ant-clean was just done -->
-		<copy todir="${build.dir}">
-			<!-- dbunit files for db and api tests -->
-			<fileset dir="${test.dir}/web" includes="**/*.xml"/>
-			<!-- module files for module tests -->
-			<fileset dir="${test.dir}/web" includes="**/*.omod"/>
-		</copy>
-		
-	</target>
 
 	<target name="package-api-tests" depends="compile-api-tests" description="create api-tests jar">
 		<mkdir dir="${dist.dir}" />
@@ -263,7 +236,10 @@
 				<exclude name="**/web/" />
 				<include name="**/test/*.class" /> <!-- include the helper files -->
 				<include name="**/*Test*.class" /> <!-- include all junit tests and inner classes -->
-				<include name="org/openmrs/include/*.xml" />
+				<include name="**/include/*.xml" />
+				
+				<!-- For spring's exclusion of tests. These are in the openmrs-api.jar file -->
+				<exclude name="org/openmrs/util/TestTypeFilter.class" /> 
 			</fileset>
 			<!-- Put this xml in a separate fileset so that its in the root of the jar file -->
 			<fileset file="${build.dir}/org/openmrs/test/TestingApplicationContext.xml" />
@@ -280,24 +256,45 @@
 				<path location="${dist.dir}/${openmrs.api.name}" />
 			</classpath>
 		</javac>
+		
+		<!-- copy the extra files to the build dir in case an ant-clean was just done -->
+		<copy todir="${build.dir}">
+			<!-- vm files for the initial setup wizard -->
+			<fileset dir="${src.dir}/web" includes="**/*.vm"/>
+		</copy>
+		
+	</target>
+				
+	<target name="compile-web-tests" depends="compile-api-tests,compile-web" description="compile the java files in /test/api">
+		<mkdir dir="${build.dir}" />
+		<javac srcdir="${test.dir}/web" destdir="${build.dir}" debug="${javac.debug}" debuglevel="${javac.debuglevel}" deprecation="${compile.deprecation}" optimize="${compile.optimize}" classpathref="api.test.classpath">
+			<compilerarg line="${compile.arguments}" />
+		</javac>
+
+		<!-- copy the extra files to the build dir in case an ant-clean was just done -->
+		<copy todir="${build.dir}">
+			<!-- dbunit files for db and api tests -->
+			<fileset dir="${test.dir}/web" includes="**/*.xml"/>
+			<!-- module files for module tests -->
+			<fileset dir="${test.dir}/web" includes="**/*.omod"/>
+		</copy>
+		
 	</target>
 
-	<!-- 
-		TODO: The 'deploy' target doesn't work all that well with our setup for some reason.  	
-	-->
     <target name="deploy" depends="package-web" if="tomcat.home" description="Move war into the tomcat's webapps directory - ">
-		<echo message="Deploying webapp to Tomcat.  NOTE: The 'deploy' target is not working as expected yet."/>
+		<echo message="Deploying war file to Tomcat webapps directory"/>
         <copy todir="${tomcat.home}/webapps" file="${dist.dir}/${webapp.name}.war"/>
     </target>
 	
-	<target name="undeploy" if="tomcat.home" description="undeploy war file to servlet container's deployment dir">
-		<echo message="Undeploying webapp from Tomcat"/>
+	<target name="undeploy" if="tomcat.home" description="undeploy war file from servlet container's deployment dir">
+		<echo message="Undeploying war file from Tomcat webapps directory"/>
 		<delete file="${tomcat.home}/webapps/${webapp.name}.war"/>
 		<delete dir="${tomcat.home}/webapps/${webapp.name}"/>
     </target>
 	
-	<target name="deploy-web" description="standalone copy web target">
-		<copy todir="${tomcat.home}/webapps/${webapp.name}">
+	<target name="deploy-web" description="Copies all jsp/css/properties files to webapps dir without restarting the war">
+		<!-- If you receive errors about "Failed to Copy", make sure your user has write access to ${tomcat.home}/webapps/${webapp.name} -->
+		<copy todir="${tomcat.home}/webapps/${webapp.name}" failonerror="false">
 			<fileset dir="web">
 				<include name="**/*.jsp"/>
 				<include name="**/*.tag"/>
@@ -309,12 +306,12 @@
 				<include name="**/*_theme*.properties"/>
 				<include name="**/images/**/*" />
 				<!-- This fileset doesn't exclude /web/test so that 
-					 developers can easily test files -->
+					 developers can easily test /web/test files by running deploy-web -->
 			</fileset>
 		</copy>
 	</target>
 	
-	<target name="package-web-init" depends="compile-web" description="start creation of webapp. Use package-web for complete">
+	<target name="package-web" depends="compile-web" description="create webapp war file">
 		<mkdir dir="${dist.dir}/web" />
 		
 		<!-- copy the web.xml file to the dist folder (for variable replacement) -->
@@ -323,56 +320,56 @@
 			<filterset refid="web.xml.variables.to.replace" />
 		</copy>
 		
-		<property name="libs-zipped-temp" value="${dist.dir}/web/temp-war-libs-zipped.zip" />
-		<zip destfile="${libs-zipped-temp}">
-			
-			<!-- NOTE: You must do an ant "clean" after changing these libraries -->
-			
-			<zipfileset dir="${antlr.dir}" includes="*.jar" />
-			<zipfileset dir="${asm.dir}" includes="*.jar" />
-			<zipfileset dir="${c3p0.dir}" includes="*.jar" />
-			<zipfileset dir="${cglib.dir}" includes="*.jar" />
-			<zipfileset dir="${commons-beanutils.dir}" includes="*.jar" />
-			<zipfileset dir="${commons-collections.dir}" includes="*.jar" excludes="*test*.jar" />
-			<zipfileset dir="${commons-fileupload.dir}" includes="*.jar" />
-			<zipfileset dir="${commons-io.dir}" includes="*.jar" />
-			<zipfileset dir="${commons-lang.dir}" includes="*.jar" />
-			<zipfileset dir="${commons-logging.dir}" includes="*.jar" excludes="*api*.jar" />
-			<zipfileset dir="${database.dir}" includes="*.jar" />
-			<zipfileset dir="${dom4j.dir}" includes="*.jar" />
-			<zipfileset dir="${dwr.dir}" includes="*.jar" />
-			<zipfileset dir="${ehcache.dir}" includes="*.jar" />
-			<zipfileset dir="${hl7api.dir}" includes="*.jar" />
-			<zipfileset dir="${hibernate.dir}" includes="*.jar" />
-			<zipfileset dir="${jfreechart.dir}" includes="*.jar" />
-			<zipfileset dir="${jstl.dir}" includes="*.jar" />
-			<zipfileset dir="${jta.dir}" includes="*.jar" />
-			<zipfileset dir="${log4j.dir}" includes="*.jar" />
-			<zipfileset dir="${mail.dir}" includes="*.jar" />
-			<zipfileset dir="${neal-reporting.dir}" includes="*.jar" />
-			<zipfileset dir="${saxon.dir}" includes="*.jar" />
-			<zipfileset dir="${simple.dir}" includes="*.jar" />
-			<zipfileset dir="${spring.dir}" includes="*.jar" excludes="*test*.jar"/>
-			<zipfileset dir="${stax.dir}" includes="*.jar" />
-			<zipfileset dir="${taglibs.dir}" includes="*.jar" />
-			<zipfileset dir="${velocity.dir}" includes="*.jar" />
-			<zipfileset dir="${xerces.dir}" includes="*.jar" excludes="*Samples*.jar" />
-			<zipfileset dir="${xstream.dir}" includes="*.jar" />
-		</zip>
+		<!-- Extract the liquibase files so they can be included in the war file -->
+		<unzip src="${metadata.dir}/model/liquibase-data.zip" 
+			   dest="${build.dir}/liquibase-data" />
 		
-	</target>
-	
-	<target name="package-web" depends="package-web-init" description="create webapp war file">
 		<war destfile="${dist.dir}/${webapp.name}.war" basedir="web" excludes="**/web.xml, **/test/" webxml="${dist.dir}/web/web.xml" duplicate="add">
 			<classes dir="${build.dir}">
 				<include name="**/web/**/*.class" />
-				<include name="log4j.xml" />
+				<include name="**/web/**/*.vm" /> <!-- velocity macro files for initial setup -->
+				<exclude name="**/test/" />
+				<exclude name="**/*Test*.class" /><!-- more inclusive with trailing wildcard --> 
+			</classes>
+			<classes file="${metadata.dir}/api/log4j/log4j.xml" />
+			<classes file="${metadata.dir}/api/log4j/velocity.properties" />
+			<classes dir="${build.dir}/liquibase-data">
+				<include name="*" /> <!-- for the initial setup files: liquibase-schema-only.xml, liquibase-core-data.xml, liquibase-demo-data.xml-->
 			</classes>
 			<classes dir="web/WEB-INF">
 				<include name="*_theme*.properties"/>
 			</classes>
 			<lib file="${dist.dir}/${openmrs.api.name}" />
-			<lib src="${libs-zipped-temp}" />
+			<lib dir="${antlr.dir}" includes="*.jar" />
+			<lib dir="${asm.dir}" includes="*.jar" />
+			<lib dir="${c3p0.dir}" includes="*.jar" />
+			<lib dir="${cglib.dir}" includes="*.jar" />
+			<lib dir="${commons-beanutils.dir}" includes="*.jar" />
+			<lib dir="${commons-collections.dir}" includes="*.jar" excludes="*test*.jar" />
+			<lib dir="${commons-fileupload.dir}" includes="*.jar" />
+			<lib dir="${commons-io.dir}" includes="*.jar" />
+			<lib dir="${commons-lang.dir}" includes="*.jar" />
+			<lib dir="${database.dir}" includes="*.jar" />
+			<lib dir="${dom4j.dir}" includes="*.jar" />
+			<lib dir="${dwr.dir}" includes="*.jar" />
+			<lib dir="${ehcache.dir}" includes="*.jar" />
+			<lib dir="${hl7api.dir}" includes="*.jar" />
+			<lib dir="${hibernate.dir}" includes="*.jar" />
+			<lib dir="${jfreechart.dir}" includes="*.jar" />
+			<lib dir="${jstl.dir}" includes="*.jar" />
+			<lib dir="${jta.dir}" includes="*.jar" />
+			<lib dir="${log4j.dir}" includes="*.jar" />
+			<lib dir="${slf4j.dir}" includes="*.jar" />
+			<lib dir="${mail.dir}" includes="*.jar" />
+			<lib dir="${saxon.dir}" includes="*.jar" />
+			<lib dir="${simple.dir}" includes="*.jar" />
+			<lib dir="${spring.dir}" includes="*.jar" excludes="*test*.jar"/>
+			<lib dir="${stax.dir}" includes="*.jar" />
+			<lib dir="${taglibs.dir}" includes="*.jar" />
+			<lib dir="${velocity.dir}" includes="*.jar" />
+			<lib dir="${xerces.dir}" includes="*.jar" excludes="*Samples*.jar" />
+			<lib dir="${xstream.dir}" includes="*.jar" />
+			<lib dir="${liquibase.dir}" includes="*.jar" />
 		</war>
 	</target>
 	
@@ -387,50 +384,11 @@
 		<mkdir dir="${dist.dir}" />
 		<jar destfile="${dist.dir}/web-${openmrs.api.name}">
 			<fileset dir="${build.dir}" includes="**/web/**/*" />
+			<fileset dir="${basedir}/web/WEB-INF" includes="openmrs-servlet.xml" />
 		</jar>
 	</target>
-	
-	<target name="package-web-without-libs" depends="package-web-init" description="create webapp war file without libs">
-		<war destfile="${dist.dir}/${webapp.name}.war" basedir="web" excludes="**/web.xml, **/test/" webxml="${dist.dir}/web/web.xml" duplicate="add">
-			<classes dir="${build.dir}" >
-				<include name="**/web/**/*.class" />
-				<include name="log4j.xml" />
-			</classes>
-			<classes dir="web/WEB-INF">
-				<include name="*_theme*.properties"/>
-			</classes>
-		</war>
-	</target>
 
-	<target name="package-web-libs-only" depends="package-web-init" description="create zip file of webapp libraries">
-		<zip destfile="${dist.dir}/libs-${openmrs.version.short}.zip">
-			<zipfileset file="${dist.dir}/${openmrs.api.name}" />
-			<zipfileset src="${libs-zipped-temp}" />
-		</zip>
-	</target>
-	
-	<!-- 
-	<target name="compile-web-tests" description="compile webapp tests">
-		<mkdir dir="${build.dir}" />
-		<javac srcdir="${test.dir}/web" destdir="${build.dir}" debug="${javac.debug}" debuglevel="${javac.debuglevel}" deprecation="${compile.deprecation}" optimize="${compile.optimize}" classpathref="web.test.classpath">
-			<compilerarg line="${compile.arguments}" />
-		</javac>
-	</target>
-	
-	<target name="package-web-tests" depends="compile-web-tests" description="create webapp tests jar">
-		<mkdir dir="${dist.dir}" />
-		<jar destfile="${dist.dir}/${webapp.name}-web-tests-${webapp.version}.jar">
-			<manifest>
-				<attribute name="Class-Path" value="${webapp.name}-web-tests-${webapp.version}.jar" />
-			</manifest>
-			<fileset dir="${build.dir}" >
-				<include name="**/web/**/*Test.class" />
-			</fileset>
-		</jar>
-	</target>
-	-->
-
-	<target name="dist" depends="package-web" description="create distribution packages" />
+	<target name="dist" depends="package-web" description="create distribution war file and api jar file packages" />
 
 	<target name="install" description="Install application in Tomcat" depends="package-web">
 		<echo>Installing ${webapp.name} to ${tomcat.manager.url} as tomcat user named ${tomcat.username}</echo>
@@ -446,31 +404,21 @@
 		<antcall target="remove" />
 		<sleep seconds="2" />
 		<antcall target="install" />
-		<antcall target="growl" />
-	</target>
-	
-	<target name="growl">
-		<exec executable="/usr/local/bin/growlnotify" os="Mac OS X" logError="true">
+		
+		<exec executable="/usr/local/bin/growlnotify" os="Mac OS X" logError="true" failifexecutionfails="false">
 			<arg line="-m 'OpenMRS is ready' Build completed -a Eclipse" />
 		</exec>
+        
+		<!-- on Ubuntu, requires "libnotify-bin" package -->
+		<exec executable="notify-send" os="Linux" logError="true" failifexecutionfails="false">
+			<arg line="'OpenMRS is ready' 'Build completed'" />
+		</exec>
 	</target>
-				
+
 	<target name="reload" depends="package-web" description="Explode war and reload application in Tomcat">
 		<mkdir dir="${tomcat.home}/webapps/${webapp.name}" />
 		<unzip src="${dist.dir}/${webapp.name}.war" dest="${tomcat.home}/webapps/${webapp.name}" overwrite="true" />
 		<reload url="${tomcat.manager.url}" username="${tomcat.username}" password="${tomcat.password}" path="/${webapp.name}" />
-	</target>
-
-	<target name="start" description="Start Tomcat application">
-		<start url="${tomcat.manager.url}" username="${tomcat.username}" password="${tomcat.password}" path="/${webapp.name}" />
-	</target>
-
-	<target name="stop" description="Stop Tomcat application">
-		<stop url="${tomcat.manager.url}" username="${tomcat.username}" password="${tomcat.password}" path="/${webapp.name}" />
-	</target>
-
-	<target name="list" description="List Tomcat applications">
-		<list url="${tomcat.manager.url}" username="${tomcat.username}" password="${tomcat.password}" />
 	</target>
 
 	<target name="tomcat-start" description="Start Tomcat">
@@ -487,13 +435,6 @@
              <arg line="stop"/>
          </java>
      </target>
-	
-	<target name="schemaexport">
-		<taskdef name="schemaexport" classname="org.hibernate.tool.hbm2ddl.SchemaExportTask" classpathref="hibernate.classpath" />
-
-		<schemaexport config="${build.dir}/api/hibernate.cfg.xml" quiet="no" text="yes" drop="no" delimiter=";" output="schema-export.sql">
-		</schemaexport>
-	</target>
 	
 	<target name="arden-clean-grammar">
 		<delete>
@@ -522,6 +463,8 @@
 		</antlr>
 	</target>
 	
+	<!-- These targets are either not used or are broken and should be removed -bwolfe 20090102
+		
 	<target name="arden-tests">
 		<java 
 			classpath=".;build;lib/antlr/antlrdebug_1.0.0.jar;lib/antlr/antlr_2.7.6.jar" 
@@ -551,6 +494,7 @@
 			<classpath path="lib/antlr/antlr_2.7.6.jar" />
 		</antlr>
 	</target>
+	-->
 		
 	<target name="hl7-test" description="Spawns the HL7API test panel for testing HL7 messages (see http://hl7api.sourceforge.net)">
 		<java classname="ca.uhn.hl7v2.app.TestPanel" fork="yes" spawn="yes">
@@ -568,8 +512,49 @@
 		</java>
 	</target>
 	
-	<target name="junit-report" depends="junit" description="Run tests and create JUnit report (requires driver.jar property)">
-        <delete dir="${junit-reports.dir}" failonerror="false" />
+	<target name="junit-report" depends="compile-api-tests,compile-web-tests" description="Run tests and create JUnit report (requires driver.jar property)">
+		<delete dir="${junit-tests.dir}" failonerror="false"/>
+		<mkdir dir="${junit-tests.dir}" />
+		
+	    <path id="junit-path">
+			<fileset refid="lib.files" />
+		    <pathelement path="${build.dir}"/>
+	    	<pathelement path="${metadata.dir}/api/log4j/"/>
+	    	<pathelement path="web/WEB-INF/"/>
+			<pathelement location="${dist.dir}/${openmrs.api.name}"/>
+		</path>
+		
+		<!-- fork the vm so that translation happens faster -->
+        <junit fork="yes" forkmode="once" clonevm="false">
+        	<classpath refid="junit-path"/>
+        	<formatter type="xml"/>
+        	<!-- overwrite this system property so that there are less properties printed -->
+        	<sysproperty key="repositoryFileInput" value="" />
+            <batchtest todir="${junit-tests.dir}" haltonfailure="no">
+				<fileset dir="${build.dir}">
+					<include name="org/openmrs/**/*Test.class" />
+					<exclude name="**/test/*" /> <!-- util classes used by junit -->
+					<exclude name="org/openmrs/web/**/*" /> <!-- util classes used by junit -->
+				</fileset>
+			</batchtest>
+		</junit>
+		
+		<!-- run the web tests separately to reduce memory errors -->
+		<junit fork="yes" forkmode="once" clonevm="false">
+	    	<classpath refid="junit-path"/>
+	    	<formatter type="xml"/>
+	    	<!-- overwrite this system property so that there are less properties printed -->
+	    	<sysproperty key="repositoryFileInput" value="" />
+	        <batchtest todir="${junit-tests.dir}" haltonfailure="no">
+				<fileset dir="${build.dir}">
+					<include name="org/openmrs/web/**/*Test.class" />
+					<exclude name="**/SummaryTest.class" />
+					<exclude name="**/test/*" /> <!-- util classes used by junit -->
+				</fileset>
+			</batchtest>
+		</junit>
+		
+		<delete dir="${junit-reports.dir}" failonerror="false" />
         <mkdir dir="${junit-reports.dir}" />
         <junitreport todir="${junit-reports.dir}">
 			<fileset dir="${junit-tests.dir}">
@@ -591,31 +576,91 @@
 		</exec>
 		
 	</target>
+	
+	<target name="liquibase-init" description="setup the path and properties for liquibase targets">
+		<mkdir dir="build" />
+		<path id="classpath">
+            <fileset dir="${liquibase.dir}">
+                <include name="*.jar"/>
+            </fileset>
+            <fileset dir="${database.dir}">
+                <include name="*.jar"/>
+            </fileset>
+			<path refid="api.compile.classpath"/>
+			<pathelement location="${build.dir}" />
+        </path>
 
-    <target name="junit" depends="compile-api-tests,compile-web-tests" description="Run the test suite (requires driver.jar property)">
-		<delete dir="${junit-tests.dir}" failonerror="false"/>
-		<mkdir dir="${junit-tests.dir}" />
-		
-	    <path id="junit-path">
-			<fileset refid="lib.files" />
-		    <pathelement path="${build.dir}"/>
-	    	<pathelement path="web/WEB-INF/"/>
-			<pathelement location="${dist.dir}/${openmrs.api.name}"/>
-		</path>
-		
-        <junit dir="${junit-tests.dir}" maxmemory="256M" fork="yes" forkmode="perBatch" newenvironment="true">
-			<classpath refid="junit-path"/>
-        	<sysproperty key="diffFileInput" value="--"/> <!-- put here so this property isn't printed and wasting space -->
-			<formatter type="brief"/>
-        	<formatter type="xml"/>
-            <batchtest todir="${junit-tests.dir}" haltonfailure="no">
-				<fileset dir="${build.dir}">
-					<include name="**/*Test.class" />
-					<exclude name="**/SummaryTest.class" />
-					<exclude name="**/test/*" /> <!-- util classes used by junit -->
-				</fileset>
-			</batchtest>
-		</junit>
+        <property name="db.changelog.file" value="root.changelog.xml"/>
+        <property name="database.url" value="jdbc:mysql://localhost:3306/openmrs-trunk"/>
+        <property name="database.username" value="root"/>
+        <property name="database.password" value="password"/>
+        <property name="database.driver" value="com.mysql.jdbc.Driver"/>
+        <property name="prompt.user.if.not.local.database" value="true"/>
+
+        <taskdef resource="liquibasetasks.properties">
+        	<classpath refid="classpath"/>
+        </taskdef>
+    </target>
+	
+	<!--
+	<target name="liquibase-generate-change-log" depends="liquibase-init" description="Create changelog xml file from database for table schema only">
+		<generateChangeLog
+                driver="${database.driver}"
+                url="${database.url}"
+                username="${database.username}"
+                password="${database.password}"
+                promptOnNonLocalDatabase="${prompt.user.if.not.local.database}"
+                classpathref="classpath"
+				databaseChangeLogTableName="liquibasechangelog"
+				databaseChangeLogLockTableName="liquibasechangeloglock"
+							
+                outputFile="build/liquibase-tables.xml"
+                >
+        </generateChangeLog>
+    </target>
+	
+	<target name="liquibase-diff-change-log" depends="liquibase-init" description="Create changelog xml file with rows comparing two databases">
+		<diffDatabaseToChangeLog
+                changeLogFile="${db.changelog.file}"
+                driver="${database.driver}"
+                url="${database.url}"
+                username="${database.username}"
+                password="${database.password}"
+                promptOnNonLocalDatabase="${prompt.user.if.not.local.database}"
+                classpathref="classpath"
+				diffTypes="data"
+
+                baseUrl="jdbc:mysql://localhost/openmrs-with-core"
+                baseUsername="${database.username}"
+                basePassword="${database.password}"
+                baseDefaultSchemaName="liquibase"
+
+				databaseChangeLogTableName="liquibasechangelog"
+				databaseChangeLogLockTableName="liquibasechangeloglock"
+							
+				outputFile="build/liquibase-diff.xml"
+                >
+        </diffDatabaseToChangeLog>
+    </target>
+	-->
+	
+	<target name="liquibase-generate-offline-sql-diff-mysql" depends="liquibase-init" description="Create the /dist/update-to-latest-mysql-diff.sql file for running on systems that don't use the openmrs webapp">
+		<updateDatabase 
+				changeLogFile="${metadata.dir}/model/liquibase-update-to-latest.xml"
+				driver="${database.driver}"
+				url="${database.url}"
+				username="${database.username}"
+				password="${database.password}"
+				promptOnNonLocalDatabase="${prompt.user.if.not.local.database}"
+				dropFirst="false"
+				classpathref="classpath"
+				databaseChangeLogTableName="liquibasechangelog"
+				databaseChangeLogLockTableName="liquibasechangeloglock"
+				
+				outputFile="dist/update-to-latest-mysql-diff.sql"
+				>
+		</updateDatabase>
+		<echo>Created dist/update-to-latest.sql</echo>
 	</target>
 	
 </project>

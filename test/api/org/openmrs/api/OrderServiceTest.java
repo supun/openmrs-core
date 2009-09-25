@@ -13,17 +13,11 @@
  */
 package org.openmrs.api;
 
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-
-import java.util.Iterator;
-import java.util.List;
-
 import org.junit.Test;
-import org.openmrs.OrderType;
+import org.openmrs.Order;
 import org.openmrs.api.context.Context;
 import org.openmrs.test.BaseContextSensitiveTest;
+import org.openmrs.test.Verifies;
 
 /**
  * TODO clean up and test all methods in OrderService
@@ -31,77 +25,14 @@ import org.openmrs.test.BaseContextSensitiveTest;
 public class OrderServiceTest extends BaseContextSensitiveTest {
 	
 	/**
-	 * Adds then updates an order
-	 * 
-	 * @throws Exception
+	 * @see {@link OrderService#saveOrder(Order)}
 	 */
-	@Test
-	public void shouldOrderCreateUpdateDelete() throws Exception {
-		
-	}
-	
-	/**
-	 * Adds then updates a drug order
-	 * 
-	 * @throws Exception
-	 */
-	@Test
-	public void shouldDrugOrderCreateUpdateDelete() throws Exception {
-		
-	}
-	
-	/**
-	 * TODO finish and activate this test method
-	 * 
-	 * @throws Exception
-	 */
-	public void xtestOrderType() throws Exception {
-		
+	@Test(expected = APIException.class)
+	@Verifies(value = "should not save order if order doesnt validate", method = "saveOrder(Order)")
+	public void saveOrder_shouldNotSaveOrderIfOrderDoesntValidate() throws Exception {
 		OrderService orderService = Context.getOrderService();
-		
-		//testing creation
-		
-		OrderType orderType = new OrderType();
-		
-		orderType.setName("testing");
-		orderType.setDescription("desc");
-		
-		orderService.saveOrderType(orderType);
-		assertNotNull(orderType.getOrderTypeId());
-		
-		List<OrderType> orderTypes = orderService.getAllOrderTypes();
-		
-		//make sure we get a list
-		assertNotNull(orderTypes);
-		
-		boolean found = false;
-		for (Iterator<OrderType> i = orderTypes.iterator(); i.hasNext();) {
-			OrderType orderType2 = i.next();
-			assertNotNull(orderType);
-			//check .equals function
-			assertTrue(orderType.equals(orderType2) == (orderType.getOrderTypeId().equals(orderType2.getOrderTypeId())));
-			//mark found flag
-			if (orderType.equals(orderType2))
-				found = true;
-		}
-		
-		//assert that the new orderType was returned in the list
-		assertTrue(found);
-		
-		//check update
-		orderType.setName("another test");
-		orderService.saveOrderType(orderType);
-		
-		OrderType newerOrderType = orderService.getOrderType(orderType.getOrderTypeId());
-		assertTrue(newerOrderType.getName().equals(orderType.getName()));
-		
-		//check deletion
-		
-		// TODO must create this method before testing it!
-		//as.deleteOrderType(orderType.getOrderTypeId());
-		
-		assertNull(orderService.getOrderType(orderType.getOrderTypeId()));
-		
+		Order order = new Order();
+		order.setPatient(null);
+		orderService.saveOrder(order);
 	}
-	
 }

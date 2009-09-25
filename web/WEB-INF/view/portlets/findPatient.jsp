@@ -70,7 +70,7 @@
 				function findObjects(text) {
 					if (text.length > 2) {
 						savedText = text;
-						DWRPatientService.findPatients(preFillTable, text, includeRetired);
+						DWRPatientService.findPatients(text, includeRetired, preFillTable);
 					}
 					else {
 						var msg = new Array();
@@ -106,7 +106,7 @@
 				var findPatientForm = document.getElementById("findPatientForm");
 				
 				function init() {
-					DWRUtil.useLoadingMessage();
+					dwr.util.useLoadingMessage();
 				
 					<request:existsParameter name="patientId">
 						<!-- User has 'patientId' in the request params -- selecting that patient -->
@@ -146,8 +146,7 @@
 				
 				dojo.addOnLoad( function() {
 					
-					searchWidget = dojo.widget.manager.getWidgetById("pSearch");			
-					
+					searchWidget = dojo.widget.manager.getWidgetById("pSearch");
 					dojo.event.topic.subscribe("pSearch/select", 
 						function(msg) {
 							if (msg.objs[0].patientId)
@@ -191,7 +190,7 @@
 
 		</c:when>
 		<c:otherwise>
-			ERROR! unknown size '${model.size}' in FindOnePatientWidget
+			<spring:message code="Portlet.findPatient.error" arguments="${model.size}"/>
 		</c:otherwise>
 	</c:choose>
 

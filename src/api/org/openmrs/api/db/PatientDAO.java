@@ -19,7 +19,6 @@ import org.openmrs.Location;
 import org.openmrs.Patient;
 import org.openmrs.PatientIdentifier;
 import org.openmrs.PatientIdentifierType;
-import org.openmrs.Tribe;
 
 /**
  * Database methods for the PatientService
@@ -45,7 +44,7 @@ public interface PatientDAO {
 	 * 
 	 * @param patient patient to be deleted
 	 * @see org.openmrs.api.PatientService#deletePatient(org.openmrs.Patient)
-	 * @see #voidPatient(Patient, String)
+	 * @see org.openmrs.api.PatientService#voidPatient(Patient, String)
 	 */
 	public void deletePatient(Patient patient) throws DAOException;
 	
@@ -98,42 +97,31 @@ public interface PatientDAO {
 	public void deletePatientIdentifierType(PatientIdentifierType patientIdentifierType) throws DAOException;
 	
 	/**
-	 * Get tribe by internal tribe identifier
-	 * 
-	 * @return Tribe
-	 * @param tribeId
-	 * @throws DAOException
-	 * @deprecated tribe will be moved to patient attribute
-	 */
-	public Tribe getTribe(Integer tribeId) throws DAOException;
-	
-	/**
-	 * Get list of tribes that are not retired
-	 * 
-	 * @return non-retired Tribe list
-	 * @throws DAOException
-	 * @deprecated tribe will be moved to patient attribute
-	 */
-	public List<Tribe> getTribes() throws DAOException;
-	
-	/**
-	 * Get tribes by partial name lookup
-	 * 
-	 * @param Search string
-	 * @return non-retired Tribe list
-	 * @throws DAOException
-	 * @deprecated tribe will be moved to patient attribute
-	 */
-	public List<Tribe> findTribes(String s) throws DAOException;
-	
-	/**
 	 * @see org.openmrs.api.PatientService#getDuplicatePatientsByAttributes(java.util.List)
 	 */
 	public List<Patient> getDuplicatePatientsByAttributes(List<String> attributes) throws DAOException;
-
+	
 	/**
-	 * @see org.openmrs.api.PatientService#isIdentifierInUseByAnotherPatient(PatientIdentifier) 
+	 * @see org.openmrs.api.PatientService#isIdentifierInUseByAnotherPatient(PatientIdentifier)
 	 */
-    public boolean isIdentifierInUseByAnotherPatient(PatientIdentifier patientIdentifier);
+	public boolean isIdentifierInUseByAnotherPatient(PatientIdentifier patientIdentifier);
+	
+	/**
+	 * Auto generated method comment
+	 * 
+	 * @param uuid
+	 * @return
+	 */
+	public Patient getPatientByUuid(String uuid);
+	
+	public PatientIdentifier getPatientIdentifierByUuid(String uuid);
+	
+	/**
+	 * Auto generated method comment
+	 * 
+	 * @param uuid
+	 * @return
+	 */
+	public PatientIdentifierType getPatientIdentifierTypeByUuid(String uuid);
 	
 }

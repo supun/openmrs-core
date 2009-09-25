@@ -13,7 +13,6 @@
  */
 package org.openmrs.arden;
 
-import java.io.IOException;
 import java.io.Writer;
 
 /**

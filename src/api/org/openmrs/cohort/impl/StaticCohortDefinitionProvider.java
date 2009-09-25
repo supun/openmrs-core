@@ -32,7 +32,10 @@ import org.openmrs.report.EvaluationContext;
  * CohortDefinition or EvaluationContext in the cohort that it returns. Those are not meaningful in
  * the context of a static cohort, and alse because we want to preserve the original
  * CohortDefinition that produced the Cohort that is being wrapped by a StaticCohortDefinition.
+ * 
+ * @deprecated see reportingcompatibility module
  */
+@Deprecated
 public class StaticCohortDefinitionProvider implements CohortDefinitionProvider {
 	
 	/**
@@ -60,7 +63,7 @@ public class StaticCohortDefinitionProvider implements CohortDefinitionProvider 
 	 */
 	public List<CohortDefinitionItemHolder> getAllCohortDefinitions() {
 		List<CohortDefinitionItemHolder> ret = new Vector<CohortDefinitionItemHolder>();
-		for (Cohort cohort : Context.getCohortService().getCohorts()) {
+		for (Cohort cohort : Context.getCohortService().getAllCohorts()) {
 			CohortDefinitionItemHolder item = new CohortDefinitionItemHolder();
 			CohortDefinition cohortDefinition = new StaticCohortDefinition(cohort);
 			item.setKey(cohort.getCohortId() + ":" + cohortDefinition.getClass().getCanonicalName());
@@ -91,10 +94,7 @@ public class StaticCohortDefinitionProvider implements CohortDefinitionProvider 
 	public CohortDefinition saveCohortDefinition(CohortDefinition cohortDefinition) {
 		StaticCohortDefinition def = (StaticCohortDefinition) cohortDefinition;
 		Cohort c = def.getCohort();
-		if (c.getCohortId() == null)
-			Context.getCohortService().createCohort(c);
-		else
-			Context.getCohortService().updateCohort(c);
+		Context.getCohortService().saveCohort(c);
 		return def;
 	}
 	

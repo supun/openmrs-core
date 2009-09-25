@@ -16,7 +16,9 @@ package org.openmrs.notification;
 import java.io.Serializable;
 import java.util.Map;
 
-public class Template implements Serializable {
+import org.openmrs.BaseOpenmrsObject;
+
+public class Template extends BaseOpenmrsObject implements Serializable {
 	
 	/**
 	 * 
@@ -39,6 +41,7 @@ public class Template implements Serializable {
 	private String subject;
 	
 	// Not persisted
+	@SuppressWarnings("unchecked")
 	private Map data;
 	
 	private String content;
@@ -108,10 +111,12 @@ public class Template implements Serializable {
 		return ordinal;
 	}
 	
+	@SuppressWarnings("unchecked")
 	public void setData(Map data) {
 		this.data = data;
 	}
 	
+	@SuppressWarnings("unchecked")
 	public Map getData() {
 		return this.data;
 	}

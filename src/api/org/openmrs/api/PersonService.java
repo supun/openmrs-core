@@ -19,6 +19,7 @@ import java.util.Set;
 
 import org.openmrs.Patient;
 import org.openmrs.Person;
+import org.openmrs.PersonAddress;
 import org.openmrs.PersonAttribute;
 import org.openmrs.PersonAttributeType;
 import org.openmrs.PersonName;
@@ -35,7 +36,7 @@ import org.springframework.transaction.annotation.Transactional;
  * Contains methods pertaining to Persons in the system Use:<br/>
  * 
  * <pre>
- *   List<Person> personObjects = Context.getPersonService().getAllPersons();
+ * List&lt;Person&gt; personObjects = Context.getPersonService().getAllPersons();
  * </pre>
  * 
  * @see org.openmrs.api.context.Context
@@ -58,7 +59,13 @@ public interface PersonService {
 		/**
 		 * Attributes to be shown when only showing one patient or user
 		 */
-		VIEWING
+		VIEWING,
+
+		/**
+		 * Attributes to be shown in the header
+		 */
+		HEADER,
+		
 	}
 	
 	/**
@@ -77,7 +84,7 @@ public interface PersonService {
 	 * @param nameSearch string to search the person's name for
 	 * @param birthyear the year of birth to restrict
 	 * @param gender The gender field to search on (Typically just "M" or "F")
-	 * @return
+	 * @return Set<Person> object with all people matching criteria
 	 * @throws APIException
 	 * @should accept greater than three names
 	 * @should match single search to any name part
@@ -89,6 +96,28 @@ public interface PersonService {
 	@Transactional(readOnly = true)
 	@Authorized( { OpenmrsConstants.PRIV_VIEW_PERSONS })
 	public Set<Person> getSimilarPeople(String nameSearch, Integer birthyear, String gender) throws APIException;
+	
+	/**
+	 * This method is needed to limit the ability for Users/Patients to be created that are already
+	 * of the other type. This method will not be needed after a Person/Patient/User refactor that
+	 * is due in 1.6.
+	 * 
+	 * @param nameSearch string to search the person's name for
+	 * @param birthyear the year of birth to restrict
+	 * @param gender The gender field to search on (Typically just "M" or "F")
+	 * @param personType one of person, user, or patient. If Person, any Person object is returned,
+	 *            if Patient, only Persons that are Patients are returned, if User, only Persons
+	 *            that are Users are returned
+	 * @return Set<Person> object with all people matching criteria
+	 * @throws APIException
+	 * @see {@link #getSimilarPeople(String, Integer, String)}
+	 * @since 1.5
+	 * @should limit personType equals Patient searches to only Patients
+	 * @should limit personType equals User searches to only Users
+	 * @should limit return all Persons with personType equals Person
+	 */
+	public Set<Person> getSimilarPeople(String nameSearch, Integer birthyear, String gender, String personType)
+	                                                                                                           throws APIException;
 	
 	/**
 	 * Find a person matching the <tt>searchPhrase</tt> search string
@@ -186,8 +215,7 @@ public interface PersonService {
 	public void deletePersonAttributeType(Integer attrTypeId) throws APIException;
 	
 	/**
-	 * @deprecated use {@link #savePersonAttributeType(PersonAttributeType)
-
+	 * @deprecated use {@link #savePersonAttributeType(PersonAttributeType)}
 	 */
 	@Authorized( { OpenmrsConstants.PRIV_MANAGE_PERSON_ATTRIBUTE_TYPES })
 	public void updatePersonAttributeType(PersonAttributeType type) throws APIException;
@@ -205,8 +233,9 @@ public interface PersonService {
 	/**
 	 * Get all PersonAttributeTypes in the database with the option of including the retired types
 	 * 
-	 * @param includeRetired true/false whether to include the person attribute types
-	 * @return
+	 * @param includeRetired boolean - include retired attribute types as well?
+	 * @return List<PersonAttributeType> object of all PersonAttributeTypes, possibly including
+	 *         retired ones
 	 */
 	@Transactional(readOnly = true)
 	@Authorized( { OpenmrsConstants.PRIV_VIEW_PERSON_ATTRIBUTE_TYPES })
@@ -244,6 +273,9 @@ public interface PersonService {
 	@Transactional(readOnly = true)
 	@Authorized( { OpenmrsConstants.PRIV_VIEW_PERSON_ATTRIBUTE_TYPES })
 	public PersonAttributeType getPersonAttributeType(Integer typeId) throws APIException;
+	
+	@Transactional(readOnly = true)
+	public PersonAttributeType getPersonAttributeTypeByUuid(String uuid);
 	
 	/**
 	 * Get a PersonAttribute from the database with the given PersonAttributeid
@@ -284,6 +316,9 @@ public interface PersonService {
 	@Authorized( { OpenmrsConstants.PRIV_VIEW_RELATIONSHIPS })
 	public Relationship getRelationship(Integer relationshipId) throws APIException;
 	
+	@Transactional(readOnly = true)
+	public Relationship getRelationshipByUuid(String uuid) throws APIException;
+	
 	/**
 	 * Get list of relationships that are not voided
 	 * 
@@ -316,9 +351,10 @@ public interface PersonService {
 	 * Get list of relationships that include Person in person_id or relative_id Does not include
 	 * voided relationships
 	 * 
-	 * @param person object listed on either side of the relationship
+	 * @param p person object listed on either side of the relationship
 	 * @return Relationship list
 	 * @throws APIException
+	 * @should only get unvoided relationships
 	 */
 	@Transactional(readOnly = true)
 	@Authorized( { OpenmrsConstants.PRIV_VIEW_RELATIONSHIPS })
@@ -378,13 +414,16 @@ public interface PersonService {
 	/**
 	 * Get relationshipType by internal identifier
 	 * 
-	 * @param relationshipType id
+	 * @param relationshipTypeId
 	 * @return relationshipType with given internal identifier or null if none found
 	 * @throws APIException
 	 */
 	@Transactional(readOnly = true)
 	@Authorized( { OpenmrsConstants.PRIV_VIEW_RELATIONSHIP_TYPES })
 	public RelationshipType getRelationshipType(Integer relationshipTypeId) throws APIException;
+	
+	@Transactional(readOnly = true)
+	public RelationshipType getRelationshipTypeByUuid(String uuid) throws APIException;
 	
 	/**
 	 * @deprecated use {@link #getRelationshipTypeByName(String)}
@@ -469,7 +508,8 @@ public interface PersonService {
 	/**
 	 * Voids the given Relationship, effectively removing it from openmrs.
 	 * 
-	 * @param Relationship to void
+	 * @param relationship Relationship to void
+	 * @param voidReason String reason the relationship is being voided.
 	 * @return the newly saved relationship
 	 * @throws APIException
 	 */
@@ -479,7 +519,7 @@ public interface PersonService {
 	/**
 	 * Unvoid Relationship in the database, effectively marking this as a valid relationship again
 	 * 
-	 * @param Relationship to unvoid
+	 * @param relationship Relationship to unvoid
 	 * @return the newly unvoided relationship
 	 * @throws APIException
 	 */
@@ -522,6 +562,18 @@ public interface PersonService {
 	 */
 	@Authorized( { OpenmrsConstants.PRIV_PURGE_PERSONS })
 	public void purgePerson(Person person) throws APIException;
+	
+	@Transactional(readOnly = true)
+	public Person getPersonByUuid(String uuid) throws APIException;
+	
+	@Transactional(readOnly = true)
+	public PersonAddress getPersonAddressByUuid(String uuid) throws APIException;
+	
+	@Transactional(readOnly = true)
+	public PersonAttribute getPersonAttributeByUuid(String uuid) throws APIException;
+	
+	@Transactional(readOnly = true)
+	public PersonName getPersonNameByUuid(String uuid) throws APIException;
 	
 	/**
 	 * Gets a person by internal id
@@ -606,20 +658,11 @@ public interface PersonService {
 	                                                                                                         throws APIException;
 	
 	/**
-	 * @deprecated use
-	 *             {@link #getPersonAttributeTypes(PERSON_TYPE, org.openmrs.api.PersonService.ATTR_VIEW_TYPE)}
+	 * @deprecated use {@link #getPersonAttributeTypes(String, String)}
 	 */
 	@Transactional(readOnly = true)
 	@Authorized( { OpenmrsConstants.PRIV_VIEW_PERSON_ATTRIBUTE_TYPES })
 	public List<PersonAttributeType> getPersonAttributeTypes(String personType, String viewType) throws APIException;
-	
-	/**
-	 * Iterates over Names/Addresses/Attributes to set dateCreated and creator properties if needed
-	 * 
-	 * @deprecated replaced by {@link #savePerson(Person)}
-	 * @param person
-	 */
-	public void setCollectionProperties(Person person);
 	
 	/**
 	 * Splits the <code>name</code> string into Given, Middle, and Family parts of a PersonName
@@ -636,6 +679,8 @@ public interface PersonService {
 	 * 
 	 * @param name person name to be parsed
 	 * @return parsed person name
+	 * @should parse two person name with comma
+	 * @should parse two person name without comma
 	 */
 	public PersonName parsePersonName(String name) throws APIException;
 	

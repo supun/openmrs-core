@@ -21,13 +21,13 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.Vector;
+import java.util.regex.Pattern;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.hibernate.Criteria;
 import org.hibernate.Hibernate;
 import org.hibernate.Query;
-import org.hibernate.SQLQuery;
 import org.hibernate.SessionFactory;
 import org.hibernate.criterion.Expression;
 import org.hibernate.criterion.LogicalExpression;
@@ -41,7 +41,6 @@ import org.openmrs.PatientIdentifier;
 import org.openmrs.PatientIdentifierType;
 import org.openmrs.Person;
 import org.openmrs.PersonName;
-import org.openmrs.Tribe;
 import org.openmrs.api.AdministrationService;
 import org.openmrs.api.context.Context;
 import org.openmrs.api.db.DAOException;
@@ -74,7 +73,7 @@ public class HibernatePatientDAO implements PatientDAO {
 	}
 	
 	/**
-	 * @see org.openmrs.api.PatientService#getPatient(java.lang.Long)
+	 * @see org.openmrs.api.PatientService#getPatient(java.lang.Integer)
 	 */
 	public Patient getPatient(Integer patientId) {
 		return (Patient) sessionFactory.getCurrentSession().get(Patient.class, patientId);
@@ -122,10 +121,12 @@ public class HibernatePatientDAO implements PatientDAO {
 		
 		boolean stubInsertNeeded = false;
 		
+		PreparedStatement ps = null;
+		
 		if (patient.getPatientId() != null) {
 			// check if there is a row with a matching patient.patient_id 
 			try {
-				PreparedStatement ps = connection.prepareStatement("SELECT * FROM patient WHERE patient_id = ?");
+				ps = connection.prepareStatement("SELECT * FROM patient WHERE patient_id = ?");
 				ps.setInt(1, patient.getPatientId());
 				ps.execute();
 				
@@ -138,11 +139,19 @@ public class HibernatePatientDAO implements PatientDAO {
 			catch (SQLException e) {
 				log.error("Error while trying to see if this person is a patient already", e);
 			}
+			if (ps != null) {
+				try {
+					ps.close();
+				}
+				catch (SQLException e) {
+					log.error("Error generated while closing statement", e);
+				}
+			}
 		}
 		
 		if (stubInsertNeeded) {
 			try {
-				PreparedStatement ps = connection
+				ps = connection
 				        .prepareStatement("INSERT INTO patient (patient_id, creator, voided, date_created) VALUES (?, ?, 0, ?)");
 				
 				ps.setInt(1, patient.getPatientId());
@@ -153,6 +162,16 @@ public class HibernatePatientDAO implements PatientDAO {
 			}
 			catch (SQLException e) {
 				log.warn("SQL Exception while trying to create a patient stub", e);
+			}
+			finally {
+				if (ps != null) {
+					try {
+						ps.close();
+					}
+					catch (SQLException e) {
+						log.error("Error generated while closing statement", e);
+					}
+				}
 			}
 		}
 		
@@ -226,22 +245,29 @@ public class HibernatePatientDAO implements PatientDAO {
 				// if the user wants an exact search, match on that.
 				if (matchIdentifierExactly) {
 					criteria.add(Expression.eq("ids.identifier", identifier));
-				}
-				// if the regex is empty, default to a simple "like" search or if 
-				// we're in hsql world, also only do the simple like search (because
-				// hsql doesn't know how to deal with 'regexp'
-				else if (regex.equals("") || HibernateUtil.isHSQLDialect(sessionFactory)) {
-					String prefix = adminService.getGlobalProperty(
-					    OpenmrsConstants.GLOBAL_PROPERTY_PATIENT_IDENTIFIER_PREFIX, "");
-					String suffix = adminService.getGlobalProperty(
-					    OpenmrsConstants.GLOBAL_PROPERTY_PATIENT_IDENTIFIER_SUFFIX, "%");
-					StringBuffer likeString = new StringBuffer(prefix).append(identifier).append(suffix);
-					criteria.add(Expression.like("ids.identifier", likeString.toString()));
-				}
-				// if the regex is present, search on that
-				else {
-					regex = regex.replace("@SEARCH@", identifier);
-					criteria.add(Restrictions.sqlRestriction("identifier regexp ?", regex, Hibernate.STRING));
+				} else {
+					// remove padding from identifier search string
+					if (Pattern.matches("^\\^.{1}\\*.*$", regex)) {
+						String padding = regex.substring(regex.indexOf("^") + 1, regex.indexOf("*"));
+						Pattern pattern = Pattern.compile("^" + padding + "+");
+						identifier = pattern.matcher(identifier).replaceFirst("");
+					}
+					// if the regex is empty, default to a simple "like" search or if 
+					// we're in hsql world, also only do the simple like search (because
+					// hsql doesn't know how to deal with 'regexp'
+					if (regex.equals("") || HibernateUtil.isHSQLDialect(sessionFactory)) {
+						String prefix = adminService.getGlobalProperty(
+						    OpenmrsConstants.GLOBAL_PROPERTY_PATIENT_IDENTIFIER_PREFIX, "");
+						String suffix = adminService.getGlobalProperty(
+						    OpenmrsConstants.GLOBAL_PROPERTY_PATIENT_IDENTIFIER_SUFFIX, "%");
+						StringBuffer likeString = new StringBuffer(prefix).append(identifier).append(suffix);
+						criteria.add(Expression.like("ids.identifier", likeString.toString()));
+					}
+					// if the regex is present, search on that
+					else {
+						regex = regex.replace("@SEARCH@", identifier);
+						criteria.add(Restrictions.sqlRestriction("identifier regexp ?", regex, Hibernate.STRING));
+					}
 				}
 			}
 			
@@ -271,7 +297,7 @@ public class HibernatePatientDAO implements PatientDAO {
 	 * This criteria is essentially:
 	 * 
 	 * <pre>
-	 * ... where voided = false && name in (familyName2, familyName, middleName, givenName)
+	 * ... where voided = false &amp;&amp; name in (familyName2, familyName, middleName, givenName)
 	 * </pre>
 	 * 
 	 * @param name
@@ -327,6 +353,11 @@ public class HibernatePatientDAO implements PatientDAO {
 	                                                     List<Location> locations, List<Patient> patients,
 	                                                     Boolean isPreferred) throws DAOException {
 		Criteria criteria = sessionFactory.getCurrentSession().createCriteria(PatientIdentifier.class);
+		
+		// join with the patient table to prevent patient identifiers from patients
+		// that already voided getting returned
+		criteria.createAlias("patient", "patient");
+		criteria.add(Expression.eq("patient.voided", false));
 		
 		// TODO add junit test for not getting voided
 		// make sure the patient object isn't voided
@@ -418,40 +449,6 @@ public class HibernatePatientDAO implements PatientDAO {
 		criteria.add(Expression.eq("retired", false));
 		
 		return criteria.list();
-	}
-	
-	/**
-	 * @see org.openmrs.api.PatientService#getTribe()
-	 * @deprecated tribe will be moved to patient attribute
-	 */
-	public Tribe getTribe(Integer tribeId) throws DAOException {
-		Tribe tribe = (Tribe) sessionFactory.getCurrentSession().get(Tribe.class, tribeId);
-		
-		return tribe;
-	}
-	
-	/**
-	 * @see org.openmrs.api.PatientService#getTribes()
-	 * @deprecated tribe will be moved to patient attribute
-	 */
-	@SuppressWarnings("unchecked")
-	public List<Tribe> getTribes() throws DAOException {
-		List<Tribe> tribes = sessionFactory.getCurrentSession().createQuery("from Tribe t order by t.name asc").list();
-		
-		return tribes;
-	}
-	
-	/**
-	 * @see org.openmrs.api.PatientService#findTribes()
-	 * @deprecated tribe will be moved to patient attribute
-	 */
-	@SuppressWarnings("unchecked")
-	public List<Tribe> findTribes(String s) throws DAOException {
-		Criteria crit = sessionFactory.getCurrentSession().createCriteria(Tribe.class);
-		crit.add(Expression.like("name", s, MatchMode.START));
-		crit.addOrder(Order.asc("name"));
-		
-		return crit.list();
 	}
 	
 	/**
@@ -577,6 +574,31 @@ public class HibernatePatientDAO implements PatientDAO {
 		*/
 
 		return patients;
+	}
+	
+	/**
+	 * @see org.openmrs.api.db.PatientDAO#getPatientByUuid(java.lang.String)
+	 */
+	public Patient getPatientByUuid(String uuid) {
+		Patient p = null;
+		
+		p = (Patient) sessionFactory.getCurrentSession().createQuery("from Patient p where p.uuid = :uuid").setString(
+		    "uuid", uuid).uniqueResult();
+		
+		return p;
+	}
+	
+	public PatientIdentifier getPatientIdentifierByUuid(String uuid) {
+		return (PatientIdentifier) sessionFactory.getCurrentSession().createQuery(
+		    "from PatientIdentifier p where p.uuid = :uuid").setString("uuid", uuid).uniqueResult();
+	}
+	
+	/**
+	 * @see org.openmrs.api.db.PatientDAO#getPatientIdentifierTypeByUuid(java.lang.String)
+	 */
+	public PatientIdentifierType getPatientIdentifierTypeByUuid(String uuid) {
+		return (PatientIdentifierType) sessionFactory.getCurrentSession().createQuery(
+		    "from PatientIdentifierType pit where pit.uuid = :uuid").setString("uuid", uuid).uniqueResult();
 	}
 	
 	/**

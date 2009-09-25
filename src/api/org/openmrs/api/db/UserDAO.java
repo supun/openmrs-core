@@ -122,6 +122,16 @@ public interface UserDAO {
 	public void changePassword(String pw, String pw2) throws DAOException;
 	
 	/**
+	 * @see org.openmrs.api.UserService#changeHashedPassword(User, String, String)
+	 */
+	public void changeHashedPassword(User user, String hashedPassword, String salt) throws DAOException;
+	
+	/**
+	 * @see org.openmrs.api.UserService#changeQuestionAnswer(User, String, String)
+	 */
+	public void changeQuestionAnswer(User u, String question, String answer) throws DAOException;
+	
+	/**
 	 * @see org.openmrs.api.UserService#changeQuestionAnswer(java.lang.String, java.lang.String,
 	 *      java.lang.String)
 	 */
@@ -131,6 +141,53 @@ public interface UserDAO {
 	 * @see org.openmrs.api.UserService#isSecretAnswer(org.openmrs.User, java.lang.String)
 	 */
 	public boolean isSecretAnswer(User u, String answer) throws DAOException;
+	
+	/**
+	 * Auto generated method comment
+	 * 
+	 * @param uuid
+	 * @return
+	 */
+	public Privilege getPrivilegeByUuid(String uuid);
+	
+	/**
+	 * Auto generated method comment
+	 * 
+	 * @param uuid
+	 * @return
+	 */
+	public Role getRoleByUuid(String uuid);
+	
+	/**
+	 * Auto generated method comment
+	 * 
+	 * @param uuid
+	 * @return
+	 */
+	public User getUserByUuid(String uuid);
+	
+	/**
+	 * @param user
+	 * @return The login credentials for a specified user.
+	 */
+	public LoginCredential getLoginCredential(User user);
+	
+	/**
+	 * Auto generated method comment
+	 * 
+	 * @param uuid
+	 * @return
+	 */
+	public LoginCredential getLoginCredentialByUuid(String uuid);
+	
+	/**
+	 * Updates a user's login credentials. Note that there is no
+	 * createLoginCredential(LoginCredential) method. Login credentials are dependent on a User
+	 * already existing.
+	 * 
+	 * @param credential
+	 */
+	public void updateLoginCredential(LoginCredential credential);
 	
 	/**
 	 * @see org.openmrs.api.UserService#generateSystemId()

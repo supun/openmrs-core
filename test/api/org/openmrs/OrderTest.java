@@ -30,7 +30,8 @@ import org.junit.Test;
 public class OrderTest {
 	
 	/**
-	 * Tests the {@link Order#isDiscontinued()} method
+	 * Tests the {@link Order#isDiscontinuedRightNow()} method TODO this should be split into many
+	 * different tests
 	 * 
 	 * @throws Exception
 	 */
@@ -62,7 +63,8 @@ public class OrderTest {
 	}
 	
 	/**
-	 * Tests the {@link Order#isCurrent()} method
+	 * Tests the {@link Order#isCurrent()} method TODO this should be split into many different
+	 * tests
 	 * 
 	 * @throws Exception
 	 */

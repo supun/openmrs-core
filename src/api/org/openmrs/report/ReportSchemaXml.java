@@ -14,14 +14,19 @@
 package org.openmrs.report;
 
 import java.io.StringWriter;
+
+import org.openmrs.BaseOpenmrsObject;
 import org.openmrs.util.OpenmrsUtil;
 import org.simpleframework.xml.Serializer;
 
 /**
  * This represents a very simplified saving technique for ReportSchemas. The "xml" attribute is
  * assumed to be a serialized ReportSchema object.
+ * 
+ * @deprecated see reportingcompatibility module
  */
-public class ReportSchemaXml {
+@Deprecated
+public class ReportSchemaXml extends BaseOpenmrsObject {
 	
 	private static final long serialVersionUID = 9330457450L;
 	
@@ -76,7 +81,7 @@ public class ReportSchemaXml {
 	/**
 	 * Returns the ReportSchema Id
 	 * 
-	 * @return
+	 * @return the Integer Report Schema Id
 	 */
 	public Integer getReportSchemaId() {
 		return this.reportSchemaId;
@@ -156,6 +161,22 @@ public class ReportSchemaXml {
 			
 			setXml(newXml);
 		}
+	}
+	
+	/**
+	 * @since 1.5
+	 * @see org.openmrs.OpenmrsObject#getId()
+	 */
+	public Integer getId() {
+		return getReportSchemaId();
+	}
+	
+	/**
+	 * @since 1.5
+	 * @see org.openmrs.OpenmrsObject#setId(java.lang.Integer)
+	 */
+	public void setId(Integer id) {
+		setReportSchemaId(id);
 	}
 	
 }

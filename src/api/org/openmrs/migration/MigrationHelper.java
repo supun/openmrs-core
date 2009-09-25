@@ -20,6 +20,7 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -47,8 +48,7 @@ import org.openmrs.Relationship;
 import org.openmrs.RelationshipType;
 import org.openmrs.Role;
 import org.openmrs.User;
-import org.openmrs.api.AdministrationService;
-import org.openmrs.api.EncounterService;
+import org.openmrs.api.LocationService;
 import org.openmrs.api.PatientService;
 import org.openmrs.api.PersonService;
 import org.openmrs.api.ProgramWorkflowService;
@@ -143,7 +143,7 @@ public class MigrationHelper {
 				}
 				pass = new String(password);
 			}
-			us.createUser(user, pass);
+			us.saveUser(user, pass);
 			++ret;
 		}
 		return ret;
@@ -155,8 +155,7 @@ public class MigrationHelper {
 	 */
 	public static int importLocations(Document document) {
 		int ret = 0;
-		EncounterService es = Context.getEncounterService();
-		AdministrationService as = Context.getAdministrationService();
+		LocationService ls = Context.getLocationService();
 		List<Node> toAdd = new ArrayList<Node>();
 		findNodesNamed(document, "location", toAdd);
 		for (Node node : toAdd) {
@@ -165,13 +164,13 @@ public class MigrationHelper {
 			if (name == null || name.length() == 0) {
 				throw new IllegalArgumentException("each <location /> element must define a name attribute");
 			}
-			if (es.getLocationByName(name) != null) {
+			if (ls.getLocation(name) != null) {
 				continue;
 			}
 			Location location = new Location();
 			location.setName(name);
 			
-			as.createLocation(location);
+			ls.saveLocation(location);
 			++ret;
 		}
 		return ret;
@@ -207,7 +206,7 @@ public class MigrationHelper {
 			String identifier = ss[4];
 			User user = null;
 			{ // first try looking for non-voided users
-				List<User> users = us.findUsers(userFirstName, userLastName, false);
+				List<User> users = us.getUsersByName(userFirstName, userLastName, false);
 				if (users.size() == 1)
 					user = users.get(0);
 				else if (users.size() > 1) {
@@ -217,7 +216,7 @@ public class MigrationHelper {
 			}
 			if (user == null) {
 				// next try looking for voided users
-				List<User> users = us.findUsers(userFirstName, userLastName, false);
+				List<User> users = us.getUsersByName(userFirstName, userLastName, false);
 				if (users.size() == 1)
 					user = users.get(0);
 				else if (users.size() > 1) {
@@ -246,19 +245,20 @@ public class MigrationHelper {
 					if (role != null)
 						user.addRole(role);
 				}
-				us.createUser(user, pass);
+				us.saveUser(user, pass);
 			}
 			if (user == null)
 				throw new IllegalArgumentException("Can't find user '" + userLastName + ", " + userFirstName + "'");
-			Person person = personService.getPerson(user);
+			Person person = personService.getPerson(user.getUserId());
 			
-			RelationshipType relationship = personService.findRelationshipType(relationshipType);
-			PatientIdentifierType pit = ps.getPatientIdentifierType(identifierType);
-			List<PatientIdentifier> found = ps.getPatientIdentifiers(identifier, pit);
+			RelationshipType relationship = personService.getRelationshipTypeByName(relationshipType);
+			PatientIdentifierType pit = ps.getPatientIdentifierTypeByName(identifierType);
+			List<PatientIdentifier> found = ps.getPatientIdentifiers(identifier, Collections.singletonList(pit), null, null,
+			    null);
 			if (found.size() != 1)
 				throw new IllegalArgumentException("Found " + found.size() + " patients with identifier '" + identifier
 				        + "' of type " + identifierType);
-			Person relative = personService.getPerson(found.get(0).getPatient());
+			Person relative = personService.getPerson(found.get(0).getPatient().getPatientId());
 			Relationship rel = new Relationship();
 			rel.setPersonA(person);
 			rel.setRelationshipType(relationship);
@@ -267,7 +267,7 @@ public class MigrationHelper {
 		}
 		int addedSoFar = 0;
 		for (Relationship rel : relsToAdd) {
-			personService.createRelationship(rel);
+			personService.saveRelationship(rel);
 			++addedSoFar;
 		}
 		return addedSoFar;
@@ -280,7 +280,7 @@ public class MigrationHelper {
 		//List<PatientState> patientStates = new ArrayList<PatientState>();
 		Map<String, PatientProgram> knownPatientPrograms = new HashMap<String, PatientProgram>();
 		Map<String, Program> programsByName = new HashMap<String, Program>();
-		for (Program program : pws.getPrograms()) {
+		for (Program program : pws.getAllPrograms()) {
 			programsByName.put(program.getConcept().getName(Context.getLocale(), false).getName(), program);
 		}
 		for (String s : programWorkflow) {
@@ -289,9 +289,10 @@ public class MigrationHelper {
 			if (s.startsWith("ENROLLMENT:")) {
 				s = s.substring(s.indexOf(":") + 1);
 				String[] temp = s.split(",");
-				PatientIdentifierType pit = ps.getPatientIdentifierType(temp[0]);
+				PatientIdentifierType pit = ps.getPatientIdentifierTypeByName(temp[0]);
 				String identifier = temp[1];
-				List<PatientIdentifier> pis = ps.getPatientIdentifiers(identifier, pit);
+				List<PatientIdentifier> pis = ps.getPatientIdentifiers(identifier, Collections.singletonList(pit), null,
+				    null, null);
 				if (pis.size() != 1)
 					throw new IllegalArgumentException("Found " + pis.size() + " instances of identifier " + identifier
 					        + " of type " + pit);
@@ -347,7 +348,7 @@ public class MigrationHelper {
 		int numAdded = 0;
 		
 		for (PatientProgram pp : knownPatientPrograms.values()) {
-			pws.createPatientProgram(pp);
+			pws.savePatientProgram(pp);
 			++numAdded;
 		}
 		return numAdded;

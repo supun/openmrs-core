@@ -1,12 +1,24 @@
+/**
+ * The contents of this file are subject to the OpenMRS Public License
+ * Version 1.0 (the "License"); you may not use this file except in
+ * compliance with the License. You may obtain a copy of the License at
+ * http://license.openmrs.org
+ *
+ * Software distributed under the License is distributed on an "AS IS"
+ * basis, WITHOUT WARRANTY OF ANY KIND, either express or implied. See the
+ * License for the specific language governing rights and limitations
+ * under the License.
+ *
+ * Copyright (C) OpenMRS, LLC.  All Rights Reserved.
+ */
 package org.openmrs.scheduler;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.openmrs.scheduler.tasks.TaskThreadedInitializationWrapper;
 import org.openmrs.util.OpenmrsClassLoader;
-import org.openmrs.scheduler.tasks.*;
 
 /**
- * @author jmiranda
  */
 public class TaskFactory {
 	
@@ -22,28 +34,28 @@ public class TaskFactory {
 	
 	/**
 	 * Gets an instance of the schedulable factory
-	 * 
-	 * @return
 	 */
 	public static TaskFactory getInstance() {
 		return factory;
 	}
 	
 	/**
-	 * Creates a new instance of Schedulable used to run tasks.
+	 * Creates a new instance of Schedulable used to run tasks. By default the returned task will be
+	 * the given task wrapped with the {@link TaskThreadedInitializationWrapper} class so that the
+	 * {@link Task#initialize(TaskDefinition)} method runs in a new thread.
 	 * 
-	 * @param taskConfig
-	 * @return
+	 * @param taskDefinition
+	 * @return the created Task
 	 * @throws SchedulerException
 	 */
 	public Task createInstance(TaskDefinition taskDefinition) throws SchedulerException {
 		try {
 			
 			// Retrieve the appropriate class
-			Class taskClass = OpenmrsClassLoader.getInstance().loadClass(taskDefinition.getTaskClass());
+			Class<?> taskClass = OpenmrsClassLoader.getInstance().loadClass(taskDefinition.getTaskClass());
 			
 			// Create a new instance of the schedulable class 
-			Task task = (Task) taskClass.newInstance();
+			Task task = new TaskThreadedInitializationWrapper((Task) taskClass.newInstance());
 			
 			if (log.isDebugEnabled()) {
 				log.debug("initializing " + taskClass.getName());
@@ -60,7 +72,7 @@ public class TaskFactory {
 			if (log.isDebugEnabled())
 				log.debug("Full error trace of ClassNotFoundException", cnfe);
 			
-			throw new SchedulerException(cnfe);
+			throw new SchedulerException("could not load class", cnfe);
 		}
 		catch (Exception e) {
 			if (log.isDebugEnabled()) {
@@ -68,7 +80,7 @@ public class TaskFactory {
 				log.debug("Error creating new task for class " + taskDefinition.getTaskClass(), e);
 			}
 			
-			throw new SchedulerException(e);
+			throw new SchedulerException("error creating new task for class " + taskDefinition.getTaskClass(), e);
 		}
 	}
 }

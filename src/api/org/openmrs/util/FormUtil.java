@@ -120,8 +120,8 @@ public class FormUtil {
 	 * @param s string to convert into a unique XML tag
 	 * @param tagList java.util.Vector containing all previously created tags. If the tagList is
 	 *            null, it will be initialized automatically
-	 * @returns unique XML tag name from given string (guaranteed not to duplicate any tag names
-	 *          already within <code>tagList</code>)
+	 * @return unique XML tag name from given string (guaranteed not to duplicate any tag names
+	 *         already within <code>tagList</code>)
 	 */
 	public static String getNewTag(String s, Vector<String> tagList) {
 		String token = getXmlToken(s);
@@ -208,15 +208,15 @@ public class FormUtil {
 	}
 	
 	/**
-	 * Turn the given concept/concept-name pair into a string acceptable to for hl7 and forms
+	 * Turn the given concept/concept-name pair into a string acceptable for hl7 and forms
 	 * 
 	 * @param concept Concept to convert to a string
 	 * @param localizedName specific localized concept-name
 	 * @return String representation of the given concept
 	 */
 	public static String conceptToString(Concept concept, ConceptName localizedName) {
-		return concept.getConceptId() + "^" + localizedName.getName() + "^" + FormConstants.HL7_LOCAL_CONCEPT + "^"
-		        + localizedName.getConceptNameId() + "^" + localizedName.getName() + "^" + FormConstants.HL7_LOCAL_CONCEPT;
+		return concept.getConceptId() + "^" + localizedName.getName() + "^" + FormConstants.HL7_LOCAL_CONCEPT; // + "^"
+		        // + localizedName.getConceptNameId() + "^" + localizedName.getName() + "^" + FormConstants.HL7_LOCAL_CONCEPT_NAME;
 	}
 	
 	/**

@@ -13,13 +13,10 @@
  */
 package org.openmrs;
 
-import java.util.Date;
 import java.util.HashSet;
 import java.util.Locale;
 import java.util.Set;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.simpleframework.xml.Attribute;
 import org.simpleframework.xml.Root;
 
@@ -27,11 +24,9 @@ import org.simpleframework.xml.Root;
  * Program
  */
 @Root
-public class Program implements java.io.Serializable {
+public class Program extends BaseOpenmrsMetadata implements java.io.Serializable {
 	
 	public static final long serialVersionUID = 3214567L;
-	
-	protected final Log log = LogFactory.getLog(getClass());
 	
 	// ******************
 	// Properties
@@ -39,23 +34,9 @@ public class Program implements java.io.Serializable {
 	
 	private Integer programId;
 	
-	private String name;
-	
-	private String description;
-	
 	private Concept concept;
 	
-	private User creator;
-	
-	private Date dateCreated;
-	
-	private User changedBy;
-	
-	private Date dateChanged;
-	
-	private Boolean retired = false;
-	
-	private Set<ProgramWorkflow> workflows = new HashSet<ProgramWorkflow>();
+	private Set<ProgramWorkflow> allWorkflows = new HashSet<ProgramWorkflow>();
 	
 	// ******************
 	// Constructors
@@ -126,12 +107,11 @@ public class Program implements java.io.Serializable {
 	public boolean equals(Object obj) {
 		if (obj != null && obj instanceof Program) {
 			Program p = (Program) obj;
-			if (this.getProgramId() == null) {
-				return p.getProgramId() == null;
+			if (this.getProgramId() != null) {
+				return (this.getProgramId().equals(p.getProgramId()));
 			}
-			return (this.getProgramId().equals(p.getProgramId()));
 		}
-		return false;
+		return this == obj;
 	}
 	
 	/** @see Object#toString() */
@@ -143,60 +123,12 @@ public class Program implements java.io.Serializable {
 	// Property Access
 	// ******************
 	
-	public String getName() {
-		return name;
-	}
-	
-	public void setName(String name) {
-		this.name = name;
-	}
-	
-	public String getDescription() {
-		return description;
-	}
-	
-	public void setDescription(String description) {
-		this.description = description;
-	}
-	
 	public Concept getConcept() {
 		return concept;
 	}
 	
 	public void setConcept(Concept concept) {
 		this.concept = concept;
-	}
-	
-	public User getCreator() {
-		return creator;
-	}
-	
-	public void setCreator(User creator) {
-		this.creator = creator;
-	}
-	
-	public Date getDateCreated() {
-		return dateCreated;
-	}
-	
-	public void setDateCreated(Date dateCreated) {
-		this.dateCreated = dateCreated;
-	}
-	
-	public User getChangedBy() {
-		return changedBy;
-	}
-	
-	public void setChangedBy(User changedBy) {
-		this.changedBy = changedBy;
-	}
-	
-	public Date getDateChanged() {
-		return dateChanged;
-	}
-	
-	public void setDateChanged(Date dateChanged) {
-		this.dateChanged = dateChanged;
 	}
 	
 	@Attribute(required = true)
@@ -209,46 +141,51 @@ public class Program implements java.io.Serializable {
 		this.programId = programId;
 	}
 	
-	public Boolean getRetired() {
-		return retired;
-	}
-	
-	public Boolean isRetired() {
-		return getRetired();
-	}
-	
-	public void setRetired(Boolean retired) {
-		this.retired = retired;
-	}
-	
 	/**
 	 * Get only the non-retired workflows
 	 * 
-	 * @return
+	 * @return Returns a Set<ProgramWorkflow> of all non-retired workflows
 	 */
 	public Set<ProgramWorkflow> getWorkflows() {
 		Set<ProgramWorkflow> ret = new HashSet<ProgramWorkflow>();
-		
-		if (this.workflows != null) {
-			for (ProgramWorkflow workflow : this.workflows) {
-				if (workflow.isRetired() == false)
-					ret.add(workflow);
-			}
+		for (ProgramWorkflow workflow : getAllWorkflows()) {
+			if (workflow.isRetired() == false)
+				ret.add(workflow);
 		}
-		
 		return ret;
 	}
 	
 	/**
 	 * Get all workflows...including the retired ones
 	 * 
-	 * @return
+	 * @return Returns a Set<ProgramWorkflow> of all workflows
 	 */
 	public Set<ProgramWorkflow> getAllWorkflows() {
-		return workflows;
+		if (allWorkflows == null) {
+			allWorkflows = new HashSet<ProgramWorkflow>();
+		}
+		return allWorkflows;
 	}
 	
-	public void setWorkflows(Set<ProgramWorkflow> workflows) {
-		this.workflows = workflows;
+	public void setAllWorkflows(Set<ProgramWorkflow> allWorkflows) {
+		this.allWorkflows = allWorkflows;
+	}
+	
+	/**
+	 * @since 1.5
+	 * @see org.openmrs.OpenmrsObject#getId()
+	 */
+	public Integer getId() {
+		
+		return getProgramId();
+	}
+	
+	/**
+	 * @since 1.5
+	 * @see org.openmrs.OpenmrsObject#setId(java.lang.Integer)
+	 */
+	public void setId(Integer id) {
+		setProgramId(id);
+		
 	}
 }

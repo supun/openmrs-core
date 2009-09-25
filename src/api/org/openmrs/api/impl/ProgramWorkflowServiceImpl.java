@@ -70,23 +70,9 @@ public class ProgramWorkflowServiceImpl extends BaseOpenmrsService implements Pr
 	 * @see org.openmrs.api.ProgramWorkflowService#saveProgram(org.openmrs.Program)
 	 */
 	public Program saveProgram(Program program) throws APIException {
-		
-		User currentUser = Context.getAuthenticatedUser();
-		Date currentDate = new Date();
-		
 		// Program
 		if (program.getConcept() == null) {
 			throw new APIException("Program concept is required");
-		}
-		if (program.getCreator() == null) {
-			program.setCreator(currentUser);
-		}
-		if (program.getDateCreated() == null) {
-			program.setDateCreated(currentDate);
-		}
-		if (program.getProgramId() != null) {
-			program.setChangedBy(currentUser);
-			program.setDateChanged(currentDate);
 		}
 		
 		// ProgramWorkflow
@@ -94,16 +80,6 @@ public class ProgramWorkflowServiceImpl extends BaseOpenmrsService implements Pr
 			
 			if (workflow.getConcept() == null) {
 				throw new APIException("ProgramWorkflow concept is required");
-			}
-			if (workflow.getCreator() == null) {
-				workflow.setCreator(currentUser);
-			}
-			if (workflow.getDateCreated() == null) {
-				workflow.setDateCreated(currentDate);
-			}
-			if (workflow.getProgramWorkflowId() != null) {
-				workflow.setChangedBy(currentUser);
-				workflow.setDateChanged(currentDate);
 			}
 			if (workflow.getProgram() == null) {
 				workflow.setProgram(program);
@@ -118,16 +94,6 @@ public class ProgramWorkflowServiceImpl extends BaseOpenmrsService implements Pr
 				
 				if (state.getConcept() == null || state.getInitial() == null || state.getTerminal() == null) {
 					throw new APIException("ProgramWorkflowState concept, initial, terminal are required");
-				}
-				if (state.getCreator() == null) {
-					state.setCreator(currentUser);
-				}
-				if (state.getDateCreated() == null) {
-					state.setDateCreated(currentDate);
-				}
-				if (state.getProgramWorkflowStateId() != null) {
-					state.setChangedBy(currentUser);
-					state.setDateChanged(currentDate);
 				}
 				if (state.getProgramWorkflow() == null) {
 					state.setProgramWorkflow(workflow);
@@ -182,7 +148,7 @@ public class ProgramWorkflowServiceImpl extends BaseOpenmrsService implements Pr
 	}
 	
 	/**
-	 * @see org.openmrs.api.ProgramWorkflowService#findPrograms(java.lang.String)
+	 * @see org.openmrs.api.ProgramWorkflowService#getPrograms(String)
 	 */
 	public List<Program> getPrograms(String nameFragment) throws APIException {
 		return dao.findPrograms(nameFragment);
@@ -247,34 +213,9 @@ public class ProgramWorkflowServiceImpl extends BaseOpenmrsService implements Pr
 	 * @see org.openmrs.api.ProgramWorkflowService#savePatientProgram(org.openmrs.PatientProgram)
 	 */
 	public PatientProgram savePatientProgram(PatientProgram patientProgram) throws APIException {
-		User currentUser = Context.getAuthenticatedUser();
-		Date currentDate = new Date();
 		
 		if (patientProgram.getPatient() == null || patientProgram.getProgram() == null) {
 			throw new APIException("PatientProgram requires a Patient and a Program");
-		}
-		// Program
-		if (patientProgram.getCreator() == null) {
-			patientProgram.setCreator(currentUser);
-		}
-		if (patientProgram.getDateCreated() == null) {
-			patientProgram.setDateCreated(currentDate);
-		}
-		if (patientProgram.getPatientProgramId() != null) {
-			patientProgram.setChangedBy(currentUser);
-			patientProgram.setDateChanged(currentDate);
-		}
-		if (patientProgram.getVoided()) {
-			if (patientProgram.getVoidedBy() == null) {
-				patientProgram.setVoidedBy(currentUser);
-			}
-			if (patientProgram.getDateVoided() == null) {
-				patientProgram.setDateVoided(currentDate);
-			}
-		} else {
-			patientProgram.setVoidedBy(null);
-			patientProgram.setVoidReason(null);
-			patientProgram.setDateVoided(null);
 		}
 		
 		// Patient State
@@ -289,33 +230,14 @@ public class ProgramWorkflowServiceImpl extends BaseOpenmrsService implements Pr
 				        "This PatientProgram contains a ProgramWorkflowState whose parent is already assigned to "
 				                + state.getPatientProgram());
 			}
-			if (state.getCreator() == null) {
-				state.setCreator(currentUser);
-			}
-			if (state.getDateCreated() == null) {
-				state.setDateCreated(currentDate);
-			}
-			if (state.getPatientStateId() != null) {
-				state.setChangedBy(currentUser);
-				state.setDateChanged(currentDate);
-			}
 			if (patientProgram.getVoided() || state.getVoided()) {
 				state.setVoided(true);
-				if (state.getVoidedBy() == null) {
-					state.setVoidedBy(currentUser);
-				}
-				if (state.getDateVoided() == null) {
-					state.setDateVoided(currentDate);
-				}
 				if (state.getVoidReason() == null && patientProgram.getVoidReason() != null) {
 					state.setVoidReason(patientProgram.getVoidReason());
 				}
-			} else {
-				state.setVoidedBy(null);
-				state.setVoidReason(null);
-				state.setDateVoided(null);
 			}
 		}
+		
 		return dao.savePatientProgram(patientProgram);
 	}
 	
@@ -327,8 +249,8 @@ public class ProgramWorkflowServiceImpl extends BaseOpenmrsService implements Pr
 	}
 	
 	/**
-	 * @see org.openmrs.api.ProgramWorkflowService#getPatientPrograms(org.openmrs.Patient,
-	 *      org.openmrs.Program, java.util.Date, java.util.Date, java.util.Date, java.util.Date)
+	 * @see org.openmrs.api.ProgramWorkflowService#getPatientPrograms(Patient, Program, Date, Date,
+	 *      Date, Date, boolean)
 	 */
 	public List<PatientProgram> getPatientPrograms(Patient patient, Program program, Date minEnrollmentDate,
 	                                               Date maxEnrollmentDate, Date minCompletionDate, Date maxCompletionDate,
@@ -338,8 +260,7 @@ public class ProgramWorkflowServiceImpl extends BaseOpenmrsService implements Pr
 	}
 	
 	/**
-	 * @see org.openmrs.api.impl.ProgramWorkflowService#getPatientPrograms(Cohort,
-	 *      Collection<Program>)
+	 * @see org.openmrs.api.ProgramWorkflowService#getPatientPrograms(Cohort, Collection)
 	 */
 	public List<PatientProgram> getPatientPrograms(Cohort cohort, Collection<Program> programs) {
 		if (cohort.getMemberIds().size() < 1)
@@ -501,7 +422,7 @@ public class ProgramWorkflowServiceImpl extends BaseOpenmrsService implements Pr
 	 * @deprecated
 	 */
 	public void createOrUpdateProgram(Program program) {
-		saveProgram(program);
+		Context.getProgramWorkflowService().saveProgram(program);
 	}
 	
 	/**
@@ -517,7 +438,7 @@ public class ProgramWorkflowServiceImpl extends BaseOpenmrsService implements Pr
 	// **************************
 	
 	/**
-	 * @see org.pih.api.ProgramWorkflowService#createWorkflow(ProgramWorkflow)
+	 * @see org.openmrs.api.ProgramWorkflowService#createWorkflow(ProgramWorkflow)
 	 * @deprecated
 	 */
 	public void createWorkflow(ProgramWorkflow w) {
@@ -532,7 +453,7 @@ public class ProgramWorkflowServiceImpl extends BaseOpenmrsService implements Pr
 		if (w.getProgram() == null) {
 			throw new APIException("ProgramWorkflow requires a Program");
 		}
-		saveProgram(w.getProgram());
+		Context.getProgramWorkflowService().saveProgram(w.getProgram());
 	}
 	
 	/**
@@ -566,7 +487,7 @@ public class ProgramWorkflowServiceImpl extends BaseOpenmrsService implements Pr
 	 */
 	public void voidWorkflow(ProgramWorkflow w, String reason) {
 		w.setRetired(true);
-		saveProgram(w.getProgram());
+		Context.getProgramWorkflowService().saveProgram(w.getProgram());
 	}
 	
 	// **************************
@@ -648,7 +569,7 @@ public class ProgramWorkflowServiceImpl extends BaseOpenmrsService implements Pr
 	 * @deprecated
 	 */
 	public void createPatientProgram(PatientProgram patientProgram) {
-		savePatientProgram(patientProgram);
+		Context.getProgramWorkflowService().savePatientProgram(patientProgram);
 	}
 	
 	/**
@@ -656,7 +577,7 @@ public class ProgramWorkflowServiceImpl extends BaseOpenmrsService implements Pr
 	 * @deprecated
 	 */
 	public void updatePatientProgram(PatientProgram patientProgram) {
-		savePatientProgram(patientProgram);
+		Context.getProgramWorkflowService().savePatientProgram(patientProgram);
 	}
 	
 	/**
@@ -672,7 +593,7 @@ public class ProgramWorkflowServiceImpl extends BaseOpenmrsService implements Pr
 		p.setDateEnrolled(enrollmentDate);
 		p.setDateCompleted(completionDate);
 		p.setCreator(creator);
-		savePatientProgram(p);
+		Context.getProgramWorkflowService().savePatientProgram(p);
 	}
 	
 	/**
@@ -782,7 +703,7 @@ public class ProgramWorkflowServiceImpl extends BaseOpenmrsService implements Pr
 	public void changeToState(PatientProgram patientProgram, ProgramWorkflow workflow, ProgramWorkflowState state,
 	                          Date onDate) {
 		patientProgram.transitionToState(state, onDate);
-		savePatientProgram(patientProgram);
+		Context.getProgramWorkflowService().savePatientProgram(patientProgram);
 	}
 	
 	/**
@@ -812,7 +733,7 @@ public class ProgramWorkflowServiceImpl extends BaseOpenmrsService implements Pr
 	 * @deprecated
 	 */
 	public void createConceptStateConversion(ConceptStateConversion csc) {
-		saveConceptStateConversion(csc);
+		Context.getProgramWorkflowService().saveConceptStateConversion(csc);
 	}
 	
 	/**
@@ -820,7 +741,7 @@ public class ProgramWorkflowServiceImpl extends BaseOpenmrsService implements Pr
 	 * @deprecated
 	 */
 	public void updateConceptStateConversion(ConceptStateConversion csc) {
-		saveConceptStateConversion(csc);
+		Context.getProgramWorkflowService().saveConceptStateConversion(csc);
 	}
 	
 	/**
@@ -836,7 +757,46 @@ public class ProgramWorkflowServiceImpl extends BaseOpenmrsService implements Pr
 	 * @deprecated
 	 */
 	public void deleteConceptStateConversion(ConceptStateConversion csc) {
-		purgeConceptStateConversion(csc);
+		Context.getProgramWorkflowService().purgeConceptStateConversion(csc);
+	}
+	
+	/**
+	 * @see org.openmrs.api.ProgramWorkflowService#getConceptStateConversionByUuid(java.lang.String)
+	 */
+	public ConceptStateConversion getConceptStateConversionByUuid(String uuid) {
+		return dao.getConceptStateConversionByUuid(uuid);
+	}
+	
+	/**
+	 * @see org.openmrs.api.ProgramWorkflowService#getPatientProgramByUuid(java.lang.String)
+	 */
+	public PatientProgram getPatientProgramByUuid(String uuid) {
+		return dao.getPatientProgramByUuid(uuid);
+	}
+	
+	/**
+	 * @see org.openmrs.api.ProgramWorkflowService#getProgramByUuid(java.lang.String)
+	 */
+	public Program getProgramByUuid(String uuid) {
+		return dao.getProgramByUuid(uuid);
+	}
+	
+	/**
+	 * @see org.openmrs.api.ProgramWorkflowService#getStateByUuid(java.lang.String)
+	 */
+	public ProgramWorkflowState getStateByUuid(String uuid) {
+		return dao.getStateByUuid(uuid);
+	}
+	
+	public PatientState getPatientStateByUuid(String uuid) {
+		return dao.getPatientStateByUuid(uuid);
+	}
+	
+	/**
+	 * @see org.openmrs.api.ProgramWorkflowService#getWorkflowByUuid(java.lang.String)
+	 */
+	public ProgramWorkflow getWorkflowByUuid(String uuid) {
+		return dao.getWorkflowByUuid(uuid);
 	}
 	
 }

@@ -14,7 +14,6 @@
 package org.openmrs.report;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
 
 import org.apache.commons.logging.Log;
@@ -25,8 +24,9 @@ import org.openmrs.Program;
 import org.openmrs.api.context.Context;
 
 /**
- *
+ * @deprecated see reportingcompatibility module
  */
+@Deprecated
 public class RowPerProgramEnrollmentDataSetProvider implements DataSetProvider {
 	
 	protected Log log = LogFactory.getLog(this.getClass());
@@ -45,7 +45,7 @@ public class RowPerProgramEnrollmentDataSetProvider implements DataSetProvider {
 	 * @see org.openmrs.report.DataSetProvider#evaluate(org.openmrs.report.DataSetDefinition,
 	 *      org.openmrs.Cohort, org.openmrs.report.EvaluationContext)
 	 */
-	public DataSet evaluate(DataSetDefinition dataSetDefinition, Cohort inputCohort, EvaluationContext evalContext) {
+	public DataSet<?> evaluate(DataSetDefinition dataSetDefinition, Cohort inputCohort, EvaluationContext evalContext) {
 		
 		RowPerProgramEnrollmentDataSetDefinition definition = (RowPerProgramEnrollmentDataSetDefinition) dataSetDefinition;
 		Cohort patients = inputCohort;

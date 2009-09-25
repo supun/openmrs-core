@@ -26,10 +26,10 @@ import org.openmrs.ProgramWorkflow;
 import org.openmrs.ProgramWorkflowState;
 import org.openmrs.api.ProgramWorkflowService;
 import org.openmrs.api.context.Context;
-import org.openmrs.web.WebConstants;
 import org.openmrs.propertyeditor.ConceptEditor;
 import org.openmrs.propertyeditor.ProgramWorkflowEditor;
 import org.openmrs.propertyeditor.ProgramWorkflowStateEditor;
+import org.openmrs.web.WebConstants;
 import org.springframework.validation.BindException;
 import org.springframework.web.bind.ServletRequestDataBinder;
 import org.springframework.web.bind.ServletRequestUtils;
@@ -106,7 +106,7 @@ public class StateConversionFormController extends SimpleFormController {
 		
 		if (Context.isAuthenticated()) {
 			ConceptStateConversion c = (ConceptStateConversion) obj;
-			Context.getProgramWorkflowService().createConceptStateConversion(c);
+			Context.getProgramWorkflowService().saveConceptStateConversion(c);
 			view = getSuccessView();
 			httpSession.setAttribute(WebConstants.OPENMRS_MSG_ATTR, "Program.conversion.saved");
 		}

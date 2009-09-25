@@ -30,14 +30,16 @@ import org.simpleframework.xml.Root;
  * 
  * @see DataSetProvider
  * @see DataSet
+ * @deprecated see reportingcompatibility module
  */
 @Root(strict = false)
+@Deprecated
 public interface DataSetDefinition extends Parameterizable {
 	
 	/**
 	 * Gets the name
 	 * 
-	 * @return
+	 * @return <code>String</code> name of the DataSetDefinition
 	 */
 	@Attribute(required = true)
 	public String getName();
@@ -53,15 +55,16 @@ public interface DataSetDefinition extends Parameterizable {
 	/**
 	 * Gets a list of column keys.
 	 * 
-	 * @return
+	 * @return <code>List<String></code> of the column keys
 	 */
 	public List<String> getColumnKeys();
 	
 	/**
 	 * Gets a list of the datatype of the columns
 	 * 
-	 * @return
+	 * @return <code>List<Class></code> of the column datatypes
 	 */
+	@SuppressWarnings("unchecked")
 	public List<Class> getColumnDatatypes();
 	
 }

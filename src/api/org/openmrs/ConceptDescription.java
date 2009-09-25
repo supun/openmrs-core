@@ -24,7 +24,7 @@ import org.simpleframework.xml.Root;
  * ConceptDescription is the localized description of a concept.
  */
 @Root
-public class ConceptDescription implements java.io.Serializable {
+public class ConceptDescription extends BaseOpenmrsObject implements Auditable, java.io.Serializable {
 	
 	private static final long serialVersionUID = -7223075113369136584L;
 	
@@ -69,6 +69,34 @@ public class ConceptDescription implements java.io.Serializable {
 	public ConceptDescription(String description, Locale locale) {
 		setLocale(locale);
 		setDescription(description);
+	}
+	
+	/**
+	 * @see java.lang.Object#equals(Object)
+	 * @should compare on id if its non null
+	 * @should not return true with different objects and null ids
+	 * @should default to object equality
+	 */
+	public boolean equals(Object object) {
+		if (!(object instanceof ConceptDescription)) {
+			return false;
+		}
+		ConceptDescription rhs = (ConceptDescription) object;
+		if (conceptDescriptionId != null && rhs.conceptDescriptionId != null)
+			return this.conceptDescriptionId == rhs.conceptDescriptionId;
+		else
+			return this == object;
+	}
+	
+	/**
+	 * @see java.lang.Object#hashCode()
+	 */
+	public int hashCode() {
+		if (this.getConceptDescriptionId() == null)
+			return super.hashCode();
+		int hash = 8;
+		hash = 33 * this.getConceptDescriptionId() + hash;
+		return hash;
 	}
 	
 	/**
@@ -169,7 +197,7 @@ public class ConceptDescription implements java.io.Serializable {
 	}
 	
 	/**
-	 * @param creator The creator to set.
+	 * @param changedBy The user who changed this description
 	 */
 	@Element(required = false)
 	public void setChangedBy(User changedBy) {
@@ -195,17 +223,6 @@ public class ConceptDescription implements java.io.Serializable {
 	}
 	
 	/**
-	 * @see java.lang.Object#hashCode()
-	 */
-	public int hashCode() {
-		if (this.getConceptDescriptionId() == null)
-			return super.hashCode();
-		int hash = 8;
-		hash = 31 * this.getConceptDescriptionId() + hash;
-		return hash;
-	}
-	
-	/**
 	 * @see java.lang.Object#toString()
 	 */
 	public String toString() {
@@ -213,20 +230,19 @@ public class ConceptDescription implements java.io.Serializable {
 	}
 	
 	/**
-	 * @see java.lang.Object#equals(Object)
-	 * @should compare on id if its non null
-	 * @should not return true with different objects and null ids
-	 * @should default to object equality
+	 * @since 1.5
+	 * @see org.openmrs.OpenmrsObject#getId()
 	 */
-	public boolean equals(Object object) {
-		if (!(object instanceof ConceptDescription)) {
-			return false;
-		}
-		ConceptDescription rhs = (ConceptDescription) object;
-		if (conceptDescriptionId != null && rhs.conceptDescriptionId != null)
-			return this.conceptDescriptionId == rhs.conceptDescriptionId;
-		else
-			return this == object;
+	public Integer getId() {
+		return getConceptDescriptionId();
+	}
+	
+	/**
+	 * @since 1.5
+	 * @see org.openmrs.OpenmrsObject#setId(java.lang.Integer)
+	 */
+	public void setId(Integer id) {
+		setConceptDescriptionId(id);
 	}
 	
 }

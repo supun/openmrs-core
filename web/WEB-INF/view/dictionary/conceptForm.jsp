@@ -5,7 +5,9 @@
 <openmrs:require privilege="Edit Concepts" otherwise="/login.htm" redirect="/dictionary/concept.form" />
 
 <openmrs:htmlInclude file="/scripts/dojo/dojo.js" />
-<script type="text/javascript" src="conceptForm.js"></script>
+<openmrs:htmlInclude file="/dwr/interface/DWRConceptService.js" />
+
+<openmrs:htmlInclude file="/dictionary/conceptForm.js" />
 
 <script type="text/javascript">
 	function addName(anchor) {
@@ -105,8 +107,6 @@
 	| <a href="concept.form" id="newConcept" valign="middle"><spring:message code="general.new"/></a>
 </c:if>
 
-<openmrs:extensionPoint pointId="org.openmrs.dictionary.conceptFormHeader" type="html" />
-
 <form class="inlineForm" action="index.htm" method="get">
   &nbsp; &nbsp; 
   <input type="text" id="searchPhrase" name="phrase" size="18"> 
@@ -136,6 +136,8 @@
 		<br/>
 	</c:if>
 </c:if>
+
+<openmrs:extensionPoint pointId="org.openmrs.dictionary.conceptFormHeader" type="html" />
 
 <form method="post" action="">
 
@@ -339,18 +341,7 @@
 		<td>
 			<table border="0">
 				<tr>
-					<th></th>
-					<th><spring:message code="ConceptNumeric.low"/></th>
-					<th><spring:message code="ConceptNumeric.high"/></th>
-				</tr>
-				<tr>
-					<th valign="middle"><spring:message code="ConceptNumeric.absolute"/></th>
-					<td valign="middle">
-						<spring:bind path="command.lowAbsolute">
-							<input type="text" name="${status.expression}" value="${status.value}" class="smallWidth" />
-							<c:if test="${status.errorMessage != ''}"><span class="error">${status.errorMessage}</span></c:if>
-						</spring:bind>
-					</td>
+					<th valign="middle"><spring:message code="ConceptNumeric.absoluteHigh"/></th>
 					<td valign="middle">
 						<spring:bind path="command.hiAbsolute">
 							<input type="text" name="${status.expression}" value="${status.value}" class="smallWidth" />
@@ -359,13 +350,7 @@
 					</td>
 				</tr>
 				<tr>
-					<th valign="middle"><spring:message code="ConceptNumeric.critical"/></th>
-					<td valign="middle">
-						<spring:bind path="command.lowCritical">
-							<input type="text" name="${status.expression}" value="${status.value}" class="smallWidth" />
-							<c:if test="${status.errorMessage != ''}"><span class="error">${status.errorMessage}</span></c:if>
-						</spring:bind>
-					</td>
+					<th valign="middle"><spring:message code="ConceptNumeric.criticalHigh"/></th>
 					<td valign="middle">
 						<spring:bind path="command.hiCritical">
 							<input type="text" name="${status.expression}" value="${status.value}" class="smallWidth" />
@@ -374,15 +359,36 @@
 					</td>
 				</tr>
 				<tr>
-					<th valign="middle"><spring:message code="ConceptNumeric.normal"/></th>
+					<th valign="middle"><spring:message code="ConceptNumeric.normalHigh"/></th>
+					<td valign="middle">
+						<spring:bind path="command.hiNormal">
+							<input type="text" name="${status.expression}" value="${status.value}" class="smallWidth" />
+							<c:if test="${status.errorMessage != ''}"><span class="error">${status.errorMessage}</span></c:if>
+						</spring:bind>
+					</td>
+				</tr>
+				<tr>
+					<th valign="middle"><spring:message code="ConceptNumeric.normalLow"/></th>
 					<td valign="middle">
 						<spring:bind path="command.lowNormal">
 							<input type="text" name="${status.expression}" value="${status.value}" class="smallWidth" />
 							<c:if test="${status.errorMessage != ''}"><span class="error">${status.errorMessage}</span></c:if>
 						</spring:bind>
 					</td>
+				</tr>
+				<tr>
+					<th valign="middle"><spring:message code="ConceptNumeric.criticalLow"/></th>
 					<td valign="middle">
-						<spring:bind path="command.hiNormal">
+						<spring:bind path="command.lowCritical">
+							<input type="text" name="${status.expression}" value="${status.value}" class="smallWidth" />
+							<c:if test="${status.errorMessage != ''}"><span class="error">${status.errorMessage}</span></c:if>
+						</spring:bind>
+					</td>
+				</tr>
+				<tr>
+					<th valign="middle"><spring:message code="ConceptNumeric.absoluteLow"/></th>
+					<td valign="middle">
+						<spring:bind path="command.lowAbsolute">
 							<input type="text" name="${status.expression}" value="${status.value}" class="smallWidth" />
 							<c:if test="${status.errorMessage != ''}"><span class="error">${status.errorMessage}</span></c:if>
 						</spring:bind>
@@ -415,7 +421,38 @@
 			</table>
 		</td>
 	</tr>
-    <tr id="conceptMapRow">
+    <tr id="complexDatatypeRow">
+        <th valign="top"><spring:message code="ConceptComplex.handler"/></th>
+        <td>
+			<spring:bind path="command.handlerKey">
+				<select name="${status.expression}"> 
+					<option value=""><spring:message code="general.select"/>...</option>
+					<c:forEach var="handler" items="${handlers}">
+						<option value="${handler.key}" <c:if test="${handler.key == status.value}">selected="selected"</c:if>>
+					        ${handler.key}
+					    </option>
+					</c:forEach>
+				</select>
+				<c:if test="${status.errorMessage != ''}"><span class="error">${status.errorMessage}</span></c:if>
+			</spring:bind>
+                 
+            <!-- All handler key to class mappings
+            <table>
+             <c:forEach var="h" items="${handlers }">
+                <tr name="handlerRow" id="handler_${h.key}">
+                    <th >
+                        <spring:message code="general.class"/>
+                    </th>
+                    <td>
+                        ${h.value.class.name }
+                    </td>
+                </tr>
+             </c:forEach>
+            </table>
+            -->
+        </td>
+    </tr>
+	<tr id="conceptMapRow">
 		<th valign="top" title="<spring:message code="Concept.mappings.help"/>">
 			<spring:message code="Concept.mappings"/>
 		</th>
@@ -539,19 +576,19 @@
 			<b><spring:message code="Concept.resources" /></b>
 		</td>
 		<td>
-			<a href="index.htm?phrase=<openmrs:format concept="${concept}" />"
+			<a href="index.htm?phrase=<openmrs:format concept="${command.concept}" />"
 			       target="_similar_terms" onclick="addName(this)">Similar Concepts</a><br/>
-			<a href="http://www2.merriam-webster.com/cgi-bin/mwmednlm?book=Medical&va=<openmrs:format concept="${concept}" />"
+			<a href="http://www2.merriam-webster.com/cgi-bin/mwmednlm?book=Medical&va=<openmrs:format concept="${command.concept}" />"
 			       target="_blank" onclick="addName(this)">Merriam Webster&reg;</a><br/>
-			<a href="http://www.google.com/search?q=<openmrs:format concept="${concept}" />"
+			<a href="http://www.google.com/search?q=<openmrs:format concept="${command.concept}" />"
 			       target="_blank" onclick="addName(this)">Google&trade;</a><br/>
-			<a href="http://www.utdol.com/application/vocab.asp?submit=Go&search=<openmrs:format concept="${concept}" />"
+			<a href="http://www.utdol.com/application/vocab.asp?submit=Go&search=<openmrs:format concept="${command.concept}" />"
 			       target="_blank" onclick="addName(this)">UpToDate&reg;</a><br/>
-			<a href="http://dictionary.reference.com/search?submit=Go&q=<openmrs:format concept="${concept}" />"
+			<a href="http://dictionary.reference.com/search?submit=Go&q=<openmrs:format concept="${command.concept}" />"
 			       target="_blank" onclick="addName(this)">Dictionary.com&reg;</a><br/>
-			<a href="http://search.atomz.com/search/?sp-a=sp1001878c&sp-q=<openmrs:format concept="${concept}" />"
+			<a href="http://search.atomz.com/search/?sp-a=sp1001878c&sp-q=<openmrs:format concept="${command.concept}" />"
 			       target="_blank" onclick="addName(this)">Lab Tests Online</a><br/>
-			<a href="http://en.wikipedia.org/wiki/<openmrs:format concept="${concept}" />"
+			<a href="http://en.wikipedia.org/wiki/<openmrs:format concept="${command.concept}" />"
 			       target="_blank"><spring:message code="Concept.wikipedia" /></a>
 		</td>
 	</tr>
@@ -562,16 +599,18 @@
 <c:if test="${conceptsLocked != 'true'}">	
 	<input type="submit" name="action" value="<spring:message code="Concept.save"/>" onMouseUp="removeHiddenRows()"/>
 	
-	<c:if test="${concept.conceptId != null}">
+	<c:if test="${command.concept.conceptId != null}">
 		<openmrs:hasPrivilege privilege="Delete Concepts">
 			 &nbsp; &nbsp; &nbsp;
-			<input type="submit" name="action" value="<spring:message code="Concept.delete"/>" onclick="return confirm('Are you sure you want to delete this ENTIRE CONCEPT?')"/>
+			<input type="submit" name="action" value="<spring:message code="Concept.delete"/>" onclick="return confirm('<spring:message code="Concept.confirmDelete"/>')"/>
 		</openmrs:hasPrivilege>
 	</c:if>
 </c:if>
 </div>
 
 </form>
+
+<openmrs:extensionPoint pointId="org.openmrs.dictionary.conceptFormFooter" type="html" />
 
 <script type="text/javascript">
 	selectTab(document.getElementById("${command.locales[0]}Tab"));

@@ -13,9 +13,12 @@
  */
 package org.openmrs.order;
 
+import java.io.Serializable;
 import java.util.List;
 
-public class RegimenSuggestion {
+public class RegimenSuggestion implements Serializable {
+	
+	private static final long serialVersionUID = 1L;
 	
 	private List<DrugSuggestion> drugComponents;
 	
@@ -47,7 +50,7 @@ public class RegimenSuggestion {
 	}
 	
 	/**
-	 * @param regimenDisplayName The regimenDisplayName to set.
+	 * @param displayName The regimenDisplayName to set.
 	 */
 	public void setDisplayName(String displayName) {
 		this.displayName = displayName;

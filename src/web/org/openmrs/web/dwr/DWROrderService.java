@@ -28,6 +28,7 @@ import org.openmrs.DrugOrder;
 import org.openmrs.Order;
 import org.openmrs.OrderType;
 import org.openmrs.Patient;
+import org.openmrs.api.APIException;
 import org.openmrs.api.OrderService;
 import org.openmrs.api.context.Context;
 import org.openmrs.util.OpenmrsConstants;
@@ -78,7 +79,7 @@ public class DWROrderService {
 				dStartDate = sdf.parse(startDate);
 			}
 			catch (ParseException e) {
-				dStartDate = null;
+				throw new DWRException(e.getMessage());
 			}
 		}
 		drugOrder.setStartDate(dStartDate);
@@ -86,7 +87,12 @@ public class DWROrderService {
 		drugOrder.setDateCreated(new Date());
 		drugOrder.setVoided(new Boolean(false));
 		
-		Context.getOrderService().updateOrder(drugOrder);
+		try {
+			Context.getOrderService().saveOrder(drugOrder);
+		}
+		catch (APIException e) {
+			throw new DWRException(e.getMessage());
+		}
 		
 		log.debug("Finished creating new drug order");
 		return ret;
@@ -97,7 +103,7 @@ public class DWROrderService {
 		Context.getOrderService().voidOrder(o, voidReason);
 	}
 	
-	public void discontinueOrder(Integer orderId, String discontinueReason, String discontinueDate) {
+	public void discontinueOrder(Integer orderId, String discontinueReason, String discontinueDate) throws DWRException {
 		Date dDiscDate = null;
 		if (discontinueDate != null) {
 			SimpleDateFormat sdf = Context.getDateFormat();
@@ -105,13 +111,18 @@ public class DWROrderService {
 				dDiscDate = sdf.parse(discontinueDate);
 			}
 			catch (ParseException e) {
-				dDiscDate = null;
+				throw new DWRException(e.getMessage());
 			}
 		}
 		
 		Order o = Context.getOrderService().getOrder(orderId);
-		Context.getOrderService().discontinueOrder(o, Context.getConceptService().getConceptByIdOrName(discontinueReason),
-		    dDiscDate);
+		try {
+			Context.getOrderService().discontinueOrder(o, Context.getConceptService().getConcept(discontinueReason),
+			    dDiscDate);
+		}
+		catch (APIException e) {
+			throw new DWRException(e.getMessage());
+		}
 	}
 	
 	public Vector<DrugOrderListItem> getDrugOrdersByPatientId(Integer patientId, int whatToShow) {
@@ -293,7 +304,8 @@ public class DWROrderService {
 		Context.getOrderService().voidDrugSet(p, drugSetId, voidReason, OrderService.SHOW_COMPLETE);
 	}
 	
-	public void discontinueDrugSet(Integer patientId, String drugSetId, String discontinueReason, String discontinueDate) {
+	public void discontinueDrugSet(Integer patientId, String drugSetId, String discontinueReason, String discontinueDate)
+	                                                                                                                     throws DWRException {
 		log.debug("in discontinueDrugSet() method");
 		
 		Patient p = Context.getPatientService().getPatient(patientId);
@@ -305,12 +317,18 @@ public class DWROrderService {
 				discDate = sdf.parse(discontinueDate);
 			}
 			catch (ParseException e) {
-				discDate = null;
+				throw new DWRException(e.getMessage());
 			}
 		}
 		
-		Context.getOrderService().discontinueDrugSet(p, drugSetId,
-		    Context.getConceptService().getConceptByIdOrName(discontinueReason), discDate);
+		try {
+			Context.getOrderService().discontinueDrugSet(p, drugSetId,
+			    Context.getConceptService().getConceptByIdOrName(discontinueReason), discDate);
+		}
+		catch (APIException e) {
+			throw new DWRException(e.getMessage());
+		}
+		
 	}
 	
 	/*
@@ -335,7 +353,8 @@ public class DWROrderService {
 	/*
 	 * This method would normally have a return type of void, but DWR requires a callback 
 	 */
-	public boolean discontinueCurrentDrugOrders(Integer patientId, String discontinueReason, String discontinueDate) {
+	public boolean discontinueCurrentDrugOrders(Integer patientId, String discontinueReason, String discontinueDate)
+	                                                                                                                throws DWRException {
 		log.debug("beginning method");
 		
 		boolean ret = true;
@@ -347,7 +366,7 @@ public class DWROrderService {
 				discDate = sdf.parse(discontinueDate);
 			}
 			catch (ParseException e) {
-				discDate = null;
+				throw new DWRException(e.getMessage());
 			}
 		}
 		
@@ -356,8 +375,13 @@ public class DWROrderService {
 		List<DrugOrder> currentOrders = Context.getOrderService().getDrugOrdersByPatient(p, OrderService.SHOW_CURRENT);
 		
 		for (DrugOrder o : currentOrders) {
-			Context.getOrderService().discontinueOrder(o,
-			    Context.getConceptService().getConceptByIdOrName(discontinueReason), discDate);
+			try {
+				Context.getOrderService().discontinueOrder(o, Context.getConceptService().getConcept(discontinueReason),
+				    discDate);
+			}
+			catch (APIException e) {
+				throw new DWRException(e.getMessage());
+			}
 		}
 		
 		return ret;

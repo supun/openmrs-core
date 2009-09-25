@@ -18,7 +18,6 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.Map;
 
 import org.junit.Assert;
@@ -28,12 +27,8 @@ import org.junit.Test;
 import org.openmrs.Cohort;
 import org.openmrs.Patient;
 import org.openmrs.api.context.Context;
-import org.openmrs.api.context.ServiceContext;
-import org.openmrs.logic.datasource.LogicDataSource;
-import org.openmrs.logic.impl.LogicServiceImpl;
 import org.openmrs.logic.result.Result;
 import org.openmrs.test.SkipBaseSetup;
-import org.openmrs.test.TestUtil;
 
 /**
  * TODO add more tests
@@ -157,11 +152,11 @@ public class LogicBasicTest extends LogicBaseContextSensitiveTest {
 		}
 		cohort.addMember(2);
 		long l = System.currentTimeMillis();
-		System.out.println(new Date());
+		//System.out.println(new Date());
 		LogicService ls = Context.getLogicService();
 		Map<Integer, Result> m = ls.eval(cohort, "WEIGHT (KG)");
-		System.out.println(m.toString());
-		System.out.println(String.valueOf(System.currentTimeMillis() - l) + " milliseconds");
+		//System.out.println(m.toString());
+		//System.out.println(String.valueOf(System.currentTimeMillis() - l) + " milliseconds");
 		
 	}
 }

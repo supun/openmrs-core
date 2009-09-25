@@ -26,8 +26,9 @@ import org.apache.commons.logging.LogFactory;
 import org.openmrs.api.context.Context;
 
 /**
- *
+ * @deprecated see reportingcompatibility module
  */
+@Deprecated
 public class ReportObjectFactory {
 	
 	private static ReportObjectFactory singleton;
@@ -49,7 +50,7 @@ public class ReportObjectFactory {
 	/**
 	 * Auto generated method comment
 	 * 
-	 * @return
+	 * @return ReportedObjectFactory gets the singleton Instance of the ReportedObjectFactory
 	 */
 	public static ReportObjectFactory getInstance() {
 		if (singleton == null)
@@ -61,7 +62,7 @@ public class ReportObjectFactory {
 	/**
 	 * Auto generated method comment
 	 * 
-	 * @return
+	 * @return List<String> of ReportObjectTypes
 	 */
 	public List<String> getReportObjectTypes() {
 		if (modules != null) {
@@ -81,7 +82,7 @@ public class ReportObjectFactory {
 	 * Auto generated method comment
 	 * 
 	 * @param type
-	 * @return
+	 * @return List<String> with the ReportObjects subtypes
 	 */
 	public List<String> getReportObjectSubTypes(String type) {
 		if (modules != null && type != null) {
@@ -103,7 +104,7 @@ public class ReportObjectFactory {
 	 * 
 	 * @param type
 	 * @param subType
-	 * @return
+	 * @return true if the subType is of type
 	 */
 	public boolean isSubTypeOfType(String type, String subType) {
 		boolean retVal = false;
@@ -122,7 +123,7 @@ public class ReportObjectFactory {
 	 * Auto generated method comment
 	 * 
 	 * @param subType
-	 * @return
+	 * @return String with the class name of an object of subType
 	 */
 	public String getReportObjectClassBySubType(String subType) {
 		if (modules != null && subType != null) {
@@ -143,7 +144,8 @@ public class ReportObjectFactory {
 	 * Auto generated method comment
 	 * 
 	 * @param name
-	 * @return
+	 * @return String with the name of a ReportObjectClass, by giving the ReportObjectFactoryModule
+	 *         name
 	 */
 	public String getReportObjectClassByName(String name) {
 		if (modules != null && name != null) {
@@ -163,7 +165,7 @@ public class ReportObjectFactory {
 	/**
 	 * Auto generated method comment
 	 * 
-	 * @return
+	 * @return List with the name of all ReportObjectClasses
 	 */
 	public List<String> getAllReportObjectClasses() {
 		if (modules != null) {
@@ -183,7 +185,7 @@ public class ReportObjectFactory {
 	 * Auto generated method comment
 	 * 
 	 * @param currentClassName
-	 * @return
+	 * @return String gets the ReportObjectValidator for the current class name
 	 */
 	public String getReportObjectValidatorByClass(String currentClassName) {
 		if (modules != null && currentClassName != null) {
@@ -207,8 +209,9 @@ public class ReportObjectFactory {
 	 * @param reportObjectName
 	 * @param initialValues
 	 * @param context
-	 * @return
+	 * @return AbstractReportObject instance
 	 */
+	@SuppressWarnings("unchecked")
 	public static AbstractReportObject getInstance(String reportObjectName, Map<String, Object> initialValues,
 	                                               Context context) {
 		ReportObjectFactory rof = ReportObjectFactory.singleton;
@@ -235,8 +238,9 @@ public class ReportObjectFactory {
 	 * 
 	 * @param reportObjectClass
 	 * @param initialValues
-	 * @return
+	 * @return AbstractReportObject instance
 	 */
+	@SuppressWarnings("unchecked")
 	public static AbstractReportObject getInstance(Class reportObjectClass, Map<String, Object> initialValues) {
 		AbstractReportObject reportObj = null;
 		
@@ -260,8 +264,9 @@ public class ReportObjectFactory {
 	 * 
 	 * @param reportObj
 	 * @param initialValues
-	 * @return
+	 * @return AbstractReportObject instance
 	 */
+	@SuppressWarnings("unchecked")
 	private static AbstractReportObject initInstance(AbstractReportObject reportObj, Map<String, Object> initialValues) {
 		if (reportObj != null && initialValues != null) {
 			for (Iterator<String> i = initialValues.keySet().iterator(); i.hasNext();) {
@@ -300,7 +305,7 @@ public class ReportObjectFactory {
 				
 				if (m != null) {
 					try {
-						Object fieldObj = m.invoke(reportObj, setterParams);
+						m.invoke(reportObj, setterParams);
 					}
 					catch (Exception e) {
 						log.error("Could not invoke setter method [" + methodName + "()] for field [" + key + "] in class ["

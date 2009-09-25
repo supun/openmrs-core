@@ -28,7 +28,10 @@ import org.openmrs.scheduler.TaskDefinition;
 
 /**
  * Generates a data export
+ * 
+ * @deprecated see reportingcompatibility module
  */
+@Deprecated
 public class GenerateDataExportTask extends AbstractTask {
 	
 	// Logger 
@@ -40,7 +43,7 @@ public class GenerateDataExportTask extends AbstractTask {
 	private EvaluationContext context;
 	
 	/**
-	 * @see org.openmrs.scheduler.tasks.AbstractTask#initialize(org.openmrs.scheduler.TaskConfig)
+	 * @see org.openmrs.scheduler.tasks.AbstractTask#initialize(TaskDefinition)
 	 */
 	public void initialize(TaskDefinition definition) {
 		super.initialize(definition);

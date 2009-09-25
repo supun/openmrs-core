@@ -57,6 +57,10 @@ import org.openmrs.propertyeditor.ProgramWorkflowEditor;
 import org.openmrs.propertyeditor.ProgramWorkflowStateEditor;
 import org.openmrs.propertyeditor.UserEditor;
 
+/**
+ * @deprecated see reportingcompatibility module
+ */
+@Deprecated
 public class ReportObjectXMLEncoder {
 	
 	private Log log = LogFactory.getLog(this.getClass());
@@ -67,6 +71,7 @@ public class ReportObjectXMLEncoder {
 		this.objectToEncode = objectToEncode;
 	}
 	
+	@SuppressWarnings("unchecked")
 	public String toXmlString() {
 		ByteArrayOutputStream arr = new ByteArrayOutputStream();
 		EnumDelegate enumDelegate = new EnumDelegate();
@@ -136,6 +141,7 @@ public class ReportObjectXMLEncoder {
 	
 	class EnumDelegate extends DefaultPersistenceDelegate {
 		
+		@SuppressWarnings("unchecked")
 		protected Expression instantiate(Object oldInstance, Encoder out) {
 			return new Expression(Enum.class, "valueOf",
 			        new Object[] { oldInstance.getClass(), ((Enum) oldInstance).name() });

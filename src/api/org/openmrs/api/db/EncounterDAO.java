@@ -22,6 +22,7 @@ import org.openmrs.EncounterType;
 import org.openmrs.Form;
 import org.openmrs.Location;
 import org.openmrs.Patient;
+import org.openmrs.User;
 
 /**
  * Encounter-related database functions
@@ -54,27 +55,19 @@ public interface EncounterDAO {
 	
 	/**
 	 * @param patientId
-	 * @param includeVoided
 	 * @return all encounters for the given patient identifer
 	 * @throws DAOException
 	 */
 	public List<Encounter> getEncountersByPatientId(Integer patientId) throws DAOException;
 	
 	/**
-	 * Get all encounters that match a variety of (nullable) criteria
-	 * 
-	 * @param patient
-	 * @param location
-	 * @param fromDate
-	 * @param toDate
-	 * @param enteredViaForms
-	 * @param encounterTypes
-	 * @param includeVoided
-	 * @return
+	 * @see org.openmrs.api.EncounterService#getEncounters(org.openmrs.Patient,
+	 *      org.openmrs.Location, java.util.Date, java.util.Date, java.util.Collection,
+	 *      java.util.Collection, java.util.Collection, boolean)
 	 */
 	public List<Encounter> getEncounters(Patient patient, Location location, Date fromDate, Date toDate,
 	                                     Collection<Form> enteredViaForms, Collection<EncounterType> encounterTypes,
-	                                     boolean includeVoided);
+	                                     Collection<User> providers, boolean includeVoided);
 	
 	/**
 	 * Save an Encounter Type
@@ -94,8 +87,8 @@ public interface EncounterDAO {
 	/**
 	 * Get encounterType by internal identifier
 	 * 
-	 * @param encounterType id
-	 * @return encounterType with given internal identifier
+	 * @param encounterTypeId Internal Integer identifier for an EncounterType
+	 * @return EncounterType with given internal identifier
 	 * @throws DAOException
 	 */
 	public EncounterType getEncounterType(Integer encounterTypeId) throws DAOException;
@@ -103,7 +96,7 @@ public interface EncounterDAO {
 	/**
 	 * Get encounterType by name
 	 * 
-	 * @param encounterType string
+	 * @param name String representation of an encounterType
 	 * @return EncounterType
 	 * @throws DAOException
 	 */
@@ -134,6 +127,24 @@ public interface EncounterDAO {
 	 * 
 	 * @param encounter the Encounter go the the encounterDatetime of
 	 * @return the encounterDatetime currently in the database for this encounter
+	 * @should get saved encounter datetime from database
 	 */
 	public Date getSavedEncounterDatetime(Encounter encounter);
+	
+	/**
+	 * Auto generated method comment
+	 * 
+	 * @param uuid
+	 * @return
+	 */
+	public Encounter getEncounterByUuid(String uuid);
+	
+	/**
+	 * Auto generated method comment
+	 * 
+	 * @param uuid
+	 * @return
+	 */
+	public EncounterType getEncounterTypeByUuid(String uuid);
+	
 }

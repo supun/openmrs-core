@@ -46,7 +46,6 @@ import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collection;
 import java.util.Date;
-import java.util.GregorianCalendar;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -61,6 +60,9 @@ import java.util.StringTokenizer;
 import java.util.TreeSet;
 import java.util.Vector;
 import java.util.jar.JarFile;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.regex.PatternSyntaxException;
 import java.util.zip.ZipEntry;
 
 import javax.xml.transform.OutputKeys;
@@ -70,6 +72,7 @@ import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.log4j.Level;
@@ -81,6 +84,7 @@ import org.openmrs.Drug;
 import org.openmrs.EncounterType;
 import org.openmrs.Form;
 import org.openmrs.Location;
+import org.openmrs.Person;
 import org.openmrs.PersonAttributeType;
 import org.openmrs.Program;
 import org.openmrs.ProgramWorkflowState;
@@ -88,7 +92,11 @@ import org.openmrs.User;
 import org.openmrs.api.APIException;
 import org.openmrs.api.AdministrationService;
 import org.openmrs.api.ConceptService;
+import org.openmrs.api.InvalidCharactersPasswordException;
+import org.openmrs.api.PasswordException;
 import org.openmrs.api.PatientService;
+import org.openmrs.api.ShortPasswordException;
+import org.openmrs.api.WeakPasswordException;
 import org.openmrs.api.context.Context;
 import org.openmrs.cohort.CohortSearchHistory;
 import org.openmrs.logic.LogicCriteria;
@@ -113,6 +121,7 @@ import org.openmrs.xml.OpenmrsCycleStrategy;
 import org.simpleframework.xml.Serializer;
 import org.simpleframework.xml.load.Persister;
 import org.springframework.beans.propertyeditors.CustomDateEditor;
+import org.springframework.context.NoSuchMessageException;
 import org.w3c.dom.Document;
 import org.w3c.dom.DocumentType;
 
@@ -127,9 +136,10 @@ public class OpenmrsUtil {
 	
 	/**
 	 * @param idWithoutCheckdigit
-	 * @return
+	 * @return int - the calculated check digit for the given string
 	 * @throws Exception
-	 * @deprecated Should be using PatientService.getPatientIdentifierValidator()
+	 * @deprecated Use {@link PatientService#getIdentifierValidator(String)}
+	 * @should get valid check digits
 	 */
 	public static int getCheckDigit(String idWithoutCheckdigit) throws Exception {
 		PatientService ps = Context.getPatientService();
@@ -183,7 +193,10 @@ public class OpenmrsUtil {
 	 * @param id
 	 * @return true/false whether id has a valid check digit
 	 * @throws Exception on invalid characters and invalid id formation
-	 * @deprecated Should be using PatientService.getPatientIdentifierValidator().isValid();
+	 * @deprecated Should be using {@link PatientService#getIdentifierValidator(String)}
+	 * @should validate correct check digits
+	 * @should not validate invalid check digits
+	 * @should throw error if given an invalid character in id
 	 */
 	public static boolean isValidCheckDigit(String id) throws Exception {
 		PatientService ps = Context.getPatientService();
@@ -464,7 +477,7 @@ public class OpenmrsUtil {
 	 * 
 	 * @param logClass optional string giving the class level to change. Defaults to
 	 *            OpenmrsConstants.LOG_CLASS_DEFAULT . Should be something like org.openmrs.___
-	 * @param level one of OpenmrsConstants.LOG_LEVEL_*
+	 * @param logLevel one of OpenmrsConstants.LOG_LEVEL_*
 	 */
 	public static void applyLogLevel(String logClass, String logLevel) {
 		
@@ -500,8 +513,8 @@ public class OpenmrsUtil {
 	 * Takes a String like "size=compact|order=date" and returns a Map<String,String> from the keys
 	 * to the values.
 	 * 
-	 * @param paramList
-	 * @return
+	 * @param paramList <code>String</code> with a list of parameters
+	 * @return Map<String, String> of the parameters passed
 	 */
 	public static Map<String, String> parseParameterList(String paramList) {
 		Map<String, String> ret = new HashMap<String, String>();
@@ -595,23 +608,32 @@ public class OpenmrsUtil {
 			return c1.compareTo(c2);
 	}
 	
+	/**
+	 * @deprecated this method is not currently used within OpenMRS and is a duplicate of
+	 *             {@link Person#getAge(Date)}
+	 */
 	public static Integer ageFromBirthdate(Date birthdate) {
 		if (birthdate == null)
 			return null;
 		
 		Calendar today = Calendar.getInstance();
 		
-		Calendar bday = new GregorianCalendar();
+		Calendar bday = Calendar.getInstance();
 		bday.setTime(birthdate);
 		
 		int age = today.get(Calendar.YEAR) - bday.get(Calendar.YEAR);
 		
-		//tricky bit:
-		// set birthday calendar to this year
-		// if the current date is less that the new 'birthday', subtract a year
-		bday.set(Calendar.YEAR, today.get(Calendar.YEAR));
-		if (today.before(bday)) {
-			age = age - 1;
+		//Adjust age when today's date is before the person's birthday
+		int todaysMonth = today.get(Calendar.MONTH);
+		int bdayMonth = bday.get(Calendar.MONTH);
+		int todaysDay = today.get(Calendar.DAY_OF_MONTH);
+		int bdayDay = bday.get(Calendar.DAY_OF_MONTH);
+		
+		if (todaysMonth < bdayMonth) {
+			age--;
+		} else if (todaysMonth == bdayMonth && todaysDay < bdayDay) {
+			// we're only comparing on month and day, not minutes, etc
+			age--;
 		}
 		
 		return age;
@@ -660,7 +682,7 @@ public class OpenmrsUtil {
 			}
 			if (c != null) {
 				if (isSet) {
-					List<Concept> inSet = cs.getConceptsInSet(c);
+					List<Concept> inSet = cs.getConceptsByConceptSet(c);
 					ret.addAll(inSet);
 				} else {
 					ret.add(c);
@@ -768,7 +790,7 @@ public class OpenmrsUtil {
 			}
 			if (c != null) {
 				if (isSet) {
-					List<Concept> inSet = cs.getConceptsInSet(c);
+					List<Concept> inSet = cs.getConceptsByConceptSet(c);
 					ret.addAll(inSet);
 				} else {
 					ret.add(c);
@@ -778,10 +800,17 @@ public class OpenmrsUtil {
 		return ret;
 	}
 	
+	/**
+	 * Return a date that is the same day as the passed in date, but the hours and seconds are the
+	 * latest possible for that day.
+	 * 
+	 * @param date date to adjust
+	 * @return a date that is the last possible time in the day
+	 */
 	public static Date lastSecondOfDay(Date date) {
 		if (date == null)
 			return null;
-		Calendar c = new GregorianCalendar();
+		Calendar c = Calendar.getInstance();
 		c.setTime(date);
 		// TODO: figure out the right way to do this (or at least set milliseconds to zero)
 		c.set(Calendar.HOUR_OF_DAY, 0);
@@ -841,6 +870,7 @@ public class OpenmrsUtil {
 	 * 
 	 * @param url an URL
 	 * @return file object for given URL or <code>null</code> if URL is not local
+	 * @should return null given null parameter
 	 */
 	public static File url2file(final URL url) {
 		if (url == null || !"file".equalsIgnoreCase(url.getProtocol())) {
@@ -1038,7 +1068,7 @@ public class OpenmrsUtil {
 		
 		Date ret = null;
 		if (withinLastDays != null || withinLastMonths != null) {
-			Calendar gc = new GregorianCalendar();
+			Calendar gc = Calendar.getInstance();
 			gc.setTime(comparisonDate != null ? comparisonDate : new Date());
 			if (withinLastDays != null)
 				gc.add(Calendar.DAY_OF_MONTH, -withinLastDays);
@@ -1056,7 +1086,7 @@ public class OpenmrsUtil {
 		
 		Date ret = null;
 		if (untilDaysAgo != null || untilMonthsAgo != null) {
-			Calendar gc = new GregorianCalendar();
+			Calendar gc = Calendar.getInstance();
 			gc.setTime(comparisonDate != null ? comparisonDate : new Date());
 			if (untilDaysAgo != null)
 				gc.add(Calendar.DAY_OF_MONTH, -untilDaysAgo);
@@ -1108,7 +1138,8 @@ public class OpenmrsUtil {
 	 * locale.
 	 * 
 	 * @return a simple date format
-	 * @deprecated use {@link Context#getDateFormat()} or {@link #getDateFormat(Context#getLocale())} instead
+	 * @deprecated use {@link Context#getDateFormat()} or {@link
+	 *             #getDateFormat(Context#getLocale())} instead
 	 */
 	public static SimpleDateFormat getDateFormat() {
 		return Context.getDateFormat();
@@ -1126,9 +1157,9 @@ public class OpenmrsUtil {
 		if (dateFormatCache.containsKey(locale))
 			return dateFormatCache.get(locale);
 		
-		SimpleDateFormat sdf = (SimpleDateFormat)DateFormat.getDateInstance(DateFormat.SHORT, locale);
+		SimpleDateFormat sdf = (SimpleDateFormat) DateFormat.getDateInstance(DateFormat.SHORT, locale);
 		String pattern = sdf.toPattern();
-
+		
 		if (!pattern.contains("yyyy")) {
 			// otherwise, change the pattern to be a four digit year
 			pattern = pattern.replaceFirst("yy", "yyyy");
@@ -1150,6 +1181,10 @@ public class OpenmrsUtil {
 		return sdf;
 	}
 	
+	/**
+	 * @deprecated see reportingcompatibility module
+	 */
+	@Deprecated
 	public static PatientFilter toPatientFilter(PatientSearch search, CohortSearchHistory history) {
 		return toPatientFilter(search, history, null);
 	}
@@ -1159,8 +1194,9 @@ public class OpenmrsUtil {
 	 * 
 	 * @param string
 	 * @param clazz
-	 * @return
+	 * @return Object of type <code>clazz</code> with the data from <code>string</code>
 	 */
+	@SuppressWarnings("unchecked")
 	public static Object parse(String string, Class clazz) {
 		try {
 			// If there's a valueOf(String) method, just use that (will cover at least String, Integer, Double, Boolean) 
@@ -1188,7 +1224,7 @@ public class OpenmrsUtil {
 					return ed.getValue();
 				}
 				catch (NumberFormatException ex) {
-					return Context.getEncounterService().getLocationByName(string);
+					return Context.getLocationService().getLocation(string);
 				}
 			} else if (Concept.class.equals(clazz)) {
 				ConceptEditor ed = new ConceptEditor();
@@ -1242,8 +1278,11 @@ public class OpenmrsUtil {
 	
 	/**
 	 * Uses reflection to translate a PatientSearch into a PatientFilter
+	 * 
+	 * @deprecated see reportingcompatibility module
 	 */
 	@SuppressWarnings("unchecked")
+	@Deprecated
 	public static PatientFilter toPatientFilter(PatientSearch search, CohortSearchHistory history,
 	                                            EvaluationContext evalContext) {
 		if (search.isSavedSearchReference()) {
@@ -1295,9 +1334,8 @@ public class OpenmrsUtil {
 					String valueAsString = sa.getValue();
 					String testForExpression = search.getArgumentValue(sa.getName());
 					if (testForExpression != null) {
-						valueAsString = testForExpression;
-						log.debug("Setting " + sa.getName() + " to: " + valueAsString);
-						if (evalContext != null && EvaluationContext.isExpression(valueAsString)) {
+						log.debug("Setting " + sa.getName() + " to: " + testForExpression);
+						if (evalContext != null && EvaluationContext.isExpression(testForExpression)) {
 							Object evaluated = evalContext.evaluateExpression(testForExpression);
 							if (evaluated != null) {
 								if (evaluated instanceof Date)
@@ -1308,6 +1346,7 @@ public class OpenmrsUtil {
 							log.debug("Evaluated " + sa.getName() + " to: " + valueAsString);
 						}
 					}
+					
 					Object value = null;
 					Class<?> valueClass = sa.getPropertyClass();
 					try {
@@ -1445,18 +1484,20 @@ public class OpenmrsUtil {
 	 * method <i>only</i> uses the .equals() method for comparison. This should be used in the
 	 * patient/person objects on their collections. Their collections are SortedSets which use the
 	 * compareTo method for equality as well. The compareTo method is currently optimized for
-	 * sorting, not for equality A null <code>obj</code> will return false
+	 * sorting, not for equality. A null <code>obj</code> will return false
 	 * 
 	 * @param objects collection to loop over
 	 * @param obj Object to look for in the <code>objects</code>
 	 * @return true/false whether the given object is found
+	 * @should use equals method for comparison instead of compareTo given List collection
+	 * @should use equals method for comparison instead of compareTo given SortedSet collection
 	 */
 	public static boolean collectionContains(Collection<?> objects, Object obj) {
 		if (obj == null || objects == null)
 			return false;
 		
 		for (Object o : objects) {
-			if (o.equals(obj))
+			if (o != null && o.equals(obj))
 				return true;
 		}
 		
@@ -1468,7 +1509,11 @@ public class OpenmrsUtil {
 	 * objects are taken into account
 	 * 
 	 * @return Serializer to do the (de)serialization
+	 * @deprecated - Use OpenmrsSerializer from
+	 *             Context.getSerializationService.getDefaultSerializer() Note, this uses a
+	 *             different Serialization mechanism, so you may need to use this for conversion
 	 */
+	@Deprecated
 	public static Serializer getSerializer() {
 		return new Persister(new OpenmrsCycleStrategy());
 	}
@@ -1479,7 +1524,11 @@ public class OpenmrsUtil {
 	 * 
 	 * @return Serializer to do the short (de)serialization
 	 * @see OpenmrsConstants#SHORT_SERIALIZATION
+	 * @deprecated - Use OpenmrsSerializer from
+	 *             Context.getSerializationService.getDefaultSerializer() Note, this uses a
+	 *             different Serialization mechanism, so you may need to use this for conversion
 	 */
+	@Deprecated
 	public static Serializer getShortSerializer() {
 		return new Persister(new OpenmrsCycleStrategy(true));
 	}
@@ -1491,7 +1540,9 @@ public class OpenmrsUtil {
 	 * 
 	 * @param sessionMap current serialization session
 	 * @return true/false whether or not to do the shortened serialization
+	 * @deprecated - use SerializationService and OpenmrsSerializer implementation for Serialization
 	 */
+	@Deprecated
 	public static boolean isShortSerialization(Map<?, ?> sessionMap) {
 		return sessionMap.containsKey(OpenmrsConstants.SHORT_SERIALIZATION);
 	}
@@ -1646,15 +1697,9 @@ public class OpenmrsUtil {
 	}
 	
 	/**
-	 * 
-	 *  Convenience method to replace Properties.store(), which isn't UTF-8 compliant
-	 * 
-	 * @param properties
-	 * @param file
-	 * @param comment
-	 */
-	/**
-	 * Convenience method to replace Properties.store(), which isn't UTF-8 compliant
+	 * Convenience method to replace Properties.store(), which isn't UTF-8 compliant <br/>
+	 * NOTE: In Java 6, you will be able to pass the load() and store() methods a UTF-8
+	 * Reader/Writer object as an argument, making this method unnecessary.
 	 * 
 	 * @param properties
 	 * @param file
@@ -1681,14 +1726,15 @@ public class OpenmrsUtil {
 	}
 	
 	/**
-	 * 
-	 * Convenience method to replace Properties.store(), which isn't UTF-8 compliant
+	 * Convenience method to replace Properties.store(), which isn't UTF-8 compliant NOTE: In Java
+	 * 6, you will be able to pass the load() and store() methods a UTF-8 Reader/Writer object as an
+	 * argument.
 	 * 
 	 * @param properties
 	 * @param file
 	 * @param comment (which appears in comments in properties file)
 	 */
-	public static void storeProperties(Properties properties, OutputStream outStream, String comment){
+	public static void storeProperties(Properties properties, OutputStream outStream, String comment) {
 		try {
 			OutputStreamWriter osw = new OutputStreamWriter(new BufferedOutputStream(outStream), "UTF-8");
 			Writer out = new BufferedWriter(osw);
@@ -1701,47 +1747,53 @@ public class OpenmrsUtil {
 			out.write("\n");
 			out.flush();
 			out.close();
-					
-		} catch (FileNotFoundException fnfe){
+		}
+		catch (FileNotFoundException fnfe) {
 			log.error("target file not found" + fnfe);
-		} catch (UnsupportedEncodingException ex){ //pass
+		}
+		catch (UnsupportedEncodingException ex) { //pass
 			log.error("unsupported encoding error hit" + ex);
-		} catch (IOException ioex){
+		}
+		catch (IOException ioex) {
 			log.error("IO exception encountered trying to append to properties file" + ioex);
 		}
+		
 	}
 	
 	/**
 	 * This method is a replacement for Properties.load(InputStream) so that we can load in utf-8
 	 * characters. Currently the load method expects the inputStream to point to a latin1 encoded
-	 * file.
+	 * file. <br/>
+	 * NOTE: In Java 6, you will be able to pass the load() and store() methods a UTF-8
+	 * Reader/Writer object as an argument, making this method unnecesary.
 	 * 
 	 * @param props the properties object to write into
 	 * @param input the input stream to read from
 	 */
-	public static Properties loadProperties(Properties props, InputStream input){
+	public static void loadProperties(Properties props, InputStream input) {
 		try {
 			BufferedReader reader = new BufferedReader(new InputStreamReader(input, "UTF-8"));
-			while (reader.ready()) {     
-			    String line = reader.readLine();
-			    if (line.length() > 0 && line.charAt(0) != '#'){
-			    	int pos = line.indexOf("=");
-			    	if (pos > 0){
-			    		String keyString = line.substring(0, pos);
-			    		String valueString = line.substring(pos + 1);
-			    		if (keyString != null && keyString.length() > 0){
-			    			props.put(keyString, fixPropertiesValueString(valueString));
-			    		}
-			    	}
-			    }
+			while (reader.ready()) {
+				String line = reader.readLine();
+				if (line.length() > 0 && line.charAt(0) != '#') {
+					int pos = line.indexOf("=");
+					if (pos > 0) {
+						String keyString = line.substring(0, pos);
+						String valueString = line.substring(pos + 1);
+						if (keyString != null && keyString.length() > 0) {
+							props.put(keyString, fixPropertiesValueString(valueString));
+						}
+					}
+				}
 			}
 			reader.close();
-		} catch (UnsupportedEncodingException uee) {
+		}
+		catch (UnsupportedEncodingException uee) {
 			log.error("Unsupported encoding used in properties file " + uee);
-		} catch(IOException ioe){
+		}
+		catch (IOException ioe) {
 			log.error("Unable to read properties from properties file " + ioe);
-		} 
-		return props;
+		}
 	}
 	
 	/**
@@ -1760,11 +1812,226 @@ public class OpenmrsUtil {
 		return returnString;
 	}
 	
+	/**
+	 * Utility method for getting the translation for the passed code
+	 * 
+	 * @param code the message key to lookup
+	 * @param args the replacement values for the translation string
+	 * @return the message, or if not found, the code
+	 */
+	public static String getMessage(String code, Object... args) {
+		Locale l = Context.getLocale();
+		try {
+			String translation = Context.getMessageSourceService().getMessage(code, args, l);
+			if (translation != null) {
+				return translation;
+			}
+		}
+		catch (NoSuchMessageException e) {
+			log.warn("Message code <" + code + "> not found for locale " + l);
+		}
+		catch (APIException apiEx) {
+			// in case the services aren't set up yet
+			log.debug("Unable to get code: " + code, apiEx);
+		}
+		return code;
+	}
+	
+	/**
+	 * Utility to check the validity of a password for a certain {@link User}. Passwords must be
+	 * non-null. Their required strength is configured via global properties:
+	 * <table>
+	 * <tr>
+	 * <th>Description</th>
+	 * <th>Property</th>
+	 * <th>Default Value</th>
+	 * </tr>
+	 * <tr>
+	 * <th>Require that it not match the {@link User}'s username or system id
+	 * <th>{@link OpenmrsConstants#GP_PASSWORD_CANNOT_MATCH_USERNAME_OR_SYSTEMID}</th>
+	 * <th>true</th>
+	 * </tr>
+	 * <tr>
+	 * <th>Require a minimum length
+	 * <th>{@link OpenmrsConstants#GP_PASSWORD_MINIMUM_LENGTH}</th>
+	 * <th>8</th>
+	 * </tr>
+	 * <tr>
+	 * <th>Require both an upper and lower case character
+	 * <th>{@link OpenmrsConstants#GP_PASSWORD_REQUIRES_UPPER_AND_LOWER_CASE}</th>
+	 * <th>true</th>
+	 * </tr>
+	 * <tr>
+	 * <th>Require at least one numeric character
+	 * <th>{@link OpenmrsConstants#GP_PASSWORD_REQUIRES_DIGIT}</th>
+	 * <th>true</th>
+	 * </tr>
+	 * <tr>
+	 * <th>Require at least one non-numeric character
+	 * <th>{@link OpenmrsConstants#GP_PASSWORD_REQUIRES_NON_DIGIT}</th>
+	 * <th>true</th>
+	 * </tr>
+	 * <tr>
+	 * <th>Require a match on the specified regular expression
+	 * <th>{@link OpenmrsConstants#GP_PASSWORD_CUSTOM_REGEX}</th>
+	 * <th>null</th>
+	 * </tr>
+	 * </table>
+	 * 
+	 * @param username user name of the user with password to validated
+	 * @param password string that will be validated
+	 * @param systemId system id of the user with password to be validated
+	 * @throws PasswordException
+	 * @since 1.5
+	 * @should fail with short password by default
+	 * @should fail with short password if not allowed
+	 * @should pass with short password if allowed
+	 * @should fail with digit only password by default
+	 * @should fail with digit only password if not allowed
+	 * @should pass with digit only password if allowed
+	 * @should fail with char only password by default
+	 * @should fail with char only password if not allowed
+	 * @should pass with char only password if allowed
+	 * @should fail without both upper and lower case password by default
+	 * @should fail without both upper and lower case password if not allowed
+	 * @should pass without both upper and lower case password if allowed
+	 * @should fail with password equals to user name by default
+	 * @should fail with password equals to user name if not allowed
+	 * @should pass with password equals to user name if allowed
+	 * @should fail with password equals to system id by default
+	 * @should fail with password equals to system id if not allowed
+	 * @should pass with password equals to system id if allowed
+	 * @should fail with password not matching configured regex
+	 * @should pass with password matching configured regex
+	 * @should allow password to contain non alphanumeric characters
+	 * @should allow password to contain white spaces
+	 * @should still work without an open session
+	 */
+	public static void validatePassword(String username, String password, String systemId) throws PasswordException {
+		
+		// default values for all of the global properties
+		String userGp = "true";
+		String lengthGp = "8";
+		String caseGp = "true";
+		String digitGp = "true";
+		String nonDigitGp = "true";
+		String regexGp = null;
+		AdministrationService svc = null;
+		
+		try {
+			svc = Context.getAdministrationService();
+		}
+		catch (APIException apiEx) {
+			// if a service isn't available, fail quietly and just do the defaults
+			log.debug("Unable to get global properties", apiEx);
+		}
+		
+		if (svc != null && Context.isSessionOpen()) {
+			// (the session won't be open here to allow for the unit test to fake not having the admin service available)
+			userGp = svc.getGlobalProperty(OpenmrsConstants.GP_PASSWORD_CANNOT_MATCH_USERNAME_OR_SYSTEMID, userGp);
+			lengthGp = svc.getGlobalProperty(OpenmrsConstants.GP_PASSWORD_MINIMUM_LENGTH, lengthGp);
+			caseGp = svc.getGlobalProperty(OpenmrsConstants.GP_PASSWORD_REQUIRES_UPPER_AND_LOWER_CASE, caseGp);
+			digitGp = svc.getGlobalProperty(OpenmrsConstants.GP_PASSWORD_REQUIRES_DIGIT, digitGp);
+			nonDigitGp = svc.getGlobalProperty(OpenmrsConstants.GP_PASSWORD_REQUIRES_NON_DIGIT, nonDigitGp);
+			regexGp = svc.getGlobalProperty(OpenmrsConstants.GP_PASSWORD_CUSTOM_REGEX, regexGp);
+		}
+		
+		if (password == null) {
+			throw new WeakPasswordException();
+		}
+		
+		if ("true".equals(userGp) && (password.equals(username) || password.equals(systemId))) {
+			throw new WeakPasswordException();
+		}
+		
+		if (StringUtils.isNotEmpty(lengthGp)) {
+			try {
+				int minLength = Integer.parseInt(lengthGp);
+				if (password.length() < minLength) {
+					throw new ShortPasswordException(getMessage("error.password.length", lengthGp));
+				}
+			}
+			catch (NumberFormatException nfe) {
+				log
+				        .warn("Error in global property <" + OpenmrsConstants.GP_PASSWORD_MINIMUM_LENGTH
+				                + "> must be an Integer");
+			}
+		}
+		
+		if ("true".equals(caseGp) && !containsUpperAndLowerCase(password)) {
+			throw new InvalidCharactersPasswordException(getMessage("error.password.requireMixedCase"));
+		}
+		
+		if ("true".equals(digitGp) && !containsDigit(password)) {
+			throw new InvalidCharactersPasswordException(getMessage("error.password.requireNumber"));
+		}
+		
+		if ("true".equals(nonDigitGp) && containsOnlyDigits(password)) {
+			throw new InvalidCharactersPasswordException(getMessage("error.password.requireLetter"));
+		}
+		
+		if (StringUtils.isNotEmpty(regexGp)) {
+			try {
+				Pattern pattern = Pattern.compile(regexGp);
+				Matcher matcher = pattern.matcher(password);
+				if (!matcher.matches()) {
+					throw new InvalidCharactersPasswordException(getMessage("error.password.different"));
+				}
+			}
+			catch (PatternSyntaxException pse) {
+				log.warn("Invalid regex of " + regexGp + " defined in global property <"
+				        + OpenmrsConstants.GP_PASSWORD_CUSTOM_REGEX + ">.");
+			}
+		}
+	}
+	
+	/**
+	 * @param test the string to test
+	 * @return true if the passed string contains both upper and lower case characters
+	 * @should return true if string contains upper and lower case
+	 * @should return false if string does not contain lower case characters
+	 * @should return false if string does not contain upper case characters
+	 */
+	public static boolean containsUpperAndLowerCase(String test) {
+		if (test != null) {
+			Pattern pattern = Pattern.compile("^(?=.*?[A-Z])(?=.*?[a-z])[\\w|\\W]*$");
+			Matcher matcher = pattern.matcher(test);
+			return matcher.matches();
+		}
+		return false;
+	}
+	
+	/**
+	 * @param test the string to test
+	 * @return true if the passed string contains only numeric characters
+	 * @should return true if string contains only digits
+	 * @should return false if string contains any non-digits
+	 */
+	public static boolean containsOnlyDigits(String test) {
+		if (test != null) {
+			for (char c : test.toCharArray()) {
+				if (!Character.isDigit(c)) {
+					return false;
+				}
+			}
+		}
+		return StringUtils.isNotEmpty(test);
+	}
+	
+	/**
+	 * @param test the string to test
+	 * @return true if the passed string contains any numeric characters
+	 * @should return true if string contains any digits
+	 * @should return false if string contains no digits
+	 */
+	public static boolean containsDigit(String test) {
+		if (test != null) {
+			for (char c : test.toCharArray()) {
+				if (Character.isDigit(c)) {
+					return true;
+				}
+			}
+		}
+		return false;
+	}
 }
-
-
-
-
-
-
-

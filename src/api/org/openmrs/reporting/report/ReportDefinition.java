@@ -17,21 +17,20 @@ import java.io.Serializable;
 import java.util.HashSet;
 import java.util.Set;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.openmrs.Cohort;
 import org.openmrs.reporting.AbstractReportObject;
 import org.openmrs.reporting.data.CohortDefinition;
 import org.openmrs.reporting.data.DatasetDefinition;
 import org.openmrs.reporting.export.DataExportReportObject;
 
+/**
+ * @deprecated see reportingcompatibility module
+ */
+@Deprecated
 public class ReportDefinition extends AbstractReportObject implements Serializable {
 	
 	/* Serial version ID*/
 	private static final long serialVersionUID = 1087599736245536124L;
-	
-	/* Logger */
-	private static Log log = LogFactory.getLog(ReportDefinition.class);
 	
 	/* Set of report elements - table, grid, graph */
 	private Set<ReportElementDefinition> reportElements = new HashSet<ReportElementDefinition>();
@@ -78,7 +77,7 @@ public class ReportDefinition extends AbstractReportObject implements Serializab
 	/**
 	 * Gets the report elements.
 	 * 
-	 * @return
+	 * @return Set<ReportElementDefinition> all Report Elements in the system
 	 */
 	public Set<ReportElementDefinition> getReportElements() {
 		return reportElements;
@@ -95,8 +94,6 @@ public class ReportDefinition extends AbstractReportObject implements Serializab
 	
 	/**
 	 * Gets the default cohort definition.
-	 * 
-	 * @return
 	 */
 	public CohortDefinition getCohortDefinition() {
 		return cohortDefinition;
@@ -113,8 +110,6 @@ public class ReportDefinition extends AbstractReportObject implements Serializab
 	
 	/**
 	 * Gets the default dataset definition.
-	 * 
-	 * @return
 	 */
 	public DatasetDefinition getDatasetDefinition() {
 		return datasetDefinition;
@@ -138,8 +133,6 @@ public class ReportDefinition extends AbstractReportObject implements Serializab
 	
 	/**
 	 * Gets the default data export object.
-	 * 
-	 * @return
 	 */
 	public DataExportReportObject getDataExport() {
 		return dataExport;

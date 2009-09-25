@@ -15,7 +15,15 @@ package org.openmrs.hl7;
 
 import java.util.Date;
 
-public class HL7InArchive {
+import org.openmrs.BaseOpenmrsObject;
+
+/**
+ * Represents a successfully processed hl7 message.
+ * 
+ * @see HL7InQueue
+ * @see HL7Service
+ */
+public class HL7InArchive extends BaseOpenmrsObject {
 	
 	private int hl7InArchiveId;
 	
@@ -24,6 +32,8 @@ public class HL7InArchive {
 	private String hl7SourceKey;
 	
 	private String hl7Data;
+	
+	private Integer messageState;
 	
 	private Date dateCreated;
 	
@@ -42,6 +52,7 @@ public class HL7InArchive {
 		setHL7Source(hl7InQueue.getHL7Source());
 		setHL7SourceKey(hl7InQueue.getHL7SourceKey());
 		setHL7Data(hl7InQueue.getHL7Data());
+		setMessageState(HL7Constants.HL7_STATUS_PROCESSING);
 	}
 	
 	/**
@@ -112,6 +123,38 @@ public class HL7InArchive {
 	 */
 	public void setHL7SourceKey(String hl7SourceKey) {
 		this.hl7SourceKey = hl7SourceKey;
+	}
+	
+	/**
+	 * @return Returns message state.
+	 * @since 1.5
+	 */
+	public Integer getMessageState() {
+		return messageState;
+	}
+	
+	/**
+	 * @param messageState The message source to set.
+	 * @since 1.5
+	 */
+	public void setMessageState(Integer messageState) {
+		this.messageState = messageState;
+	}
+	
+	/**
+	 * @see org.openmrs.OpenmrsObject#getId()
+	 * @since 1.5
+	 */
+	public Integer getId() {
+		return getHL7InArchiveId();
+	}
+	
+	/**
+	 * @see org.openmrs.OpenmrsObject#setId(java.lang.Integer)
+	 * @since 1.5
+	 */
+	public void setId(Integer id) {
+		setHL7InArchiveId(id);
 	}
 	
 }

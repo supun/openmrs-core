@@ -34,8 +34,10 @@ import org.simpleframework.xml.Root;
  * "2008-01-30", 2658
  * 
  * @see RowPerObsDataSet
+ * @deprecated see reportingcompatibility module
  */
 @Root
+@Deprecated
 public class RowPerObsDataSetDefinition implements DataSetDefinition {
 	
 	private static final long serialVersionUID = 1L;
@@ -58,6 +60,7 @@ public class RowPerObsDataSetDefinition implements DataSetDefinition {
 	/**
 	 * @see org.openmrs.report.DataSetDefinition#getColumnDatatypes()
 	 */
+	@SuppressWarnings("unchecked")
 	public List<Class> getColumnDatatypes() {
 		Class[] ret = new Class[8];
 		ret[0] = Integer.class; // patientId

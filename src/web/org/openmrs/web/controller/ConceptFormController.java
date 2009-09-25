@@ -33,6 +33,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.openmrs.Concept;
 import org.openmrs.ConceptAnswer;
+import org.openmrs.ConceptComplex;
 import org.openmrs.ConceptDescription;
 import org.openmrs.ConceptMap;
 import org.openmrs.ConceptName;
@@ -84,6 +85,8 @@ public class ConceptFormController extends SimpleFormController {
 	protected void initBinder(HttpServletRequest request, ServletRequestDataBinder binder) throws Exception {
 		super.initBinder(request, binder);
 		
+		ConceptFormBackingObject commandObject = (ConceptFormBackingObject) binder.getTarget();
+		
 		NumberFormat nf = NumberFormat.getInstance(Context.getLocale());
 		binder.registerCustomEditor(java.lang.Integer.class, new CustomNumberEditor(java.lang.Integer.class, nf, true));
 		binder.registerCustomEditor(java.lang.Double.class, new CustomNumberEditor(java.lang.Double.class, nf, true));
@@ -91,8 +94,8 @@ public class ConceptFormController extends SimpleFormController {
 		    SimpleDateFormat.SHORT, Context.getLocale()), true));
 		binder.registerCustomEditor(org.openmrs.ConceptClass.class, new ConceptClassEditor());
 		binder.registerCustomEditor(org.openmrs.ConceptDatatype.class, new ConceptDatatypeEditor());
-		binder.registerCustomEditor(java.util.Collection.class, "concept.conceptSets", new ConceptSetsEditor());
-		binder.registerCustomEditor(java.util.Collection.class, "concept.answers", new ConceptAnswersEditor());
+		binder.registerCustomEditor(java.util.Collection.class, "concept.conceptSets", new ConceptSetsEditor(commandObject.getConcept().getConceptSets()));
+		binder.registerCustomEditor(java.util.Collection.class, "concept.answers", new ConceptAnswersEditor(commandObject.getConcept().getAnswers(true)));
 		binder.registerCustomEditor(org.openmrs.ConceptSource.class, new ConceptSourceEditor());
 	}
 	
@@ -131,7 +134,6 @@ public class ConceptFormController extends SimpleFormController {
 	 * @see org.springframework.web.servlet.mvc.SimpleFormController#onSubmit(javax.servlet.http.HttpServletRequest,
 	 *      javax.servlet.http.HttpServletResponse, java.lang.Object,
 	 *      org.springframework.validation.BindException)
-	 *      
 	 * @should display numeric values from table
 	 * @should copy numeric values into numeric concepts
 	 */
@@ -235,6 +237,9 @@ public class ConceptFormController extends SimpleFormController {
 		map.put("classes", cs.getAllConceptClasses());
 		map.put("datatypes", cs.getAllConceptDatatypes());
 		
+		//get complex handlers
+		map.put("handlers", Context.getObsService().getHandlers());
+		
 		// make spring locale available to jsp
 		map.put("locale", Context.getLocale()); // should be same string format as conceptNamesByLocale map keys
 		
@@ -320,6 +325,9 @@ public class ConceptFormController extends SimpleFormController {
 				this.hiNormal = cn.getHiNormal();
 				this.precise = cn.getPrecise();
 				this.units = cn.getUnits();
+			} else if (concept.isComplex()) {
+				ConceptComplex complex = (ConceptComplex) concept;
+				this.handlerKey = complex.getHandler();
 			}
 		}
 		
@@ -378,8 +386,11 @@ public class ConceptFormController extends SimpleFormController {
 			}
 			
 			// if the user unchecked the concept sets box, erase past saved sets
-			if (!concept.isSet())
-				concept.setConceptSets(null);
+			if (!concept.isSet()) {
+				if (concept.getConceptSets() != null) {
+					concept.getConceptSets().clear();
+				}
+			}
 			
 			// add in subobject specific code
 			if (concept.getDatatype().getName().equals("Numeric")) {
@@ -400,6 +411,15 @@ public class ConceptFormController extends SimpleFormController {
 				
 				concept = cn;
 				
+			} else if (concept.getDatatype().getName().equals("Complex")) {
+				ConceptComplex complexConcept;
+				if (concept instanceof ConceptComplex)
+					complexConcept = (ConceptComplex) concept;
+				else {
+					complexConcept = new ConceptComplex(concept);
+				}
+				complexConcept.setHandler(handlerKey);
+				concept = complexConcept;
 			}
 			
 			return concept;

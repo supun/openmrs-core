@@ -13,24 +13,29 @@
  */
 package org.openmrs.api.db;
 
-import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 
 import org.openmrs.Concept;
 import org.openmrs.ConceptAnswer;
 import org.openmrs.ConceptClass;
+import org.openmrs.ConceptComplex;
 import org.openmrs.ConceptDatatype;
+import org.openmrs.ConceptDerived;
+import org.openmrs.ConceptDescription;
 import org.openmrs.ConceptName;
 import org.openmrs.ConceptNameTag;
 import org.openmrs.ConceptNumeric;
 import org.openmrs.ConceptProposal;
 import org.openmrs.ConceptSet;
+import org.openmrs.ConceptSetDerived;
 import org.openmrs.ConceptSource;
 import org.openmrs.ConceptWord;
 import org.openmrs.Drug;
+import org.openmrs.DrugIngredient;
 import org.openmrs.api.ConceptService;
 
 /**
@@ -51,6 +56,15 @@ public interface ConceptDAO {
 	public void purgeConcept(Concept concept) throws DAOException;
 	
 	/**
+	 * Get a ConceptComplex. The Concept.getDatatype() is "Complex" and the Concept.getHandler() is
+	 * the class name for the ComplexObsHandler key associated with this ConceptComplex.
+	 * 
+	 * @param conceptId
+	 * @return the ConceptComplex
+	 */
+	public ConceptComplex getConceptComplex(Integer conceptId);
+	
+	/**
 	 * @see org.openmrs.api.ConceptService#purgeDrug(org.openmrs.Drug)
 	 */
 	public void purgeDrug(Drug drug) throws DAOException;
@@ -68,7 +82,7 @@ public interface ConceptDAO {
 	/**
 	 * @see org.openmrs.api.ConceptService#getConceptName(java.lang.Integer)
 	 * @param conceptNameId
-	 * @return
+	 * @return The ConceptName matching the specified conceptNameId
 	 */
 	public ConceptName getConceptName(Integer conceptNameId) throws DAOException;
 	
@@ -90,9 +104,8 @@ public interface ConceptDAO {
 	                                 List<ConceptDatatype> datatypes) throws DAOException;
 	
 	/**
-	 * @see org.openmrs.api.ConceptService#getConceptWords(java.lang.String, java.util.Locale,
-	 *      boolean, java.util.List, java.util.List, java.util.List, java.util.List, Concept, int,
-	 *      int)
+	 * @see org.openmrs.api.ConceptService#getConceptWords(String, List, boolean, List, List, List,
+	 *      List, Concept, Integer, Integer)
 	 */
 	public List<ConceptWord> getConceptWords(String phrase, List<Locale> locales, boolean includeRetired,
 	                                         List<ConceptClass> requireClasses, List<ConceptClass> excludeClasses,
@@ -300,5 +313,83 @@ public interface ConceptDAO {
 	 * @see org.openmrs.api.ConceptService#conceptIterator()
 	 */
 	public Iterator<Concept> conceptIterator();
+
+	/**
+	 * @see org.openmrs.api.ConceptService#getConceptByMapping(java.lang.String, java.lang.String)
+	 */
+	public Concept getConceptByMapping(String conceptCode, String mappingCode);
+	
+	/**
+	 * Auto generated method comment
+	 * 
+	 * @param uuid
+	 * @return
+	 */
+	public Concept getConceptByUuid(String uuid);
+	
+	/**
+	 * Auto generated method comment
+	 * 
+	 * @param uuid
+	 * @return
+	 */
+	public ConceptClass getConceptClassByUuid(String uuid);
+	
+	public ConceptAnswer getConceptAnswerByUuid(String uuid);
+	
+	public ConceptDerived getConceptDerivedByUuid(String uuid);
+	
+	public ConceptName getConceptNameByUuid(String uuid);
+	
+	public ConceptSet getConceptSetByUuid(String uuid);
+	
+	public ConceptSetDerived getConceptSetDerivedByUuid(String uuid);
+	
+	public ConceptSource getConceptSourceByUuid(String uuid);
+	
+	public ConceptWord getConceptWordByUuid(String uuid);
+	
+	/**
+	 * Auto generated method comment
+	 * 
+	 * @param uuid
+	 * @return
+	 */
+	public ConceptDatatype getConceptDatatypeByUuid(String uuid);
+	
+	/**
+	 * Auto generated method comment
+	 * 
+	 * @param uuid
+	 * @return
+	 */
+	public ConceptNumeric getConceptNumericByUuid(String uuid);
+	
+	/**
+	 * Auto generated method comment
+	 * 
+	 * @param uuid
+	 * @return
+	 */
+	public ConceptProposal getConceptProposalByUuid(String uuid);
+	
+	/**
+	 * Auto generated method comment
+	 * 
+	 * @param uuid
+	 * @return
+	 */
+	public Drug getDrugByUuid(String uuid);
+	
+	public DrugIngredient getDrugIngredientByUuid(String uuid);
+	
+	/**
+	 * @see org.openmrs.api.ConceptService#getConceptUuids()
+	 */
+	public Map<Integer, String> getConceptUuids();
+	
+	public ConceptDescription getConceptDescriptionByUuid(String uuid);
+	
+	public ConceptNameTag getConceptNameTagByUuid(String uuid);
 	
 }

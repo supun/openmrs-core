@@ -1,5 +1,15 @@
 /**
- * 
+ * The contents of this file are subject to the OpenMRS Public License
+ * Version 1.0 (the "License"); you may not use this file except in
+ * compliance with the License. You may obtain a copy of the License at
+ * http://license.openmrs.org
+ *
+ * Software distributed under the License is distributed on an "AS IS"
+ * basis, WITHOUT WARRANTY OF ANY KIND, either express or implied. See the
+ * License for the specific language governing rights and limitations
+ * under the License.
+ *
+ * Copyright (C) OpenMRS, LLC.  All Rights Reserved.
  */
 package org.openmrs.scheduler.db.hibernate;
 
@@ -17,7 +27,6 @@ import org.openmrs.scheduler.db.SchedulerDAO;
 import org.springframework.orm.ObjectRetrievalFailureException;
 
 /**
- * @author Justin Miranda
  */
 public class HibernateSchedulerDAO implements SchedulerDAO {
 	
@@ -105,10 +114,9 @@ public class HibernateSchedulerDAO implements SchedulerDAO {
 	}
 	
 	/**
-	 * Find all tasks with a given identifier
+	 * Find all tasks in the database
 	 * 
-	 * @param identifier
-	 * @return set of tasks matching identifier
+	 * @return <code>List<TaskDefinition></code> of all tasks
 	 * @throws DAOException
 	 */
 	@SuppressWarnings("unchecked")
@@ -119,7 +127,7 @@ public class HibernateSchedulerDAO implements SchedulerDAO {
 	/**
 	 * Delete task from database.
 	 * 
-	 * @param task task to be deleted
+	 * @param taskId <code>Integer</code> identifier of task to be deleted
 	 * @throws DAOException
 	 */
 	public void deleteTask(Integer taskId) throws DAOException {
@@ -130,7 +138,7 @@ public class HibernateSchedulerDAO implements SchedulerDAO {
 	/**
 	 * Delete task from database.
 	 * 
-	 * @param task task to be deleted
+	 * @param taskConfig <code>TaskDefinition</code> of task to be deleted
 	 * @throws DAOException
 	 */
 	public void deleteTask(TaskDefinition taskConfig) throws DAOException {

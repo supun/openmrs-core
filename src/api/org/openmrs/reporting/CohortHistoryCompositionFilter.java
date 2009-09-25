@@ -11,6 +11,10 @@ import org.openmrs.api.PatientSetService.BooleanOperator;
 import org.openmrs.cohort.CohortSearchHistory;
 import org.openmrs.report.EvaluationContext;
 
+/**
+ * @deprecated see reportingcompatibility module
+ */
+@Deprecated
 public class CohortHistoryCompositionFilter extends AbstractPatientFilter implements PatientFilter {
 	
 	protected final static Log log = LogFactory.getLog(CohortHistoryCompositionFilter.class);
@@ -47,6 +51,7 @@ public class CohortHistoryCompositionFilter extends AbstractPatientFilter implem
 	public void setName(String name) {
 	}
 	
+	@SuppressWarnings("unchecked")
 	private String nameHelper(List list) {
 		StringBuilder ret = new StringBuilder();
 		for (Object o : list) {
@@ -91,6 +96,7 @@ public class CohortHistoryCompositionFilter extends AbstractPatientFilter implem
 		}
 		*/
 
+	@SuppressWarnings("unchecked")
 	private PatientFilter toPatientFilter(List<Object> phrase) {
 		// Recursive step:
 		// * if anything in this list is a list, then recurse on that

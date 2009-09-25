@@ -60,7 +60,6 @@ public class ModulePropertiesFormController extends SimpleFormController {
 		String view = getFormView();
 		String success = "";
 		String error = "";
-		MessageSourceAccessor msa = getMessageSourceAccessor();
 		
 		view = getSuccessView();
 		

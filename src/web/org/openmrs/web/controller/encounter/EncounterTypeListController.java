@@ -25,7 +25,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.openmrs.EncounterType;
 import org.openmrs.api.APIException;
-import org.openmrs.api.AdministrationService;
 import org.openmrs.api.EncounterService;
 import org.openmrs.api.context.Context;
 import org.openmrs.web.WebConstants;
@@ -61,6 +60,7 @@ public class EncounterTypeListController extends SimpleFormController {
 	 * @see org.springframework.web.servlet.mvc.SimpleFormController#onSubmit(javax.servlet.http.HttpServletRequest,
 	 *      javax.servlet.http.HttpServletResponse, java.lang.Object,
 	 *      org.springframework.validation.BindException)
+	 * @should not fail if no encounter types are selected
 	 */
 	protected ModelAndView onSubmit(HttpServletRequest request, HttpServletResponse response, Object obj,
 	                                BindException errors) throws Exception {
@@ -69,31 +69,34 @@ public class EncounterTypeListController extends SimpleFormController {
 		
 		String view = getFormView();
 		if (Context.isAuthenticated()) {
-			String[] encounterTypeList = request.getParameterValues("encounterTypeId");
-			AdministrationService as = Context.getAdministrationService();
-			EncounterService os = Context.getEncounterService();
-			
 			String success = "";
 			String error = "";
 			
 			MessageSourceAccessor msa = getMessageSourceAccessor();
-			String deleted = msa.getMessage("general.deleted");
-			String notDeleted = msa.getMessage("general.cannot.delete");
-			for (String p : encounterTypeList) {
-				//TODO convenience method deleteEncounterType(Integer) ??
-				try {
-					as.deleteEncounterType(os.getEncounterType(Integer.valueOf(p)));
-					if (!success.equals(""))
-						success += "<br/>";
-					success += p + " " + deleted;
+			
+			String[] encounterTypeList = request.getParameterValues("encounterTypeId");
+			if (encounterTypeList != null) {
+				EncounterService es = Context.getEncounterService();
+				
+				String deleted = msa.getMessage("general.deleted");
+				String notDeleted = msa.getMessage("general.cannot.delete");
+				for (String p : encounterTypeList) {
+					//TODO convenience method deleteEncounterType(Integer) ??
+					try {
+						es.purgeEncounterType(es.getEncounterType(Integer.valueOf(p)));
+						if (!success.equals(""))
+							success += "<br/>";
+						success += p + " " + deleted;
+					}
+					catch (APIException e) {
+						log.warn("Error deleting encounter type", e);
+						if (!error.equals(""))
+							error += "<br/>";
+						error += p + " " + notDeleted;
+					}
 				}
-				catch (APIException e) {
-					log.warn("Error deleting encounter type", e);
-					if (!error.equals(""))
-						error += "<br/>";
-					error += p + " " + notDeleted;
-				}
-			}
+			} else
+				error = msa.getMessage("EncounterType.select");
 			
 			view = getSuccessView();
 			if (!success.equals(""))
@@ -118,8 +121,8 @@ public class EncounterTypeListController extends SimpleFormController {
 		
 		//only fill the Object is the user has authenticated properly
 		if (Context.isAuthenticated()) {
-			EncounterService os = Context.getEncounterService();
-			encounterTypeList = os.getEncounterTypes();
+			EncounterService es = Context.getEncounterService();
+			encounterTypeList = es.getAllEncounterTypes();
 		}
 		
 		return encounterTypeList;

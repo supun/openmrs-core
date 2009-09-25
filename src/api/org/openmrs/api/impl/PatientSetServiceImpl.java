@@ -48,7 +48,6 @@ import org.openmrs.ProgramWorkflow;
 import org.openmrs.ProgramWorkflowState;
 import org.openmrs.Relationship;
 import org.openmrs.RelationshipType;
-import org.openmrs.User;
 import org.openmrs.api.APIAuthenticationException;
 import org.openmrs.api.PatientSetService;
 import org.openmrs.api.context.Context;
@@ -75,6 +74,15 @@ public class PatientSetServiceImpl implements PatientSetService {
 	
 	public void setPatientSetDAO(PatientSetDAO dao) {
 		this.dao = dao;
+	}
+	
+	/**
+	 * Clean up after this class. Set the static var to null so that the classloader can reclaim the
+	 * space.
+	 * 
+	 * @see org.openmrs.api.impl.BaseOpenmrsService#onShutdown()
+	 */
+	public void onShutdown() {
 	}
 	
 	/**
@@ -176,9 +184,10 @@ public class PatientSetServiceImpl implements PatientSetService {
 	 * date. Can also be used to find patient with no drug orders on that date.
 	 * 
 	 * @param patientIds Collection of patientIds you're interested in. NULL means all patients.
-	 * @param takingAny Collection of drugIds the patient is taking. (Or the empty set to mean
+	 * @param takingIds Collection of drugIds the patient is taking. (Or the empty set to mean
 	 *            "any drug" or NULL to mean "no drugs")
 	 * @param onDate Which date to look at the patients' drug orders. (NULL defaults to now().)
+	 * @return Cohort of Patients matching criteria
 	 */
 	public Cohort getPatientsHavingDrugOrder(Collection<Integer> patientIds, Collection<Integer> takingIds, Date onDate) {
 		Map<Integer, Collection<Integer>> activeDrugs = getPatientSetDAO().getActiveDrugIds(patientIds, onDate, onDate);
@@ -213,7 +222,7 @@ public class PatientSetServiceImpl implements PatientSetService {
 		Set<Integer> ret = new HashSet<Integer>();
 		
 		if (drugIds == null)
-			drugIds = new ArrayList();
+			drugIds = new ArrayList<Integer>();
 		
 		if (drugIds.size() == 0) {
 			if (groupMethod == GroupMethod.NONE) {
@@ -344,8 +353,7 @@ public class PatientSetServiceImpl implements PatientSetService {
 	}
 	
 	/**
-	 * @see org.openmrs.api.PatientSetService#getPatientAttributes(org.openmrs.Cohort,
-	 *      java.lang.String, java.lang.String[], boolean)
+	 * @see org.openmrs.api.PatientSetService#getPatientAttributes(Cohort, String, String, boolean)
 	 */
 	public Map<Integer, Object> getPatientAttributes(Cohort patients, String className, String property, boolean returnAll) {
 		return getPatientSetDAO().getPatientAttributes(patients, className, property, returnAll);
@@ -396,45 +404,6 @@ public class PatientSetServiceImpl implements PatientSetService {
 		return getPatientSetDAO().getRelatives(ps, relType, forwards);
 	}
 	
-	// these should go elsewhere
-	
-	private static Map<User, Cohort> userPatientSets;
-	
-	public void setMyPatientSet(Cohort ps) {
-		if (userPatientSets == null) {
-			userPatientSets = new HashMap<User, Cohort>();
-		}
-		User u = Context.getAuthenticatedUser();
-		userPatientSets.put(u, ps);
-	}
-	
-	public Cohort getMyPatientSet() {
-		if (Context.isAuthenticated() == false)
-			return new Cohort();
-		
-		if (userPatientSets == null) {
-			userPatientSets = new HashMap<User, Cohort>();
-		}
-		Cohort mine = userPatientSets.get(Context.getAuthenticatedUser());
-		if (mine == null) {
-			mine = new Cohort();
-			userPatientSets.put(Context.getAuthenticatedUser(), mine);
-		}
-		return mine;
-	}
-	
-	public void addToMyPatientSet(Integer ptId) {
-		getMyPatientSet().addMember(ptId);
-	}
-	
-	public void removeFromMyPatientSet(Integer ptId) {
-		getMyPatientSet().removeMember(ptId);
-	}
-	
-	public void clearMyPatientSet() {
-		setMyPatientSet(null);
-	}
-	
 	public Map<Integer, PatientState> getCurrentStates(Cohort ps, ProgramWorkflow wf) {
 		return getPatientSetDAO().getCurrentStates(ps, wf);
 	}
@@ -454,7 +423,7 @@ public class PatientSetServiceImpl implements PatientSetService {
 	public Map<Integer, List<DrugOrder>> getCurrentDrugOrders(Cohort ps, Concept drugSet) {
 		List<Concept> drugConcepts = null;
 		if (drugSet != null) {
-			List<ConceptSet> concepts = Context.getConceptService().getConceptSets(drugSet);
+			List<ConceptSet> concepts = Context.getConceptService().getConceptSetsByConcept(drugSet);
 			drugConcepts = new ArrayList<Concept>();
 			for (ConceptSet cs : concepts) {
 				drugConcepts.add(cs.getConcept());
@@ -471,7 +440,7 @@ public class PatientSetServiceImpl implements PatientSetService {
 	public Map<Integer, List<DrugOrder>> getDrugOrders(Cohort ps, Concept drugSet) {
 		List<Concept> drugConcepts = null;
 		if (drugSet != null) {
-			List<ConceptSet> concepts = Context.getConceptService().getConceptSets(drugSet);
+			List<ConceptSet> concepts = Context.getConceptService().getConceptSetsByConcept(drugSet);
 			drugConcepts = new ArrayList<Concept>();
 			for (ConceptSet cs : concepts) {
 				drugConcepts.add(cs.getConcept());

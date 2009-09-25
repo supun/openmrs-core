@@ -15,8 +15,6 @@ package org.openmrs.reporting.export;
 
 import java.io.Serializable;
 
-import org.openmrs.api.APIException;
-
 /**
  * Used with the RowPerObsDataExport to output data for one concept answered multiple times per
  * patient. The output will repeat patients in rows in order to list off all observations for the
@@ -31,7 +29,10 @@ import org.openmrs.api.APIException;
  * 4393,      35.0,      1/7/2000
  * 4400,      12.0,      1/1/2000
  * </pre>
+ * 
+ * @deprecated see reportingcompatibility module
  */
+@Deprecated
 public class RowPerObsColumn implements ExportColumn, Serializable {
 	
 	public static final long serialVersionUID = 987654323L;

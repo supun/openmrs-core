@@ -16,6 +16,7 @@ package org.openmrs.report;
 import java.util.List;
 import java.util.Vector;
 
+import org.openmrs.BaseOpenmrsMetadata;
 import org.openmrs.cohort.CohortDefinition;
 import org.simpleframework.xml.Attribute;
 import org.simpleframework.xml.Element;
@@ -24,22 +25,24 @@ import org.simpleframework.xml.Root;
 
 /**
  * This class holds the different parts of a report before generation. A ReportSchema will typically
- * be evaluated upon a Cohort, in the context of an EvaluationContext. @see
+ * be evaluated upon a Cohort, in the context of an EvaluationContext. See
  * {@link org.openmrs.api.ReportService#evaluate(ReportSchema, org.openmrs.Cohort, EvaluationContext)}
+ * <p>
  * Evaluating a report really means evaluating all the DataSetDefinitions it contains, resulting in
- * a {@link org.openmrs.report.ReportData} The "filter" represents an (optional) extra filter that
- * is applied to the input cohort before the DataSetDefinitions ever see it.
+ * a {@link org.openmrs.report.ReportData}
+ * <p>
+ * The "filter" represents an (optional) extra filter that is applied to the input cohort before the
+ * DataSetDefinitions ever see it.
+ * 
+ * @deprecated see reportingcompatibility module
  */
 @Root(strict = false)
-public class ReportSchema implements Parameterizable {
+@Deprecated
+public class ReportSchema extends BaseOpenmrsMetadata implements Parameterizable {
 	
 	private static final long serialVersionUID = 932347906334509564L;
 	
 	private Integer reportSchemaId;
-	
-	private String name;
-	
-	private String description;
 	
 	private CohortDefinition filter;
 	
@@ -57,6 +60,20 @@ public class ReportSchema implements Parameterizable {
 	}
 	
 	/**
+	 * @see org.openmrs.OpenmrsObject#getId()
+	 */
+	public Integer getId() {
+		return getReportSchemaId();
+	}
+	
+	/**
+	 * @see org.openmrs.OpenmrsObject#setId(java.lang.Integer)
+	 */
+	public void setId(Integer id) {
+		setReportSchemaId(id);
+	}
+	
+	/**
 	 * Set the Report Schema Id
 	 * 
 	 * @param reportSchemaId
@@ -69,7 +86,7 @@ public class ReportSchema implements Parameterizable {
 	/**
 	 * Returns the ReportSchema Id
 	 * 
-	 * @return
+	 * @return the Integer Report Schema Id
 	 */
 	@Attribute(required = false)
 	public Integer getReportSchemaId() {
@@ -79,21 +96,21 @@ public class ReportSchema implements Parameterizable {
 	/**
 	 * Set a name for the ReportSchema
 	 * 
-	 * @param name
+	 * @param name <code>String</code> name to set
 	 */
 	@Element(data = true, required = true)
 	public void setName(String name) {
-		this.name = name;
+		super.setName(name);
 	}
 	
 	/**
 	 * Returns the name of the ReportSchema
 	 * 
-	 * @return
+	 * @return the name of the ReportSchema
 	 */
 	@Element(data = true, required = true)
 	public String getName() {
-		return this.name;
+		return super.getName();
 	}
 	
 	/**
@@ -103,23 +120,23 @@ public class ReportSchema implements Parameterizable {
 	 */
 	@Element(data = true, required = true)
 	public void setDescription(String description) {
-		this.description = description;
+		super.setDescription(description);
 	}
 	
 	/**
 	 * Returns the description of this ReportSchema
 	 * 
-	 * @return
+	 * @return the <code>String</code> description of the ReportSchema
 	 */
 	@Element(data = true, required = true)
 	public String getDescription() {
-		return this.description;
+		return super.getDescription();
 	}
 	
 	/**
 	 * Set the filter
 	 * 
-	 * @param cohort
+	 * @param filter
 	 */
 	@Element(required = false)
 	public void setFilter(CohortDefinition filter) {
@@ -129,7 +146,7 @@ public class ReportSchema implements Parameterizable {
 	/**
 	 * Returns the filter
 	 * 
-	 * @return
+	 * @return the filter as a <code>CohortDefinition</code>
 	 */
 	@Element(required = false)
 	public CohortDefinition getFilter() {
@@ -139,7 +156,7 @@ public class ReportSchema implements Parameterizable {
 	/**
 	 * Sets List<Parameter> reportParameters
 	 * 
-	 * @param reportParameters
+	 * @param reportParameters this schema's defined parameters
 	 */
 	@ElementList(required = false, name = "parameters")
 	public void setReportParameters(List<Parameter> reportParameters) {
@@ -150,7 +167,7 @@ public class ReportSchema implements Parameterizable {
 	 * Get all ReportParameters defined for this schema. This method does not recurse through the
 	 * sub objects to find _all_ parameters. Use {@link #getParameters()} for that.
 	 * 
-	 * @param reportParameters this schema's defined parameters
+	 * @return this schema's defined parameters
 	 */
 	@ElementList(required = false, name = "parameters")
 	public List<Parameter> getReportParameters() {
@@ -160,7 +177,7 @@ public class ReportSchema implements Parameterizable {
 	/**
 	 * Set List<DataSetDefinition> dataSetDefinitions
 	 * 
-	 * @param dataSetDefinitions
+	 * @param definitions
 	 */
 	@ElementList(required = true, name = "dataSets")
 	public void setDataSetDefinitions(List<DataSetDefinition> definitions) {
@@ -170,7 +187,7 @@ public class ReportSchema implements Parameterizable {
 	/**
 	 * Returns List<DataSetDefinition> dataSetDefinitions
 	 * 
-	 * @return
+	 * @return List<DataSetDefinition> a list with the DataSet Definitions
 	 */
 	@ElementList(required = true, name = "dataSets")
 	public List<DataSetDefinition> getDataSetDefinitions() {

@@ -16,8 +16,9 @@ package org.openmrs.report.impl;
 import org.openmrs.report.ReportSchema;
 
 /**
- *
+ * @deprecated see reportingcompatibility module
  */
+@Deprecated
 public class CsvReportRenderer extends DelimitedTextReportRenderer {
 	
 	public CsvReportRenderer() {
@@ -55,7 +56,7 @@ public class CsvReportRenderer extends DelimitedTextReportRenderer {
 	}
 	
 	/**
-	 * @see org.openmrs.report.renderer.ReportRenderer#getRenderedContentType(org.openmrs.report.ReportSchema)
+	 * @see org.openmrs.report.ReportRenderer#getRenderedContentType(ReportSchema, String)
 	 */
 	public String getRenderedContentType(ReportSchema model, String argument) {
 		return "text/csv";

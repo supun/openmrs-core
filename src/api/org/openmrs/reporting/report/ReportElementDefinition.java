@@ -14,10 +14,15 @@
 package org.openmrs.reporting.report;
 
 import java.io.Serializable;
-import org.openmrs.reporting.AbstractReportObject;
-import org.openmrs.reporting.data.DatasetDefinition;
-import org.openmrs.reporting.data.CohortDefinition;
 
+import org.openmrs.reporting.AbstractReportObject;
+import org.openmrs.reporting.data.CohortDefinition;
+import org.openmrs.reporting.data.DatasetDefinition;
+
+/**
+ * @deprecated see reportingcompatibility module
+ */
+@Deprecated
 public class ReportElementDefinition extends AbstractReportObject implements Serializable {
 	
 	/* */
@@ -30,7 +35,9 @@ public class ReportElementDefinition extends AbstractReportObject implements Ser
 	public CohortDefinition cohortDefinition = new CohortDefinition();
 	
 	/**
-	 * @return
+	 * TODO Auto generated method comment
+	 * 
+	 * @return CohortDefinition the CohortDefinition of this Report Element Definition
 	 */
 	public CohortDefinition getCohortDefinition() {
 		return cohortDefinition;
@@ -44,7 +51,9 @@ public class ReportElementDefinition extends AbstractReportObject implements Ser
 	}
 	
 	/**
-	 * @return
+	 * TODO Auto generated method comment
+	 * 
+	 * @return DatasetDefinition the DatasetDefinition of this Report Element Definition
 	 */
 	public DatasetDefinition getDatasetDefinition() {
 		return datasetDefinition;

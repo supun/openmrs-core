@@ -71,7 +71,8 @@ public class ConceptSourceListController extends SimpleFormController {
 			String notDeleted = msa.getMessage("general.cannot.delete");
 			for (String conceptSourceId : conceptSourceIdList) {
 				try {
-					cs.purgeConceptSource(new ConceptSource(Integer.valueOf(conceptSourceId)));
+					ConceptSource source = cs.getConceptSource(Integer.valueOf(conceptSourceId));
+					cs.purgeConceptSource(source);
 					if (!success.equals(""))
 						success += "<br>";
 					success += conceptSourceId + " " + deleted;
@@ -118,6 +119,7 @@ public class ConceptSourceListController extends SimpleFormController {
 	 * @see org.springframework.web.servlet.mvc.SimpleFormController#referenceData(javax.servlet.http.HttpServletRequest,
 	 *      java.lang.Object, org.springframework.validation.Errors)
 	 */
+	@SuppressWarnings("unchecked")
 	@Override
 	protected Map<String, Object> referenceData(HttpServletRequest request, Object command, Errors errors) throws Exception {
 		List<ConceptSource> conceptSources = (List<ConceptSource>) command;

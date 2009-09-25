@@ -385,7 +385,7 @@ public class ObsTableWidget extends TagSupport {
 					List<Obs> list = groupedObs.get(key);
 					if (list != null) {
 						if (combineEqualResults) {
-							Set<String> unique = new LinkedHashSet<String>();
+							Collection<String> unique = new LinkedHashSet<String>();
 							for (Obs obs : list)
 								unique.add(obs.getValueAsString(loc));
 							for (String s : unique)

@@ -28,17 +28,15 @@ import org.openmrs.util.OpenmrsConstants;
  * 
  * @see Privilege
  */
-public class Role implements java.io.Serializable {
+public class Role extends BaseOpenmrsMetadata implements java.io.Serializable {
 	
 	public static final long serialVersionUID = 1234233L;
 	
-	private static Log log = LogFactory.getLog(Role.class);
+	private transient static Log log = LogFactory.getLog(Role.class);
 	
 	// Fields
 	
 	private String role;
-	
-	private String description;
 	
 	private Set<Privilege> privileges;
 	
@@ -58,7 +56,7 @@ public class Role implements java.io.Serializable {
 	/** constructor with all database required properties */
 	public Role(String role, String description) {
 		this.role = role;
-		this.description = description;
+		setDescription(description);
 	}
 	
 	/**
@@ -80,20 +78,6 @@ public class Role implements java.io.Serializable {
 	}
 	
 	// Property accessors
-	
-	/**
-	 * @return Returns the description.
-	 */
-	public String getDescription() {
-		return description;
-	}
-	
-	/**
-	 * @param description The description to set.
-	 */
-	public void setDescription(String description) {
-		this.description = description;
-	}
 	
 	/**
 	 * @return Returns the privileges.
@@ -124,7 +108,7 @@ public class Role implements java.io.Serializable {
 	/**
 	 * Removes the given Privilege from the list of privileges
 	 * 
-	 * @param privilegen Privilege to remove
+	 * @param privilege Privilege to remove
 	 */
 	public void removePrivilege(Privilege privilege) {
 		if (privileges != null)
@@ -158,6 +142,10 @@ public class Role implements java.io.Serializable {
 	 * 
 	 * @param privilegeName String name of a privilege
 	 * @return true/false whether this role has the given privilege
+	 * @should return false if not found
+	 * @should return true if found
+	 * @should not fail given null parameter
+	 * @should return true for any privilegeName if super user
 	 */
 	public boolean hasPrivilege(String privilegeName) {
 		
@@ -175,14 +163,14 @@ public class Role implements java.io.Serializable {
 	}
 	
 	/**
-	 * @return Returns the parentRoles.
+	 * @return Returns the inheritedRoles.
 	 */
 	public Set<Role> getInheritedRoles() {
 		return inheritedRoles;
 	}
 	
 	/**
-	 * @param parentRoles The parentRoles to set.
+	 * @param inheritedRoles The inheritedRoles to set.
 	 */
 	public void setInheritedRoles(Set<Role> inheritedRoles) {
 		this.inheritedRoles = inheritedRoles;
@@ -220,13 +208,13 @@ public class Role implements java.io.Serializable {
 		if (!this.inheritsRoles())
 			return children;
 		
-		Set<Role> allRoles = new HashSet<Role>(); //total roles (parents + children)
-		Set<Role> myRoles = new HashSet<Role>(); //new roles
+		Set<Role> allRoles = new HashSet<Role>(); // total roles (parents + children)
+		Set<Role> myRoles = new HashSet<Role>(); // new roles
 		allRoles.addAll(children);
 		
 		myRoles.addAll(this.getInheritedRoles());
 		myRoles.removeAll(children);
-		myRoles.remove(this); //prevent an obvious looping problem
+		myRoles.remove(this); // prevent an obvious looping problem
 		allRoles.addAll(myRoles);
 		
 		for (Role r : myRoles) {
@@ -238,6 +226,22 @@ public class Role implements java.io.Serializable {
 			log.debug("Total roles: " + allRoles);
 		
 		return allRoles;
+	}
+	
+	/**
+	 * @since 1.5
+	 * @see org.openmrs.OpenmrsObject#getId()
+	 */
+	public Integer getId() {
+		throw new UnsupportedOperationException();
+	}
+	
+	/**
+	 * @since 1.5
+	 * @see org.openmrs.OpenmrsObject#setId(java.lang.Integer)
+	 */
+	public void setId(Integer id) {
+		throw new UnsupportedOperationException();
 	}
 	
 }

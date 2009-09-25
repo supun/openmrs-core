@@ -76,12 +76,13 @@
 							autocomplete="off" />
 					<c:if test="${status.errorMessage != ''}"><span class="error">${status.errorMessage}</span></c:if>
 				</spring:bind>
+				<i><spring:message code="User.login.manner" /></i>
 			</td>
 		</tr>
 		<c:if test="${modifyPasswords == true}">
 			<tr>
 				<td><spring:message code="User.usersPassword" /></td>
-				<td><input type="password" name="userFormPassword" value="<c:if test="${isNewUser == false}">XXXXXXXXXXXXXXX</c:if>" autocomplete="off"/> <i><spring:message code="User.password.description"/></i></td>
+				<td><input type="password" name="userFormPassword" value="<c:if test="${isNewUser == false}">XXXXXXXXXXXXXXX</c:if>" autocomplete="off"/></td>
 	
 			</tr>
 			<tr>
@@ -100,7 +101,7 @@
 			</tr>
 		</c:if>
 		
-		<tr><td colspan=2">&nbsp;</td></tr>
+		<tr><td colspan="2">&nbsp;</td></tr>
 		
 		<tr>
 			<td valign="top"><spring:message code="User.roles"/></td>
@@ -109,7 +110,7 @@
 			</td>
 		</tr>
 		
-		<tr><td colspan=2">&nbsp;</td></tr>
+		<tr><td colspan="2">&nbsp;</td></tr>
 		
 		<tr>
 			<td colspan="2"><a href="#Show Advanced" onclick="return toggleLayer('advancedOptions', this, '<spring:message code="User.showAdvancedOptions"/>', '<spring:message code="User.hideAdvancedOptions"/>')"><spring:message code="User.showAdvancedOptions"/></a></td>
@@ -129,8 +130,53 @@
 			<spring:nestedPath path="user">
 				<%@ include file="../person/include/editPersonInfo.jsp" %>
 			</spring:nestedPath>
-		</tbody>
-	</table>
+		
+		<c:if test="${fn:length(user.userProperties) > 0}" >
+			<tr>
+				<td valign="top" colspan="2"><spring:message code="User.userProperties" /></td>
+			</tr>
+	
+			<tr>
+				<td></td>
+				<td>
+					<table cellpadding="1" cellspacing="0">
+							<thead>
+								<tr>
+									<td><spring:message code="general.name" /></td>
+									<td><spring:message code="general.value" /></td>
+								</tr>
+							</thead>
+							<tbody id="userPropsList">
+							<c:forEach var="userProp" items="${user.userProperties}" varStatus="status">
+								<tr class="<c:choose><c:when test="${status.index % 2 == 0}">evenRow</c:when><c:otherwise>oddRow</c:otherwise></c:choose>">
+									<td valign="top">
+										<input type="hidden" name="property"
+											value="${userProp.key}" maxlength="250" />
+										${userProp.key}:
+									</td>
+									<td valign="top">
+										<c:choose>
+											<c:when test="${fn:length(userProp.value) > 20}">
+												<textarea name="value" rows="1" cols="60"
+													wrap="off">${userProp.value}</textarea>
+											</c:when>
+											<c:otherwise>
+												<input type="text" name="value" value="${userProp.value}"
+													size="30" maxlength="4000" />
+											</c:otherwise>
+										</c:choose>
+									</td>
+								</tr>
+							</c:forEach>
+						</tbody>
+					</table>
+				</td>
+			</tr>
+		</c:if>
+	</tbody>
+</table>
+
+<br />
 	
 	<br/>
 	

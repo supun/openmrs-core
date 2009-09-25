@@ -23,7 +23,10 @@ import org.simpleframework.xml.stream.NodeMap;
 
 /**
  * This label logic will convert hibernate proxy class names to their equivalent pojo class names
+ * 
+ * @deprecated - Use OpenmrsSerializer from Context.getSerializationService.getDefaultSerializer()
  */
+@Deprecated
 public class OpenmrsLabelLogic implements LabelLogic {
 	
 	private static Log log = LogFactory.getLog(OpenmrsLabelLogic.class);
@@ -32,6 +35,7 @@ public class OpenmrsLabelLogic implements LabelLogic {
 	 * @see org.simpleframework.xml.graph.LabelLogic#getLabel(java.lang.Class, java.lang.Object,
 	 *      java.lang.Class, org.simpleframework.xml.stream.NodeMap)
 	 */
+	@SuppressWarnings("unchecked")
 	public String getLabel(Class field, Object value, Class real, NodeMap node) {
 		String simpleName = real.getSimpleName();
 		simpleName = Introspector.decapitalize(simpleName);

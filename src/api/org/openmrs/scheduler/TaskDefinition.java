@@ -19,28 +19,23 @@ import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.openmrs.BaseOpenmrsMetadata;
 import org.openmrs.User;
 
 /**
  * Represents the metadata for a task that can be scheduled.
- * 
- * @author Justin Miranda
  */
-public class TaskDefinition {
+public class TaskDefinition extends BaseOpenmrsMetadata {
 	
 	private Log log = LogFactory.getLog(this.getClass());
 	
 	// Task metadata
 	private Integer id;
 	
-	private String name;
+	// This class must implement the schedulable interface or it will fail to start
+	private String taskClass;
 	
-	private String description;
-	
-	private String taskClass; // This class must implement the schedulable
-	
-	// interface or it will fail to start
-	private Task taskInstance = null;;
+	private Task taskInstance = null;
 	
 	// Scheduling metadata
 	private Date startTime;
@@ -49,6 +44,7 @@ public class TaskDefinition {
 	
 	// support longer intervals (years, decades,
 	// milleniums)
+	
 	private Boolean startOnStartup;
 	
 	private String startTimePattern;
@@ -57,15 +53,6 @@ public class TaskDefinition {
 	
 	// Relationships
 	private Map<String, String> properties;
-	
-	// Metadata fields
-	private User createdBy;
-	
-	private Date dateCreated;
-	
-	private User changedBy;
-	
-	private Date dateChanged;
 	
 	/**
 	 * Default no-arg public constructor
@@ -84,15 +71,15 @@ public class TaskDefinition {
 		this();
 		log.debug("Creating taskconfig: " + id);
 		this.id = id;
-		this.name = name;
-		this.description = description;
+		setName(name);
+		setDescription(description);
 		this.taskClass = taskClass;
 	}
 	
 	/**
 	 * Get the task identifier.
 	 * 
-	 * @return the task identifier
+	 * @return <code>Integer</code> identifier of the task
 	 */
 	public Integer getId() {
 		return this.id;
@@ -108,42 +95,6 @@ public class TaskDefinition {
 	}
 	
 	/**
-	 * Get the name of the task.
-	 * 
-	 * @return the name of the task
-	 */
-	public String getName() {
-		return this.name;
-	}
-	
-	/**
-	 * Set the name of the task.
-	 * 
-	 * @param name of the task
-	 */
-	public void setName(String name) {
-		this.name = name;
-	}
-	
-	/**
-	 * Get the description of the task.
-	 * 
-	 * @return the description of the task
-	 */
-	public String getDescription() {
-		return this.description;
-	}
-	
-	/**
-	 * Set the name of the task.
-	 * 
-	 * @param name of the task
-	 */
-	public void setDescription(String description) {
-		this.description = description;
-	}
-	
-	/**
 	 * Get the data map used to provide the task with runtime data.
 	 * 
 	 * @return the data map
@@ -153,9 +104,10 @@ public class TaskDefinition {
 	}
 	
 	/**
-	 * Set the name of the task.
+	 * Set the properties of the task. This overrides any properties previously set with the
+	 * setProperty(String, String) method.
 	 * 
-	 * @param name of the task
+	 * @param properties <code>Map<String, String></code> of the properties to set
 	 */
 	public void setProperties(Map<String, String> properties) {
 		this.properties = properties;
@@ -173,7 +125,7 @@ public class TaskDefinition {
 	/**
 	 * Set the schedulable object to be executed.
 	 * 
-	 * @param schedulable schedulable object
+	 * @param taskClass <code>String</code> taskClass of a schedulable object
 	 */
 	public void setTaskClass(String taskClass) {
 		this.taskClass = taskClass;
@@ -231,14 +183,14 @@ public class TaskDefinition {
 	}
 	
 	/**
-	 * Gets the flag that indicates whether we start on scheduler startup.
+	 * Gets the flag that indicates whether the task should startup as soon as the scheduler starts.
 	 */
 	public Boolean getStartOnStartup() {
 		return this.startOnStartup;
 	}
 	
 	/**
-	 * Sets the flag that indicates whether we start on scheduler startup.
+	 * Sets the flag that indicates whether the task should startup as soon as the scheduler starts.
 	 */
 	public void setStartOnStartup(Boolean startOnStartup) {
 		this.startOnStartup = startOnStartup;
@@ -261,8 +213,8 @@ public class TaskDefinition {
 	/**
 	 * Get task configuration property.
 	 * 
-	 * @param key
-	 * @return
+	 * @param key the <code>String</code> key of the property to get
+	 * @return the <code>String</code> value for the given key
 	 */
 	public String getProperty(String key) {
 		return this.properties.get(key);
@@ -271,8 +223,8 @@ public class TaskDefinition {
 	/**
 	 * Set task configuration property. Only supports strings at the moment.
 	 * 
-	 * @param key
-	 * @param value
+	 * @param key the <code>String</code> key of the property to set
+	 * @param value the <code>String</code> value of the property to set
 	 */
 	public void setProperty(String key, String value) {
 		this.properties.put(key, value);
@@ -281,7 +233,7 @@ public class TaskDefinition {
 	/**
 	 * Convenience method that asks SchedulerUtil for it's next execution time.
 	 * 
-	 * @return
+	 * @return the <code>Date</code> of the next execution
 	 */
 	public Date getNextExecutionTime() {
 		return SchedulerUtil.getNextExecution(this);
@@ -290,7 +242,7 @@ public class TaskDefinition {
 	/**
 	 * Convenience method to calculate the seconds until the next execution time.
 	 * 
-	 * @return
+	 * @return the number of seconds until the next execution
 	 */
 	public long getSecondsUntilNextExecutionTime() {
 		return (getNextExecutionTime().getTime() - System.currentTimeMillis()) / 1000;
@@ -298,62 +250,6 @@ public class TaskDefinition {
 	}
 	
 	// ==================================   Metadata ============================
-	
-	/**
-	 * @return Returns the creator.
-	 */
-	public User getCreatedBy() {
-		return this.createdBy;
-	}
-	
-	/**
-	 * @param creator The creator to set.
-	 */
-	public void setCreatedBy(User createdBy) {
-		this.createdBy = createdBy;
-	}
-	
-	/**
-	 * @return Returns the dateCreated.
-	 */
-	public Date getDateCreated() {
-		return dateCreated;
-	}
-	
-	/**
-	 * @param dateCreated The dateCreated to set.
-	 */
-	public void setDateCreated(Date dateCreated) {
-		this.dateCreated = dateCreated;
-	}
-	
-	/**
-	 * @return Returns the changedBy.
-	 */
-	public User getChangedBy() {
-		return changedBy;
-	}
-	
-	/**
-	 * @param changedBy The changedBy to set.
-	 */
-	public void setChangedBy(User changedBy) {
-		this.changedBy = changedBy;
-	}
-	
-	/**
-	 * @return Returns the dateChanged.
-	 */
-	public Date getDateChanged() {
-		return this.dateChanged;
-	}
-	
-	/**
-	 * @param dateChanged The dateChanged to set.
-	 */
-	public void setDateChanged(Date dateChanged) {
-		this.dateChanged = dateChanged;
-	}
 	
 	/**
 	 * @see java.lang.Object#equals(java.lang.Object)
@@ -405,10 +301,26 @@ public class TaskDefinition {
 	 * Sets the runnable task instance associated with this definition. This should be set by the
 	 * scheduler which instantiates the task.
 	 * 
-	 * @param tastkInstance
+	 * @param taskInstance
 	 */
 	public void setTaskInstance(Task taskInstance) {
 		this.taskInstance = taskInstance;
+	}
+	
+	/**
+	 * @deprecated use {@link #getCreator()}
+	 */
+	public Object getCreatedBy() {
+		// TODO Auto-generated method stub
+		return null;
+	}
+	
+	/**
+	 * @deprecated use {@link #setCreator(User)}
+	 */
+	public void setCreatedBy(User authenticatedUser) {
+		// TODO Auto-generated method stub
+		
 	}
 	
 }

@@ -55,12 +55,26 @@ public class WebConstants {
 	
 	public static final String OPENMRS_PORTLET_CACHED_MODEL = "__openmrs_portlet_cached_model";
 	
-	public static final String OPENMRS_REPORT_DATA = "__openmrs_report_data";
-	
-	public static final String OPENMRS_REPORT_ARGUMENT = "__openmrs_report_argument";
-	
 	// these vars filled in by org.openmrs.web.Listener at webapp start time
 	public static String BUILD_TIMESTAMP = "";
 	
 	public static String WEBAPP_NAME = "openmrs";
+	
+	// ComplexObsHandler views specific to the web layer:
+	public static final String HTML_VIEW = "html_view";
+	
+	public static final String HYPERLINK_VIEW = "hyperlink_view";
+	
+	/**
+	 * Page in the webapp used for initial setup of the database connection if no valid one exists
+	 */
+	public static final String SETUP_PAGE_URL = "initialsetup";
+	
+	/**
+	 * Global property name for the number of times one IP can fail at logging in before being
+	 * locked out. A value of 0 for this property means no IP lockout checks.
+	 * 
+	 * @see org.openmrs.web.servlet.LoginServlet
+	 */
+	public static String GP_ALLOWED_LOGIN_ATTEMPTS_PER_IP = "security.loginAttemptsAllowedPerIP";
 }

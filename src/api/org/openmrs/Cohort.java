@@ -16,11 +16,10 @@ package org.openmrs;
 import java.io.Serializable;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Date;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
 import java.util.StringTokenizer;
+import java.util.TreeSet;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -41,33 +40,17 @@ import org.simpleframework.xml.Root;
  * @see org.openmrs.cohort.CohortDefinition
  */
 @Root(strict = false)
-public class Cohort implements Serializable {
+public class Cohort extends BaseOpenmrsData implements Serializable {
 	
 	public static final long serialVersionUID = 0L;
 	
-	public Log log = LogFactory.getLog(this.getClass());
+	private transient Log log = LogFactory.getLog(this.getClass());
 	
 	private Integer cohortId;
 	
 	private String name;
 	
 	private String description;
-	
-	private User creator;
-	
-	private Date dateCreated;
-	
-	private Boolean voided = false;
-	
-	private User voidedBy;
-	
-	private Date dateVoided;
-	
-	private String voidReason;
-	
-	private User changedBy;
-	
-	private Date dateChanged;
 	
 	private Set<Integer> memberIds;
 	
@@ -76,7 +59,7 @@ public class Cohort implements Serializable {
 	private EvaluationContext evaluationContext;
 	
 	public Cohort() {
-		memberIds = new HashSet<Integer>();
+		memberIds = new TreeSet<Integer>();
 	}
 	
 	/**
@@ -86,38 +69,38 @@ public class Cohort implements Serializable {
 	 * @param cohortId the internal identifier for this cohort
 	 */
 	public Cohort(Integer cohortId) {
-		memberIds = new HashSet<Integer>();
+		this();
 		this.cohortId = cohortId;
 	}
 	
 	/**
 	 * This constructor does not check whether the database contains patients with the given ids,
-	 * but @see CohortService.saveCohort(Cohort) will.
+	 * but
 	 * 
+	 * @see CohortService.saveCohort(Cohort) will.
 	 * @param name
 	 * @param description optional description
 	 * @param ids option array of Integer ids
 	 */
 	public Cohort(String name, String description, Integer[] ids) {
+		this();
 		this.name = name;
 		this.description = description;
-		memberIds = new HashSet<Integer>();
 		if (ids != null)
 			memberIds.addAll(Arrays.asList(ids));
 	}
 	
 	/**
 	 * This constructor does not check whether the database contains patients with the given ids,
-	 * but @see CohortService.saveCohort(Cohort) will.
+	 * but
 	 * 
+	 * @see CohortService.saveCohort(Cohort) will.
 	 * @param name
 	 * @param description optional description
 	 * @param patients optional array of patients
 	 */
 	public Cohort(String name, String description, Patient[] patients) {
-		this.name = name;
-		this.description = description;
-		memberIds = new HashSet<Integer>();
+		this(name, description, (Integer[]) null);
 		if (patients != null)
 			for (Patient p : patients)
 				memberIds.add(p.getPatientId());
@@ -125,8 +108,9 @@ public class Cohort implements Serializable {
 	
 	/**
 	 * This constructor does not check whether the database contains patients with the given ids,
-	 * but @see CohortService.saveCohort(Cohort) will.
+	 * but
 	 * 
+	 * @see CohortService.saveCohort(Cohort) will.
 	 * @param patientsOrIds optional collection which may contain Patients, or patientIds which may
 	 *            be Integers, Strings, or anything whose toString() can be parsed to an Integer.
 	 */
@@ -137,8 +121,9 @@ public class Cohort implements Serializable {
 	
 	/**
 	 * This constructor does not check whether the database contains patients with the given ids,
-	 * but @see CohortService.saveCohort(Cohort) will.
+	 * but
 	 * 
+	 * @see CohortService.saveCohort(Cohort) will.
 	 * @param name
 	 * @param description optional description
 	 * @param patientsOrIds optional collection which may contain Patients, or patientIds which may
@@ -146,9 +131,7 @@ public class Cohort implements Serializable {
 	 */
 	@SuppressWarnings("unchecked")
 	public Cohort(String name, String description, Collection patientsOrIds) {
-		this.name = name;
-		this.description = description;
-		memberIds = new HashSet<Integer>();
+		this(name, description, (Integer[]) null);
 		if (patientsOrIds != null) {
 			for (Object o : patientsOrIds) {
 				if (o instanceof Patient)
@@ -163,13 +146,13 @@ public class Cohort implements Serializable {
 	
 	/**
 	 * Convenience contructor taking in a string that is a list of comma separated patient ids This
-	 * constructor does not check whether the database contains patients with the given ids, but @see
-	 * CohortService.saveCohort(Cohort) will.
+	 * constructor does not check whether the database contains patients with the given ids, but
 	 * 
+	 * @see CohortService.saveCohort(Cohort) will.
 	 * @param commaSeparatedIds
 	 */
 	public Cohort(String commaSeparatedIds) {
-		memberIds = new HashSet<Integer>();
+		this();
 		for (StringTokenizer st = new StringTokenizer(commaSeparatedIds, ","); st.hasMoreTokens();) {
 			String id = st.nextToken();
 			memberIds.add(new Integer(id.trim()));
@@ -177,9 +160,7 @@ public class Cohort implements Serializable {
 	}
 	
 	/**
-	 * Auto generated method comment
-	 * 
-	 * @return
+	 * @return Returns a comma-separated list of patient ids in the cohort.
 	 */
 	public String getCommaSeparatedPatientIds() {
 		StringBuilder sb = new StringBuilder();
@@ -313,36 +294,6 @@ public class Cohort implements Serializable {
 		this.cohortId = cohortId;
 	}
 	
-	@Attribute(required = false)
-	public User getCreator() {
-		return creator;
-	}
-	
-	@Attribute(required = false)
-	public void setCreator(User creator) {
-		this.creator = creator;
-	}
-	
-	@Attribute(required = false)
-	public Date getDateCreated() {
-		return dateCreated;
-	}
-	
-	@Attribute(required = false)
-	public void setDateCreated(Date dateCreated) {
-		this.dateCreated = dateCreated;
-	}
-	
-	@Attribute(required = false)
-	public Date getDateVoided() {
-		return dateVoided;
-	}
-	
-	@Attribute(required = false)
-	public void setDateVoided(Date dateVoided) {
-		this.dateVoided = dateVoided;
-	}
-	
 	@Element(required = false)
 	public String getDescription() {
 		return description;
@@ -361,44 +312,6 @@ public class Cohort implements Serializable {
 	@Element(required = false)
 	public void setName(String name) {
 		this.name = name;
-	}
-	
-	public Boolean isVoided() {
-		return voided;
-	}
-	
-	/**
-	 * @see #isVoided()
-	 * @deprecated use isVoided()
-	 */
-	@Attribute(required = false)
-	public Boolean getVoided() {
-		return voided;
-	}
-	
-	@Attribute(required = false)
-	public void setVoided(Boolean voided) {
-		this.voided = voided;
-	}
-	
-	@Attribute(required = false)
-	public User getVoidedBy() {
-		return voidedBy;
-	}
-	
-	@Attribute(required = false)
-	public void setVoidedBy(User voidedBy) {
-		this.voidedBy = voidedBy;
-	}
-	
-	@Attribute(required = false)
-	public String getVoidReason() {
-		return voidReason;
-	}
-	
-	@Attribute(required = false)
-	public void setVoidReason(String voidReason) {
-		this.voidReason = voidReason;
 	}
 	
 	@ElementList(required = true)
@@ -422,26 +335,11 @@ public class Cohort implements Serializable {
 		this.memberIds = memberIds;
 	}
 	
-	public User getChangedBy() {
-		return changedBy;
-	}
-	
-	public void setChangedBy(User changedBy) {
-		this.changedBy = changedBy;
-	}
-	
-	public Date getDateChanged() {
-		return dateChanged;
-	}
-	
-	public void setDateChanged(Date dateChanged) {
-		this.dateChanged = dateChanged;
-	}
-	
 	/**
 	 * @return the cohortDefinition
 	 */
 	@Element(required = false)
+	@Deprecated
 	public CohortDefinition getCohortDefinition() {
 		return cohortDefinition;
 	}
@@ -450,6 +348,7 @@ public class Cohort implements Serializable {
 	 * @param cohortDefinition the cohortDefinition to set
 	 */
 	@Element(required = false)
+	@Deprecated
 	public void setCohortDefinition(CohortDefinition cohortDefinition) {
 		this.cohortDefinition = cohortDefinition;
 	}
@@ -458,6 +357,7 @@ public class Cohort implements Serializable {
 	 * @return the evaluationContext
 	 */
 	@Element(required = false)
+	@Deprecated
 	public EvaluationContext getEvaluationContext() {
 		return evaluationContext;
 	}
@@ -466,7 +366,26 @@ public class Cohort implements Serializable {
 	 * @param evaluationContext the evaluationContext to set
 	 */
 	@Element(required = false)
+	@Deprecated
 	public void setEvaluationContext(EvaluationContext evaluationContext) {
 		this.evaluationContext = evaluationContext;
+	}
+	
+	/**
+	 * @since 1.5
+	 * @see org.openmrs.OpenmrsObject#getId()
+	 */
+	public Integer getId() {
+		
+		return getCohortId();
+	}
+	
+	/**
+	 * @since 1.5
+	 * @see org.openmrs.OpenmrsObject#setId(java.lang.Integer)
+	 */
+	public void setId(Integer id) {
+		setCohortId(id);
+		
 	}
 }

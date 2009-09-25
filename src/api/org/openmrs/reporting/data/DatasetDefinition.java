@@ -14,9 +14,14 @@
 package org.openmrs.reporting.data;
 
 import java.io.Serializable;
+
 import org.openmrs.reporting.AbstractReportObject;
 import org.openmrs.reporting.export.DataExportReportObject;
 
+/**
+ * @deprecated see reportingcompatibility module
+ */
+@Deprecated
 public class DatasetDefinition extends AbstractReportObject implements Serializable {
 	
 	/* Serial version ID */
@@ -49,7 +54,7 @@ public class DatasetDefinition extends AbstractReportObject implements Serializa
 	}
 	
 	/**
-	 * @return
+	 * @return DataExportReportObject
 	 */
 	public DataExportReportObject getDataset() {
 		return dataExport;
@@ -65,7 +70,7 @@ public class DatasetDefinition extends AbstractReportObject implements Serializa
 	/**
 	 * Get the file location of the dataset export.
 	 * 
-	 * @return
+	 * @return String the file location of the dataset export
 	 */
 	public String getDatasetLocation() {
 		return datasetLocation;
