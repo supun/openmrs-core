@@ -1096,13 +1096,18 @@ public interface ConceptService extends OpenmrsService {
 	public Iterator<Concept> conceptIterator();
 	
 	/**
-	 * Looks up a concept via its code and {@link ConceptMap}ping
+	 * Looks up a concept via {@link ConceptMap}
+	 * This will return the {@link Concept} which contains a {@link ConceptMap} entry
+	 * whose <code>sourceCode</code> is equal to the passed <code>conceptCode</code>
+	 * and whose {@link ConceptSource} has either a <code>name</code> or <code>hl7Code</code> 
+	 * that is equal to the passed <code>mappingCode</code>
 	 * 
-	 * @param conceptCode the foreign concept code in the given mapping
-	 * @param mappingCode the map code to look up
-	 * @return null if no concept found, or the concept with the given hl7Code mapping
+	 * @param conceptCode the code associated with a concept within a given {@link ConceptSource}
+	 * @param mappingCode the name or hl7Code of the {@link ConceptSource} to check
+	 * @return the {@link Concept} that has the given mapping, or null if no {@link Concept} found
 	 * @throws APIException
-	 * @should get concept with given code and mapping
+	 * @should get concept with given code and and source hl7 code
+	 * @should get concept with given code and source name
 	 * @should return null if code does not exist
 	 * @should return null if mapping does not exist
 	 */
@@ -1132,5 +1137,33 @@ public interface ConceptService extends OpenmrsService {
 	
 	@Transactional(readOnly = true)
 	public Object getConceptDescriptionByUuid(String uuid);
+	
+	/**
+	 * 
+	 * Lookup a ConceptSource by its name property
+	 * 
+	 * @param conceptSourceName
+	 * @return ConceptSource 
+	 * @throws APIException
+	 * @should get ConceptSource with the given name
+	 * @should return null if no ConceptSource with that name is found.
+	 */
+	@Transactional(readOnly = true)
+	@Authorized(OpenmrsConstants.PRIV_VIEW_CONCEPTS)
+	public ConceptSource getConceptSourceByName(String conceptSourceName) throws APIException;
+	
+	/**
+	 * 
+	 * Looks up a list of ConceptMaps for a given ConceptSource
+	 * 
+	 * @param conceptSource
+	 * @return a List<ConceptMap> object
+	 * @throws APIException
+	 * @should return a List<ConceptMap> if concept mappings found
+	 * @should return empty List<ConceptMap> if none found
+	 */
+	@Transactional(readOnly = true)
+	@Authorized(OpenmrsConstants.PRIV_VIEW_CONCEPTS)
+	public List<ConceptMap> getConceptsByConceptSource(ConceptSource conceptSource) throws APIException;
 	
 }

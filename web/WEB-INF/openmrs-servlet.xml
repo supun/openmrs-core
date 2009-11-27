@@ -35,7 +35,17 @@
 	</bean>
 	
 	<!-- So that controllers can use annotations like @Controller and @RequestMapping -->
-	<bean class="org.springframework.web.servlet.mvc.annotation.DefaultAnnotationHandlerMapping"/>
+	<bean class="org.springframework.web.servlet.mvc.annotation.DefaultAnnotationHandlerMapping">
+		<!-- makes annotations more important than default mappings -->
+		<property name="order"><value>98</value></property>
+		<!-- allows for locale changes on any annotation based page -->
+		<property name="interceptors">
+			<list>
+				<ref bean="localeChangeInterceptor" />
+				<!-- <ref bean="openSessionInViewInterceptor"/> -->
+			</list>
+		</property>
+	</bean>
 	
 	<!-- The default place to look for controllers that have annotations -->
 	<context:component-scan base-package="org.openmrs.web.controller" />
@@ -1299,6 +1309,18 @@
 				<prop key="country">Kenya</prop>
 			</props>
 		</property>
+        <property name="elementRegex">
+            <props>
+                <prop key="latitude">^(\\d{1,3}\\s)\\d\\d.(\\d{2,3})\\s*$</prop>
+                <prop key="longitude">^(\\d{1,3}\\s)\\d\\d.(\\d{2,3})\\s*$</prop>
+            </props>
+        </property>
+        <property name="elementRegexFormats">
+            <props>
+                 <prop key="latitude">123 45.000</prop>
+                 <prop key="longitude">123 45.000</prop>
+            </props>
+        </property>
 		<property name="lineByLineFormat">
 			<list>
 				<value>address1</value>

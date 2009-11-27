@@ -18,12 +18,13 @@ import java.net.URL;
 import junit.framework.Assert;
 
 import org.junit.Test;
+import org.openmrs.test.BaseContextSensitiveTest;
 import org.openmrs.test.Verifies;
 
 /**
  * Tests methods on the {@link ModuleUtil} class
  */
-public class ModuleUtilTest {
+public class ModuleUtilTest extends BaseContextSensitiveTest {
 	
 	/**
 	 * This test requires a connection to the internet to pass
@@ -61,6 +62,27 @@ public class ModuleUtilTest {
 	}
 	
 	/**
+	 * @see {@link ModuleUtil#checkMandatoryModulesStarted()}
+	 */
+	@Test(expected = MandatoryModuleException.class)
+	@Verifies(value = "should throw ModuleException if a mandatory module is not started", method = "checkMandatoryModulesStarted()")
+	public void checkMandatoryModulesStarted_shouldThrowModuleExceptionIfAMandatoryModuleIsNotStarted() throws Exception {
+		executeDataSet("org/openmrs/module/include/mandatoryModulesGlobalProperties.xml");
+		ModuleUtil.checkMandatoryModulesStarted();
+	}
+	
+	/**
+	 * @see {@link ModuleUtil#getMandatoryModules()}
+	 */
+	@Test
+	@Verifies(value = "should return mandatory module ids", method = "getMandatoryModules()")
+	public void getMandatoryModules_shouldReturnMandatoryModuleIds() throws Exception {
+		executeDataSet("org/openmrs/module/include/mandatoryModulesGlobalProperties.xml");
+		Assert.assertEquals(1, ModuleUtil.getMandatoryModules().size());
+		Assert.assertEquals("firstmodule", ModuleUtil.getMandatoryModules().get(0));
+	}
+	
+	/**
 	 * This test requires a connection to the internet to pass
 	 * 
 	 * @see {@link ModuleUtil#getURL(URL)}
@@ -71,5 +93,58 @@ public class ModuleUtilTest {
 		String updateRdf = ModuleUtil.getURL(new URL("http://modules.openmrs.org/modules/download/formentry/update.rdf"));
 		Assert.assertTrue(updateRdf.contains("<updates"));
 	}
+
+	/**
+     * @see {@link ModuleUtil#getPathForResource(Module,String)}
+     */
+    @Test
+    @Verifies(value = "should handle ui springmvc css ui dot css example", method = "getPathForResource(Module,String)")
+    public void getPathForResource_shouldHandleUiSpringmvcCssUiDotCssExample() throws Exception {
+    	Module module = new Module("Unit test");
+    	module.setModuleId("ui.springmvc");
+    	String path = "/ui/springmvc/css/ui.css";
+    	Assert.assertEquals("/css/ui.css", ModuleUtil.getPathForResource(module, path));
+    }
+
+	/**
+     * @see {@link ModuleUtil#getModuleForPath(String)}
+     */
+    @Test
+    @Verifies(value = "should handle ui springmvc css ui dot css when ui dot springmvc module is running", method = "getModuleForPath(String)")
+    public void getModuleForPath_shouldHandleUiSpringmvcCssUiDotCssWhenUiDotSpringmvcModuleIsRunning() throws Exception {
+    	ModuleFactory.getStartedModulesMap().clear();
+	    Module module = new Module("For Unit Test");
+	    module.setModuleId("ui.springmvc");
+	    ModuleFactory.getStartedModulesMap().put(module.getModuleId(), module);
+	    
+	    String path = "/ui/springmvc/css/ui.css";
+	    Assert.assertEquals(module, ModuleUtil.getModuleForPath(path));
+    }
+
+	/**
+     * @see {@link ModuleUtil#getModuleForPath(String)}
+     */
+    @Test
+    @Verifies(value = "should handle ui springmvc css ui dot css when ui module is running", method = "getModuleForPath(String)")
+    public void getModuleForPath_shouldHandleUiSpringmvcCssUiDotCssWhenUiModuleIsRunning() throws Exception {
+    	ModuleFactory.getStartedModulesMap().clear();
+	    Module module = new Module("For Unit Test");
+	    module.setModuleId("ui");
+	    ModuleFactory.getStartedModulesMap().put(module.getModuleId(), module);
+	    
+	    String path = "/ui/springmvc/css/ui.css";
+	    Assert.assertEquals(module, ModuleUtil.getModuleForPath(path));
+    }
+
+	/**
+     * @see {@link ModuleUtil#getModuleForPath(String)}
+     */
+    @Test
+    @Verifies(value = "should return null for ui springmvc css ui dot css when no relevant module is running", method = "getModuleForPath(String)")
+    public void getModuleForPath_shouldReturnNullForUiSpringmvcCssUiDotCssWhenNoRelevantModuleIsRunning() throws Exception {
+    	ModuleFactory.getStartedModulesMap().clear();
+	    String path = "/ui/springmvc/css/ui.css";
+	    Assert.assertNull(ModuleUtil.getModuleForPath(path));
+    }
 	
 }

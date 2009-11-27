@@ -23,17 +23,20 @@ import java.io.OutputStream;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLConnection;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Enumeration;
 import java.util.List;
 import java.util.Properties;
+import java.util.Set;
 import java.util.Vector;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.openmrs.GlobalProperty;
 import org.openmrs.api.AdministrationService;
 import org.openmrs.api.context.Context;
 import org.openmrs.api.context.ServiceContext;
@@ -53,7 +56,7 @@ public class ModuleUtil {
 	 * 
 	 * @param props Properties (OpenMRS runtime properties)
 	 */
-	public static void startup(Properties props) {
+	public static void startup(Properties props) throws MandatoryModuleException {
 		
 		String moduleListString = props.getProperty(ModuleConstants.RUNTIMEPROPERTY_MODULE_LIST_TO_LOAD);
 		
@@ -114,6 +117,7 @@ public class ModuleUtil {
 		// start all of the modules we just loaded
 		ModuleFactory.startModules();
 		
+		// some debugging info
 		if (log.isDebugEnabled()) {
 			Collection<Module> modules = ModuleFactory.getStartedModules();
 			if (modules == null || modules.size() == 0)
@@ -121,6 +125,9 @@ public class ModuleUtil {
 			else
 				log.debug("Found and loaded " + modules.size() + " module(s)");
 		}
+		
+		// make sure all mandatory modules are loaded and started
+		checkMandatoryModulesStarted();
 	}
 	
 	/**
@@ -136,7 +143,7 @@ public class ModuleUtil {
 				log.debug("stopping module: " + mod.getModuleId());
 			
 			if (mod.isStarted())
-				ModuleFactory.stopModule(mod, true);
+				ModuleFactory.stopModule(mod, true, true);
 		}
 		
 		log.debug("done shutting down modules");
@@ -581,4 +588,110 @@ public class ModuleUtil {
 		
 		return ctx;
 	}
+	
+	/**
+	 * Looks at the <moduleid>.mandatory properties and at the currently started modules to make
+	 * sure that all mandatory modules have been started successfully.
+	 * 
+	 * @throws ModuleException if a mandatory module isn't started
+	 * @should throw ModuleException if a mandatory module is not started
+	 */
+	protected static void checkMandatoryModulesStarted() throws ModuleException {
+		
+		List<String> mandatoryModuleIds = getMandatoryModules();
+		Set<String> startedModuleIds = ModuleFactory.getStartedModulesMap().keySet();
+		
+		mandatoryModuleIds.removeAll(startedModuleIds);
+		
+		// any module ids left in the list are not started
+		if (mandatoryModuleIds.size() > 0) {
+			throw new MandatoryModuleException(mandatoryModuleIds);
+		}
+	}
+	
+	/**
+	 * Returns all modules that are marked as mandatory. Currently this means there is a
+	 * <moduleid>.mandatory=true global property.
+	 * 
+	 * @return list of modules ids for mandatory modules
+	 * @should return mandatory module ids
+	 */
+	public static List<String> getMandatoryModules() {
+		
+		List<String> mandatoryModuleIds = new ArrayList<String>();
+		
+		try {
+			List<GlobalProperty> props = Context.getAdministrationService().getGlobalPropertiesBySuffix(".mandatory");
+			
+			for (GlobalProperty prop : props) {
+				if ("true".equalsIgnoreCase(prop.getPropertyValue())) {
+					mandatoryModuleIds.add(prop.getProperty().replace(".mandatory", ""));
+				}
+			}
+		}
+		catch (Throwable t) {
+			log.warn("Unable to get the mandatory module list", t);
+		}
+		
+		return mandatoryModuleIds;
+	}
+	
+	
+	/**
+	 * <pre>
+	 * Gets the module that should handle a path. The path you pass in should be a module id (in
+	 * path format, i.e. /ui/springmvc, not ui.springmvc) followed by a resource. Something like
+	 * the following:
+	 *   /ui/springmvc/css/ui.css
+	 *   
+	 * The first running module out of the following would be returned:
+	 *   ui.springmvc.css
+	 *   ui.springmvc
+	 *   ui
+	 * </pre>
+	 * 
+	 * @param path
+	 * @return the running module that matches the most of the given path
+	 * 
+	 * @should handle ui springmvc css ui dot css when ui dot springmvc module is running
+	 * @should handle ui springmvc css ui dot css when ui module is running
+	 * @should return null for ui springmvc css ui dot css when no relevant module is running
+	 */
+    public static Module getModuleForPath(String path) {
+    	int ind = path.lastIndexOf('/');
+    	if (ind <= 0) {
+    		throw new IllegalArgumentException("Input must be /moduleId/resource. Input needs a / after the first character: " + path);
+    	}
+    	String moduleId = path.startsWith("/") ? path.substring(1, ind) : path.substring(0, ind);
+    	moduleId = moduleId.replace('/', '.');
+    	// iterate over progressively shorter module ids
+    	while (true) {
+    		Module mod = ModuleFactory.getStartedModuleById(moduleId);
+    		if (mod != null)
+    			return mod;
+    		// try the next shorter module id
+    		ind = moduleId.lastIndexOf('.');
+    		if (ind < 0)
+    			break;
+    		moduleId = moduleId.substring(0, ind);
+    	}
+	    return null;
+    }
+
+	/**
+     * Takes a global path and returns the local path within the specified module.
+     * For example calling this method with the path "/ui/springmvc/css/ui.css" and the ui.springmvc module,
+     * you would get "/css/ui.css".
+     * 
+     * @param module
+     * @param path
+     * @return
+     * 
+     * @should handle ui springmvc css ui dot css example
+     */
+    public static String getPathForResource(Module module, String path) {
+    	if (path.startsWith("/"))
+    		path = path.substring(1);
+    	return path.substring(module.getModuleIdAsPath().length());
+    }
 }

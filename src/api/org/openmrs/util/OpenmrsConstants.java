@@ -58,6 +58,12 @@ public final class OpenmrsConstants {
 	 */
 	private static final Package THIS_PACKAGE = OpenmrsConstants.class.getPackage();
 	
+	/**
+	 * This holds the current openmrs code version. This version is a string containing spaces and
+	 * words.<br/>
+	 * The format is:<br/>
+	 * <i>major</i>.<i>minor</i>.<i>maintenance</i> <i>suffix</i> Build <i>buildNumber</i>
+	 */
 	public static final String OPENMRS_VERSION = THIS_PACKAGE.getSpecificationVendor();
 	
 	public static final String OPENMRS_VERSION_SHORT = THIS_PACKAGE.getSpecificationVersion();
@@ -281,6 +287,9 @@ public final class OpenmrsConstants {
 	public static final String PRIV_MANAGE_FORMS = "Manage Forms";
 	
 	public static final String PRIV_PURGE_FORMS = "Purge Forms";
+	
+	// This name is historic, since that's what it was originally called in the infopath formentry module
+	public static final String PRIV_FORM_ENTRY = "Form Entry";
 	
 	@Deprecated
 	public static final String PRIV_VIEW_REPORTS = "View Reports";
@@ -523,6 +532,7 @@ public final class OpenmrsConstants {
 			
 			CORE_PRIVILEGES.put(PRIV_VIEW_FORMS, "Able to view forms");
 			CORE_PRIVILEGES.put(PRIV_MANAGE_FORMS, "Able to add/edit/delete forms");
+			CORE_PRIVILEGES.put(PRIV_FORM_ENTRY, "Able to fill out forms");
 			
 			CORE_PRIVILEGES.put(PRIV_VIEW_REPORTS, "Able to view reports");
 			CORE_PRIVILEGES.put(PRIV_ADD_REPORTS, "Able to add reports");
@@ -634,9 +644,8 @@ public final class OpenmrsConstants {
 	public static final Map<String, String> CORE_ROLES() {
 		Map<String, String> roles = new HashMap<String, String>();
 		
-		roles
-		        .put(SUPERUSER_ROLE,
-		            "Assigned to developers of OpenMRS. Gives additional access to change fundamental structure of the database model.");
+		roles.put(SUPERUSER_ROLE,
+		    "Assigned to developers of OpenMRS. Gives additional access to change fundamental structure of the database model.");
 		roles.put(ANONYMOUS_ROLE, "Privileges for non-authenticated users.");
 		roles.put(AUTHENTICATED_ROLE, "Privileges gained once authentication has been established.");
 		roles.put(PROVIDER_ROLE, "All users with the 'Provider' role will appear as options in the default Infopath ");
@@ -678,6 +687,8 @@ public final class OpenmrsConstants {
 	
 	public static final String GLOBAL_PROPERTY_PATIENT_IDENTIFIER_SUFFIX = "patient.identifierSuffix";
 	
+	public static final String GLOBAL_PROPERTY_PATIENT_IDENTIFIER_SEARCH_PATTERN = "patient.identifierSearchPattern";
+	
 	public static final String GLOBAL_PROPERTY_PATIENT_SEARCH_MAX_RESULTS = "patient.searchMaxResults";
 	
 	public static final String GLOBAL_PROPERTY_GZIP_ENABLED = "gzip.enabled";
@@ -717,12 +728,14 @@ public final class OpenmrsConstants {
 	
 	public static final String GLOBAL_PROPERTY_DEFAULT_SERIALIZER = "serialization.defaultSerializer";
 	
+	public static final String GLOBAL_PROPERTY_IGNORE_MISSING_NONLOCAL_PATIENTS = "hl7_processor.ignore_missing_patient_non_local";
+	
 	/**
-	 * Global property name that allows specification of whether user passwords must contain 
-	 * both upper and lower case characters.  Allowable values are "true", "false", and null
+	 * Global property name that allows specification of whether user passwords must contain both
+	 * upper and lower case characters. Allowable values are "true", "false", and null
 	 */
 	public static String GP_PASSWORD_REQUIRES_UPPER_AND_LOWER_CASE = "security.passwordRequiresUpperAndLowerCase";
-
+	
 	/**
 	 * Global property name that allows specification of whether user passwords require non-digits.
 	 * Allowable values are "true", "false", and null
@@ -736,19 +749,20 @@ public final class OpenmrsConstants {
 	public static String GP_PASSWORD_REQUIRES_DIGIT = "security.passwordRequiresDigit";
 	
 	/**
-	 * Global property name that allows specification of whether user passwords can match username or system id.
-	 * Allowable values are "true", "false", and null
+	 * Global property name that allows specification of whether user passwords can match username
+	 * or system id. Allowable values are "true", "false", and null
 	 */
 	public static String GP_PASSWORD_CANNOT_MATCH_USERNAME_OR_SYSTEMID = "security.passwordCannotMatchUsername";
 	
 	/**
-	 * Global property name that allows specification of whether user passwords have a minimum length requirement
-	 * Allowable values are any integer
+	 * Global property name that allows specification of whether user passwords have a minimum
+	 * length requirement Allowable values are any integer
 	 */
 	public static String GP_PASSWORD_MINIMUM_LENGTH = "security.passwordMinimumLength";
 	
 	/**
-	 * Global property name that allows specification of a regular expression that passwords must adhere to
+	 * Global property name that allows specification of a regular expression that passwords must
+	 * adhere to
 	 */
 	public static String GP_PASSWORD_CUSTOM_REGEX = "security.passwordCustomRegex";
 	
@@ -921,8 +935,8 @@ public final class OpenmrsConstants {
 		props
 		        .add(new GlobalProperty(
 		                GLOBAL_PROPERTY_PATIENT_IDENTIFIER_REGEX,
-		                "^0*@SEARCH@([A-Z]+-[0-9])?$",
-		                "A MySQL regular expression for the patient identifier search strings.  The @SEARCH@ string is replaced at runtime with the user's search string.  An empty regex will cause a simply 'like' sql search to be used"));
+		                "",
+		                "WARNING: Using this search property can cause a drop in mysql performance with large patient sets.  A MySQL regular expression for the patient identifier search strings.  The @SEARCH@ string is replaced at runtime with the user's search string.  An empty regex will cause a simply 'like' sql search to be used. Example: ^0*@SEARCH@([A-Z]+-[0-9])?$"));
 		props
 		        .add(new GlobalProperty(
 		                GLOBAL_PROPERTY_PATIENT_IDENTIFIER_PREFIX,
@@ -933,10 +947,16 @@ public final class OpenmrsConstants {
 		props
 		        .add(new GlobalProperty(
 		                GLOBAL_PROPERTY_PATIENT_IDENTIFIER_SUFFIX,
-		                "%",
+		                "",
 		                "This property is only used if "
 		                        + GLOBAL_PROPERTY_PATIENT_IDENTIFIER_REGEX
 		                        + " is empty.  The string here is prepended to the sql indentifier search string.  The sql becomes \"... where identifier like '<PREFIX><QUERY STRING><SUFFIX>';\".  Typically this value is either a percent sign (%) or empty."));
+		props
+        .add(new GlobalProperty(
+        	GLOBAL_PROPERTY_PATIENT_IDENTIFIER_SEARCH_PATTERN,
+                "",
+                "If this is empty, the regex or suffix/prefix search is used.  Comma separated list of identifiers to check.  Allows for faster searching of multiple options rather than the slow regex. e.g. @SEARCH@,0@SEARCH@,@SEARCH-1@-@CHECKDIGIT@,0@SEARCH-1@-@CHECKDIGIT@ would turn a request for \"4127\" into a search for \"in ('4127','04127','412-7','0412-7')\""));
+		
 		props.add(new GlobalProperty(GLOBAL_PROPERTY_PATIENT_SEARCH_MAX_RESULTS, "1000",
 		        "The maximum number of results returned by patient searches"));
 		
@@ -1023,6 +1043,9 @@ public final class OpenmrsConstants {
 		
 		props.add(new GlobalProperty(GP_PASSWORD_REQUIRES_UPPER_AND_LOWER_CASE, "true",
 		 							 "Configure whether passwords must contain both upper and lower case characters"));
+		
+		props.add(new GlobalProperty(GLOBAL_PROPERTY_IGNORE_MISSING_NONLOCAL_PATIENTS, "false",
+									 "If true, hl7 messages for patients that are not found and are non-local will silently be dropped/ignored"));
 		
 		for (GlobalProperty gp : ModuleFactory.getGlobalProperties()) {
 			props.add(gp);
