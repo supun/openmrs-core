@@ -71,19 +71,16 @@ public class PersonServiceImpl extends BaseOpenmrsService implements PersonServi
 	 *      java.lang.String)
 	 */
 	public Set<Person> getSimilarPeople(String name, Integer birthyear, String gender) throws APIException {
-		return getSimilarPeople(name, birthyear, gender, "person");
+		return dao.getSimilarPeople(name, birthyear, gender);
 	}
 	
 	/**
 	 * @see org.openmrs.api.PersonService#getSimilarPeople(java.lang.String, java.lang.Integer, java.lang.String, java.lang.String)
+	 * @deprecated @see {@link #getSimilarPeople(String, Integer, String)}
 	 */
 	public Set<Person> getSimilarPeople(String nameSearch, Integer birthyear, String gender, String personType)
 	                                                                                                           throws APIException {
-		if (!personType.equals("person") && !personType.equals("user") && !personType.equals("patient")) {
-			throw new IllegalArgumentException("PersonType argument must be 'person', 'user', or 'patient' but was: " + personType);
-		}
-		
-		return dao.getSimilarPeople(nameSearch, birthyear, gender, personType);
+		return getSimilarPeople(nameSearch, birthyear, gender);
 	}
 	
 	/**
@@ -139,7 +136,8 @@ public class PersonServiceImpl extends BaseOpenmrsService implements PersonServi
 		}
 		// If roles *are* defined then find matching users who have the given roles.
 		else {
-			people.addAll(Context.getUserService().findUsers(searchPhrase, roles, includeVoided));
+			for (User u : Context.getUserService().findUsers(searchPhrase, roles, includeVoided))
+				people.add(u.getPerson());
 		}
 		
 		return people;
@@ -182,8 +180,33 @@ public class PersonServiceImpl extends BaseOpenmrsService implements PersonServi
 	 * @see org.openmrs.api.PersonService#savePersonAttributeType(org.openmrs.PersonAttributeType)
 	 */
 	public PersonAttributeType savePersonAttributeType(PersonAttributeType type) throws APIException {
+		if (type.getSortWeight() == null) {
+			List<PersonAttributeType> allTypes = Context.getPersonService().getAllPersonAttributeTypes();
+			if (allTypes.size() > 0)
+				type.setSortWeight(allTypes.get(allTypes.size()-1).getSortWeight() + 1);
+			else
+				type.setSortWeight(1.0);
+		}
+		
 		return dao.savePersonAttributeType(type);
 	}
+	
+	/**
+     * @see org.openmrs.api.PersonService#retirePersonAttributeType(org.openmrs.PersonAttributeType)
+	 */
+    public PersonAttributeType retirePersonAttributeType(PersonAttributeType type, String retiredReason)
+    		throws APIException {
+    	if (retiredReason == null || retiredReason.length() < 1) {
+			throw new APIException("A reason is required when retiring a person attribute type");
+		}
+		
+		type.setRetired(true);
+		type.setRetiredBy(Context.getAuthenticatedUser());
+		type.setRetireReason(retiredReason);
+		type.setDateRetired(new Date());
+    	
+    	return dao.savePersonAttributeType(type);
+    }
 	
 	/**
 	 * @deprecated use {@link #savePersonAttributeType(PersonAttributeType)}
@@ -381,9 +404,8 @@ public class PersonServiceImpl extends BaseOpenmrsService implements PersonServi
 		savePerson(person);
 		Context.getPatientService().voidPatient(Context.getPatientService().getPatient(person.getPersonId()), reason);
 		UserService us = Context.getUserService();
-		User user = us.getUser(person.getPersonId());
-		if (user != null)
-			us.voidUser(user, reason);
+		for (User user : us.getUsersByPerson(person, false))
+			us.retireUser(user, reason);
 		
 		return person;
 	}
@@ -577,7 +599,7 @@ public class PersonServiceImpl extends BaseOpenmrsService implements PersonServi
 	 * @see org.openmrs.api.PersonService#getAllRelationshipTypes()
 	 */
 	public List<RelationshipType> getAllRelationshipTypes() throws APIException {
-		return dao.getAllRelationshipTypes();
+		return getAllRelationshipTypes(false);
 	}
 	
 	/**
@@ -838,5 +860,27 @@ public class PersonServiceImpl extends BaseOpenmrsService implements PersonServi
 	public RelationshipType getRelationshipTypeByUuid(String uuid) throws APIException {
 		return dao.getRelationshipTypeByUuid(uuid);
 	}
+
+	/**
+     * @see org.openmrs.api.PersonService#getAllRelationshipTypes(boolean)
+     */
+    public List<RelationshipType> getAllRelationshipTypes(boolean includeRetired) throws APIException {
+	    return dao.getAllRelationshipTypes(includeRetired);
+    }
+
+	/**
+     * @see org.openmrs.api.PersonService#retireRelationshipType(org.openmrs.RelationshipType, java.lang.String)
+     */
+    public RelationshipType retireRelationshipType(RelationshipType type, String retiredReason) throws APIException {
+		if (retiredReason == null || retiredReason.length() < 1) {
+			throw new APIException("A reason is required when retiring a relationship type");
+		}
+		
+		type.setRetired(true);
+		type.setRetiredBy(Context.getAuthenticatedUser());
+		type.setDateRetired(new Date());
+		type.setRetireReason(retiredReason);
+		return saveRelationshipType(type);
+    }
 	
 }

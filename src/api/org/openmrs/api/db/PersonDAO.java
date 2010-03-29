@@ -43,9 +43,9 @@ public interface PersonDAO {
 	
 	/**
 	 * @see org.openmrs.api.PersonService#getSimilarPeople(java.lang.String, java.lang.Integer,
-	 *      java.lang.String, java.lang.String)
+	 *      java.lang.String)
 	 */
-	public Set<Person> getSimilarPeople(String name, Integer birthyear, String gender, String personType) throws DAOException;
+	public Set<Person> getSimilarPeople(String name, Integer birthyear, String gender) throws DAOException;
 	
 	/**
 	 * @see org.openmrs.api.PersonService#getPeople(String, Boolean)
@@ -94,11 +94,6 @@ public interface PersonDAO {
 	 * @see org.openmrs.api.PersonService#getAllRelationships(boolean)
 	 */
 	public List<Relationship> getAllRelationships(boolean includeVoided) throws DAOException;
-	
-	/**
-	 * @see org.openmrs.api.PersonService#getAllRelationshipTypes()
-	 */
-	public List<RelationshipType> getAllRelationshipTypes() throws DAOException;
 	
 	/**
 	 * @see org.openmrs.api.PersonService#getRelationshipType(java.lang.Integer)
@@ -189,4 +184,9 @@ public interface PersonDAO {
 	 * @return
 	 */
 	public PersonAttributeType getPersonAttributeTypeByUuid(String uuid);
+
+	/**
+     * @see org.openmrs.api.PersonService#getAllRelationshipTypes(java.lang.Boolean)
+     */
+    public List<RelationshipType> getAllRelationshipTypes(boolean includeRetired);
 }

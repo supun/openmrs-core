@@ -33,6 +33,7 @@ import org.openmrs.ConceptAnswer;
 import org.openmrs.ConceptClass;
 import org.openmrs.ConceptComplex;
 import org.openmrs.ConceptDatatype;
+import org.openmrs.ConceptDescription;
 import org.openmrs.ConceptMap;
 import org.openmrs.ConceptName;
 import org.openmrs.ConceptNameTag;
@@ -1217,6 +1218,14 @@ public class ConceptServiceImpl extends BaseOpenmrsService implements ConceptSer
 	}
 	
 	/**
+	 * @see org.openmrs.api.ConceptService#retireConceptSource(org.openmrs.ConceptSource,String)
+	 */
+	public ConceptSource retireConceptSource(ConceptSource cs, String reason) throws APIException {
+		// retireReason is automatically set in BaseRetireHandler
+		return dao.saveConceptSource(cs);
+	}
+	
+	/**
 	 * @see org.openmrs.api.ConceptService#saveConceptSource(org.openmrs.ConceptSource)
 	 */
 	public ConceptSource saveConceptSource(ConceptSource conceptSource) throws APIException {
@@ -1312,7 +1321,7 @@ public class ConceptServiceImpl extends BaseOpenmrsService implements ConceptSer
 	/**
 	 * @see org.openmrs.api.ConceptService#getConceptDescriptionByUuid(java.lang.String)
 	 */
-	public Object getConceptDescriptionByUuid(String uuid) {
+	public ConceptDescription getConceptDescriptionByUuid(String uuid) {
 		return dao.getConceptDescriptionByUuid(uuid);
 	}
 	
@@ -1361,4 +1370,5 @@ public class ConceptServiceImpl extends BaseOpenmrsService implements ConceptSer
 	public ConceptSource getConceptSourceByName(String conceptSourceName) throws APIException{
 		return dao.getConceptSourceByName(conceptSourceName);
 	}
+	
 }

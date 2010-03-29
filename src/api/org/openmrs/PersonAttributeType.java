@@ -31,6 +31,8 @@ public class PersonAttributeType extends BaseOpenmrsMetadata implements java.io.
 	
 	private Integer foreignKey;
 	
+	private Double sortWeight;
+	
 	private Boolean searchable = false;
 	
 	private Privilege editPrivilege;
@@ -100,6 +102,20 @@ public class PersonAttributeType extends BaseOpenmrsMetadata implements java.io.
 	@Attribute(required = false)
 	public void setForeignKey(Integer foreignKey) {
 		this.foreignKey = foreignKey;
+	}
+	
+	/**
+	 * @return the sortWeight
+	 */
+	public Double getSortWeight() {
+		return sortWeight;
+	}
+	
+	/**
+	 * @param sortWeight the formOrder to set
+	 */
+	public void setSortWeight(Double sortWeight) {
+		this.sortWeight = sortWeight;
 	}
 	
 	/**

@@ -44,9 +44,15 @@ import org.openmrs.api.PatientSetService.PatientLocationMethod;
 import org.openmrs.api.PatientSetService.TimeModifier;
 
 public interface PatientSetDAO {
-	
+
+	/**
+	 * @deprecated
+	 */
 	public String exportXml(Cohort ps) throws DAOException;
 	
+	/**
+	 * @deprecated
+	 */
 	public String exportXml(Integer patientId) throws DAOException;
 	
 	public Cohort getAllPatients();
@@ -133,5 +139,20 @@ public interface PatientSetDAO {
 	                                         List<Concept> discontinuedReason);
 	
 	public List<Encounter> getEncountersByForm(Cohort patients, List<Form> forms);
+	
+	/**
+	 * Returns the cohort of patients matching a particular relationship search.
+	 * If relType is specified, then search for patients at one or either end of that relationship type.
+	 * (Which end is controlled by includeAtoB and includeBtoA.)
+	 * If target is specified, then that person must be at the other end of the relationship. 
+	 * 
+	 * @param relType
+	 * @param includeAtoB
+	 * @param includeBtoA
+	 * @param target
+	 * @return patients matching the specified relationship search
+	 */
+	public Cohort getPatientsByRelationship(RelationshipType relType, boolean includeAtoB, boolean includeBtoA, Person target);
+		
 	
 }

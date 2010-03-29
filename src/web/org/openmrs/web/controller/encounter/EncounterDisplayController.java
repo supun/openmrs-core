@@ -39,7 +39,7 @@ import org.springframework.web.servlet.mvc.Controller;
 
 /**
  * This is the java controller for the /openmrs/admin/encounters/encounterDisplay.list page. The jsp
- * for this display popup is located at /web/WEB-INF/view/encounters/encounerDisplay.jsp
+ * for this display popup is located at /web/WEB-INF/view/encounters/encounterDisplay.jsp
  */
 public class EncounterDisplayController implements Controller {
 	
@@ -71,7 +71,9 @@ public class EncounterDisplayController implements Controller {
 			Encounter encounter = Context.getEncounterService().getEncounter(Integer.valueOf(encounterId));
 			model.put("encounter", encounter);
 			
-			List<FormField> formFields = Context.getFormService().getFormFields(encounter.getForm());
+			List<FormField> formFields = new ArrayList<FormField>();
+			if (encounter.getForm() != null && encounter.getForm().getFormFields() != null)
+				formFields.addAll(encounter.getForm().getFormFields()); 
 			
 			// mapping from concept to FieldHolder. there should be only one
 			// fieldholder (aka one row) per unique concept in the obs for an encounter 

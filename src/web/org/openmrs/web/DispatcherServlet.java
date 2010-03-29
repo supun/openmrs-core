@@ -21,6 +21,7 @@ import org.apache.commons.logging.LogFactory;
 import org.openmrs.module.Module;
 import org.openmrs.module.ModuleFactory;
 import org.openmrs.module.web.WebModuleUtil;
+import org.openmrs.util.DatabaseUpdater;
 import org.openmrs.util.OpenmrsClassLoader;
 import org.openmrs.web.filter.initialization.InitializationFilter;
 import org.openmrs.web.filter.update.UpdateFilter;
@@ -83,18 +84,15 @@ public class DispatcherServlet extends org.springframework.web.servlet.Dispatche
 	 */
 	@Override
 	public void init(ServletConfig config) throws ServletException {
+		super.init(config);
 		
 		// hacky way to know if one of the startup filters needs to be run
-		if (UpdateFilter.updatesRequired()) {
-			log.info("DB updates are required, so spring initialization is being skipped");
-			throw new ServletException("Database updates are required. Visit /openmrs to run them.");
+		if (UpdateFilter.updatesRequired() && !DatabaseUpdater.allowAutoUpdate()) {
+			log.info("DB updates are required, the update wizard must be run");
 		}
 		if (InitializationFilter.initializationRequired()) {
-			log.info("Runtime properties were not found, so spring initialization is being skipped");
-			throw new ServletException("OpenMRS initialization is required. Visit /openmrs to run the setup wizard.");
+			log.info("Runtime properties were not found, initialization is required");
 		}
-		
-		super.init(config);
 	}
 	
 }

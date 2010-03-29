@@ -38,7 +38,6 @@ import org.openmrs.scheduler.Task;
 import org.openmrs.scheduler.TaskDefinition;
 import org.openmrs.scheduler.TaskFactory;
 import org.openmrs.scheduler.db.SchedulerDAO;
-import org.openmrs.util.InsertedOrderComparator;
 import org.openmrs.util.OpenmrsMemento;
 import org.springframework.orm.ObjectRetrievalFailureException;
 
@@ -213,8 +212,7 @@ public class TimerSchedulerServiceImpl extends BaseOpenmrsService implements Sch
 				// if we were unable to get a class, just quit
 				if (clientTask != null) {
 					
-					schedulerTask = new TimerSchedulerTask(clientTask);
-					
+					schedulerTask = new TimerSchedulerTask(clientTask);					
 					taskDefinition.setTaskInstance(clientTask);
 					
 					// Once this method is called, the timer is set to start at the given start time.
@@ -413,7 +411,7 @@ public class TimerSchedulerServiceImpl extends BaseOpenmrsService implements Sch
 	 * Get system variables.
 	 */
 	public SortedMap<String, String> getSystemVariables() {
-		TreeMap<String, String> systemVariables = new TreeMap<String, String>(new InsertedOrderComparator());
+		TreeMap<String, String> systemVariables = new TreeMap<String, String>();
 		// scheduler username and password can be found in the global properties
 		// TODO Look into java.util.concurrent.TimeUnit class.  
 		// TODO Remove this from global properties.  This is a constant value that should never change.  

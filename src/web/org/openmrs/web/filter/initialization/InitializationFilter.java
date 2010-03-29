@@ -44,6 +44,8 @@ import org.apache.log4j.Logger;
 import org.openmrs.ImplementationId;
 import org.openmrs.api.PasswordException;
 import org.openmrs.api.context.Context;
+import org.openmrs.module.MandatoryModuleException;
+import org.openmrs.module.OpenmrsCoreModuleException;
 import org.openmrs.module.web.WebModuleUtil;
 import org.openmrs.scheduler.SchedulerConstants;
 import org.openmrs.scheduler.SchedulerUtil;
@@ -831,6 +833,10 @@ public class InitializationFilter extends StartupFilter {
 						// start openmrs
 						try {
 							Context.openSession();
+
+							// load core modules so that required modules are known at openmrs startup
+							Listener.loadBundledModules(filterConfig.getServletContext());
+							
 							Context.startup(runtimeProperties);
 						}
 						catch (DatabaseUpdateException updateEx) {
@@ -849,6 +855,20 @@ public class InitializationFilter extends StartupFilter {
 							reportError(
 							    "Unable to continue because user input is required for the db updates and we cannot do anything about that right now",
 							    DEFAULT_PAGE);
+							return;
+						}
+						catch (MandatoryModuleException mandatoryModEx) {
+							log.warn(
+							    "A mandatory module failed to start. Fix the error or unmark it as mandatory to continue.",
+							    mandatoryModEx);
+							reportError(mandatoryModEx.getMessage(), DEFAULT_PAGE);
+							return;
+						}
+						catch (OpenmrsCoreModuleException coreModEx) {
+							log.warn(
+							    "A core module failed to start. Make sure that all core modules (with the required minimum versions) are installed and starting properly.",
+							    coreModEx);
+							reportError(coreModEx.getMessage(), DEFAULT_PAGE);
 							return;
 						}
 						
@@ -892,9 +912,6 @@ public class InitializationFilter extends StartupFilter {
 								Context.getUserService().changePassword("test", wizardModel.adminUserPassword);
 								Context.logout();
 							}
-							
-							// load modules
-							Listener.loadAndStartCoreModules(filterConfig.getServletContext());
 							
 							// web load modules
 							Listener.performWebStartOfModules(filterConfig.getServletContext());

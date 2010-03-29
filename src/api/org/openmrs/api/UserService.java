@@ -15,6 +15,7 @@ package org.openmrs.api;
 
 import java.util.List;
 
+import org.openmrs.Person;
 import org.openmrs.Privilege;
 import org.openmrs.Role;
 import org.openmrs.User;
@@ -66,11 +67,22 @@ public interface UserService extends OpenmrsService {
 	 * @param userId internal identifier
 	 * @return requested user
 	 * @throws APIException
+	 * @should fetch user with given userId
 	 */
 	@Transactional(readOnly = true)
 	@Authorized( { OpenmrsConstants.PRIV_VIEW_USERS })
 	public User getUser(Integer userId) throws APIException;
-	
+
+	/**
+	 * Get user by the given uuid.
+	 * 
+	 * @param uuid
+	 * @return
+	 * @throws APIException
+	 * @should fetch user with given uuid
+	 * @should find object given valid uuid
+	 * @should return null if no object found with given uuid 
+	 */
 	@Transactional(readOnly = true)
 	public User getUserByUuid(String uuid) throws APIException;
 	
@@ -92,6 +104,7 @@ public interface UserService extends OpenmrsService {
 	 * @param user User to compare
 	 * @return boolean
 	 * @throws APIException
+	 * @should verify that username and system id is unique
 	 */
 	@Transactional(readOnly = true)
 	@Authorized( { OpenmrsConstants.PRIV_VIEW_USERS })
@@ -103,6 +116,8 @@ public interface UserService extends OpenmrsService {
 	 * @param role Role that the Users must have to be returned
 	 * @return users with requested role
 	 * @throws APIException
+	 * @should fetch users assigned given role 
+	 * @should not fetch user that does not belong to given role
 	 */
 	@Transactional(readOnly = true)
 	@Authorized( { OpenmrsConstants.PRIV_VIEW_USERS })
@@ -144,6 +159,8 @@ public interface UserService extends OpenmrsService {
 	 * @param reason
 	 * @return the given user voided out
 	 * @throws APIException
+	 * @should void user and set attributes
+	 * @deprecated use {@link #retireUser(User, String)}
 	 */
 	@Authorized( { OpenmrsConstants.PRIV_EDIT_USERS })
 	public User voidUser(User user, String reason) throws APIException;
@@ -154,9 +171,33 @@ public interface UserService extends OpenmrsService {
 	 * @param user
 	 * @return the given user unvoided
 	 * @throws APIException
+	 * @should unvoid and unmark all attributes
+	 * @deprecated use {@link #unretireUser(User)}
 	 */
 	@Authorized( { OpenmrsConstants.PRIV_EDIT_USERS })
 	public User unvoidUser(User user) throws APIException;
+	
+	/**
+     * Deactive a user account so that it can no longer log in.
+     * 
+     * @param user
+     * @param reason
+     * @throws APIException
+     * @should retire user and set attributes
+     */
+	@Authorized( { OpenmrsConstants.PRIV_EDIT_USERS })
+    public User retireUser(User user, String reason) throws APIException;
+    
+    /**
+     * Clears retired flag for a user.
+     * 
+     * @param user
+     * @param reason
+     * @throws APIException
+     * @should unretire and unmark all attributes
+     */
+	@Authorized( { OpenmrsConstants.PRIV_EDIT_USERS })
+    public User unretireUser(User user) throws APIException;
 	
 	/**
 	 * @see #voidUser(User, String)
@@ -171,6 +212,7 @@ public interface UserService extends OpenmrsService {
 	 * #purgeLocation(location, boolean) method.
 	 * 
 	 * @param user the User to remove from the database.
+	 * @should delete given user
 	 */
 	@Authorized( { OpenmrsConstants.PRIV_PURGE_USERS })
 	public void purgeUser(User user) throws APIException;
@@ -186,6 +228,9 @@ public interface UserService extends OpenmrsService {
 	 * attempt to delete the user will violate foreign key constraints and fail.
 	 * 
 	 * @param cascade <code>true</code> to delete associated content
+	 * @should throw APIException if cascade is true
+	 * @should delete given user when cascade equals false
+	 * @should not delete user roles for given user when cascade equals false
 	 */
 	@Authorized( { OpenmrsConstants.PRIV_PURGE_USERS })
 	public void purgeUser(User user, boolean cascade) throws APIException;
@@ -201,6 +246,7 @@ public interface UserService extends OpenmrsService {
 	 * 
 	 * @return Global list of privileges
 	 * @throws APIException
+	 * @should return all privileges in the system
 	 */
 	@Transactional(readOnly = true)
 	public List<Privilege> getAllPrivileges() throws APIException;
@@ -216,6 +262,7 @@ public interface UserService extends OpenmrsService {
 	 * 
 	 * @return Global list of roles
 	 * @throws APIException
+	 * @should return all roles in the system
 	 */
 	@Transactional(readOnly = true)
 	public List<Role> getAllRoles() throws APIException;
@@ -232,6 +279,8 @@ public interface UserService extends OpenmrsService {
 	 * @param role Role to update
 	 * @return the saved role
 	 * @throws APIException
+	 * @should throw error if role inherits from itself
+	 * @should save given role to the database
 	 */
 	@Authorized( { OpenmrsConstants.PRIV_MANAGE_ROLES })
 	public Role saveRole(Role role) throws APIException;
@@ -241,6 +290,9 @@ public interface UserService extends OpenmrsService {
 	 * 
 	 * @param role Role to delete from the database
 	 * @throws APIException
+	 * @should throw error when role is a core role
+	 * @should return if role is null
+	 * @should delete given role from database
 	 */
 	@Authorized( { OpenmrsConstants.PRIV_PURGE_ROLES })
 	public void purgeRole(Role role) throws APIException;
@@ -251,15 +303,18 @@ public interface UserService extends OpenmrsService {
 	 * @param privilege Privilege to update
 	 * @return the saved privilege
 	 * @throws APIException
+	 * @should save given privilege to the database
 	 */
 	@Authorized( { OpenmrsConstants.PRIV_MANAGE_PRIVILEGES })
 	public Privilege savePrivilege(Privilege privilege) throws APIException;
 	
 	/**
-	 * Complete remove a privilege from the database
+	 * Completely remove a privilege from the database
 	 * 
 	 * @param privilege Privilege to delete
 	 * @throws APIException
+	 * @should delete given privilege from the database
+	 * @should throw error when privilege is core privilege
 	 */
 	@Authorized( { OpenmrsConstants.PRIV_PURGE_PRIVILEGES })
 	public void purgePrivilege(Privilege privilege) throws APIException;
@@ -269,10 +324,19 @@ public interface UserService extends OpenmrsService {
 	 * 
 	 * @return Role object for specified string
 	 * @throws APIException
+	 * @should fetch role for given role name
 	 */
 	@Transactional(readOnly = true)
 	public Role getRole(String r) throws APIException;
 	
+	/**
+	 * Get Role by its UUID
+	 * 
+	 * @param uuid
+	 * @return
+	 * @should find object given valid uuid
+	 * @should return null if no object found with given uuid 
+	 */
 	@Transactional(readOnly = true)
 	public Role getRoleByUuid(String uuid) throws APIException;
 	
@@ -281,10 +345,20 @@ public interface UserService extends OpenmrsService {
 	 * 
 	 * @return Privilege
 	 * @throws APIException
+	 * @should fetch privilege for given name
 	 */
 	@Transactional(readOnly = true)
 	public Privilege getPrivilege(String p) throws APIException;
 	
+	/**
+	 * Get Privilege by its UUID
+	 * 
+	 * @param uuid
+	 * @return
+	 * @should find object given valid uuid
+	 * @should return null if no object found with given uuid
+	 * @should fetch privilege for given uuid 
+	 */
 	@Transactional(readOnly = true)
 	public Privilege getPrivilegeByUuid(String uuid) throws APIException;
 	
@@ -300,6 +374,8 @@ public interface UserService extends OpenmrsService {
 	 * 
 	 * @return Global list of users
 	 * @throws APIException
+	 * @should fetch all users in the system
+	 * @should not contains any duplicate users
 	 */
 	@Transactional(readOnly = true)
 	@Authorized( { OpenmrsConstants.PRIV_VIEW_USERS })
@@ -312,6 +388,7 @@ public interface UserService extends OpenmrsService {
 	 * @param u user
 	 * @param pw new password
 	 * @throws APIException
+	 * @should change password for the given user and password
 	 */
 	@Authorized( { OpenmrsConstants.PRIV_EDIT_USER_PASSWORDS })
 	@Logging(ignoredArgumentIndexes = { 1 })
@@ -341,7 +418,7 @@ public interface UserService extends OpenmrsService {
 	 * @param salt - the salt which should be used with this hashed password
 	 * @throws APIException
 	 * @since 1.5
-	 * @should successfullySaveToTheDatabase
+	 * @should change the hashed password for the given user
 	 */
 	@Authorized( { OpenmrsConstants.PRIV_EDIT_USER_PASSWORDS })
 	public void changeHashedPassword(User user, String hashedPassword, String salt) throws APIException;
@@ -354,7 +431,7 @@ public interface UserService extends OpenmrsService {
 	 * @param answer
 	 * @throws APIException
 	 * @since 1.5
-	 * @should change the passed user's secrete question and answer
+	 * @should change the secret question and answer for given user
 	 */
 	@Authorized( { OpenmrsConstants.PRIV_EDIT_USER_PASSWORDS })
 	@Logging(ignoredArgumentIndexes = { 1, 2 })
@@ -379,6 +456,8 @@ public interface UserService extends OpenmrsService {
 	 * @param u user
 	 * @param answer
 	 * @throws APIException
+	 * @should return true when given answer matches stored secret answer
+	 * @should return false when given answer does not match the stored secret answer 
 	 */
 	@Transactional(readOnly = true)
 	@Logging(ignoredArgumentIndexes = { 1 })
@@ -394,6 +473,13 @@ public interface UserService extends OpenmrsService {
 	 * @param includeVoided true/false whether to include voided users
 	 * @return list of users matching the given attributes
 	 * @should match search to familyName2
+	 * @should fetch voided users if includedVoided is true
+	 * @should not fetch voided users if includedVoided is false
+	 * @should fetch users with name that contains given nameSearch
+	 * @should fetch users with systemId that contains given nameSearch
+	 * @should fetch users with at least one of the given role objects
+	 * @should not fetch duplicate users 
+	 * @should fetch all users if nameSearch is empty or null
 	 */
 	@Transactional(readOnly = true)
 	@Authorized( { OpenmrsConstants.PRIV_VIEW_USERS })
@@ -420,10 +506,28 @@ public interface UserService extends OpenmrsService {
 	 * @param familyName
 	 * @param includeVoided
 	 * @return List<User> object of users matching criteria
+	 * @should fetch users exactly matching the given givenName and familyName
+	 * @should fetch voided users whenincludeVoided is true
+	 * @should not fetch any voided users when includeVoided is false
+	 * @should not fetch any duplicate users
 	 */
 	@Transactional(readOnly = true)
 	@Authorized( { OpenmrsConstants.PRIV_VIEW_USERS })
 	public List<User> getUsersByName(String givenName, String familyName, boolean includeVoided) throws APIException;
+	
+	/**
+	 * Get all user accounts that belong to a given person.
+	 * 
+	 * @param person
+	 * @param includeRetired
+	 * @return all user accounts that belong to person, including retired ones if specified
+	 * @throws APIException
+	 * @should fetch all accounts for a person when include retired is true
+	 * @should not fetch retired accounts when include retired is false
+	 */
+	@Transactional(readOnly = true)
+	@Authorized( { OpenmrsConstants.PRIV_VIEW_USERS })
+	public List<User> getUsersByPerson(Person person, boolean includeRetired) throws APIException;
 	
 	/**
 	 * @deprecated use {@link #getUsers(String, List, boolean)}
@@ -441,6 +545,10 @@ public interface UserService extends OpenmrsService {
 	 * @param key
 	 * @param value
 	 * @return the user that was passed in and added to
+	 * @should return null if user is null
+	 * @should throw error when user is not authorized to edit users
+	 * @should add property with given key and value when key does not already exist
+	 * @should modify property with given key and value when key already exists
 	 */
 	public User setUserProperty(User user, String key, String value) throws APIException;
 	
@@ -451,6 +559,9 @@ public interface UserService extends OpenmrsService {
 	 * @param user
 	 * @param key
 	 * @return the user that was passed in and removed from
+	 * @should return null if user is null
+	 * @should throw error when user is not authorized to edit users
+	 * @should remove user property for given user and key
 	 */
 	public User removeUserProperty(User user, String key) throws APIException;
 	

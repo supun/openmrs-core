@@ -63,11 +63,12 @@ import org.openmrs.util.OpenmrsConstants;
 import org.openmrs.util.OpenmrsUtil;
 import org.openmrs.util.OpenmrsConstants.PERSON_TYPE;
 import org.openmrs.web.WebConstants;
-import org.openmrs.web.controller.user.UserFormController;
+import org.openmrs.web.controller.person.PersonFormController;
 import org.springframework.beans.propertyeditors.CustomDateEditor;
 import org.springframework.beans.propertyeditors.CustomNumberEditor;
 import org.springframework.context.support.MessageSourceAccessor;
 import org.springframework.orm.ObjectRetrievalFailureException;
+import org.springframework.util.StringUtils;
 import org.springframework.validation.BindException;
 import org.springframework.validation.ValidationUtils;
 import org.springframework.web.bind.ServletRequestDataBinder;
@@ -457,7 +458,7 @@ public class NewPatientFormController extends SimpleFormController {
 				catch (PatientIdentifierException pie) {
 					log.error(pie);
 					patient.removeIdentifier(pie.getPatientIdentifier());
-					httpSession.setAttribute(WebConstants.OPENMRS_ERROR_ATTR, "PatientIdentifier.error.general");
+					httpSession.setAttribute(WebConstants.OPENMRS_ERROR_ATTR, pie.getMessage());
 					//errors = new BindException(new PatientIdentifierException(msa.getMessage("PatientIdentifier.error.general")), "givenName");
 					isError = true;
 				}
@@ -603,7 +604,7 @@ public class NewPatientFormController extends SimpleFormController {
 		if (Context.isAuthenticated()) {
 			PatientService ps = Context.getPatientService();
 			String patientId = request.getParameter("patientId");
-			if (patientId != null) {
+			if (StringUtils.hasText(patientId)) {
 				try {
 					id = Integer.valueOf(patientId);
 					p = ps.getPatient(id);
@@ -638,7 +639,7 @@ public class NewPatientFormController extends SimpleFormController {
 			String age = request.getParameter("addAge");
 			
 			p = new Patient();
-			UserFormController.getMiniPerson(p, name, gender, date, age);
+			PersonFormController.getMiniPerson(p, name, gender, date, age);
 			
 			patient = new ShortPatientModel(p);
 		}

@@ -139,9 +139,9 @@ public abstract class StartupFilter implements Filter {
 			
 			Properties props = new Properties();
 			props.setProperty(RuntimeConstants.RUNTIME_LOG, "startup_wizard_vel.log");
-			// Linux requires setting logging properties to initialize Velocity Context.
-			props.setProperty(RuntimeConstants.RUNTIME_LOG_LOGSYSTEM_CLASS,
-			    "org.apache.velocity.runtime.log.CommonsLogLogChute");
+            // Linux requires setting logging properties to initialize Velocity Context.            
+            props.setProperty( RuntimeConstants.RUNTIME_LOG_LOGSYSTEM_CLASS,
+                "org.apache.velocity.runtime.log.CommonsLogLogChute" );
 			props.setProperty(CommonsLogLogChute.LOGCHUTE_COMMONS_LOG_NAME, "initial_wizard_velocity");
 			
 			// so the vm pages can import the header/footer

@@ -38,6 +38,7 @@ import org.openmrs.Location;
 import org.openmrs.Obs;
 import org.openmrs.Order;
 import org.openmrs.Patient;
+import org.openmrs.Person;
 import org.openmrs.User;
 import org.openmrs.api.context.Context;
 import org.openmrs.test.BaseContextSensitiveTest;
@@ -74,7 +75,7 @@ public class EncounterServiceTest extends BaseContextSensitiveTest {
 		encounter.setEncounterType(new EncounterType(1));
 		encounter.setEncounterDatetime(new Date());
 		encounter.setPatient(new Patient(3));
-		encounter.setProvider(new User(1));
+		encounter.setProvider(new Person(1));
 		
 		EncounterService es = Context.getEncounterService();
 		es.saveEncounter(encounter);
@@ -146,7 +147,7 @@ public class EncounterServiceTest extends BaseContextSensitiveTest {
 		enc.setEncounterType(new EncounterType(1));
 		enc.setEncounterDatetime(new Date());
 		enc.setPatient(new Patient(3));
-		enc.setProvider(new User(1));
+		enc.setProvider(new Person(1));
 		es.saveEncounter(enc);
 		
 		// Now add an obs to it
@@ -970,11 +971,11 @@ public class EncounterServiceTest extends BaseContextSensitiveTest {
 	}
 	
 	/**
-	 * @see {@link EncounterService#getAllEncounterTypes(null)}
+	 * @see {@link EncounterService#getAllEncounterTypes(boolean)}
 	 */
 	@Test
-	@Verifies(value = "should non return retired types", method = "getAllEncounterTypes(null)")
-	public void getAllEncounterTypes_shouldNonReturnRetiredTypes() throws Exception {
+	@Verifies(value = "should not return retired types", method = "getAllEncounterTypes(boolean)")
+	public void getAllEncounterTypes_shouldNotReturnRetiredTypes() throws Exception {
 		EncounterService encounterService = Context.getEncounterService();
 		List<EncounterType> encounterTypes = encounterService.getAllEncounterTypes(false);
 		
@@ -984,18 +985,6 @@ public class EncounterServiceTest extends BaseContextSensitiveTest {
 		// make sure we only get the two non retired encounter types
 		// defined in the initialData.xml
 		assertEquals(2, encounterTypes.size());
-	}
-	
-	/**
-	 * @see {@link EncounterService#getAllEncounterTypes()}
-	 */
-	@Test
-	@Verifies(value = "should not return retired types", method = "getAllEncounterTypes()")
-	public void getAllEncounterTypes_shouldNotReturnRetiredTypes() throws Exception {
-		EncounterService encounterService = Context.getEncounterService();
-		List<EncounterType> types = encounterService.getAllEncounterTypes();
-		assertNotNull(types);
-		assertEquals(2, types.size());
 	}
 	
 	/**
@@ -1229,6 +1218,54 @@ public class EncounterServiceTest extends BaseContextSensitiveTest {
 		
 		Context.getEncounterService().saveEncounter(enc);
 		Assert.assertEquals(enc.getPatient(), existing.getPatient());
+	}
+
+	/**
+	 * @see {@link EncounterService#getEncounterByUuid(String)}
+	 * 
+	 */
+	@Test
+	@Verifies(value = "should find object given valid uuid", method = "getEncounterByUuid(String)")
+	public void getEncounterByUuid_shouldFindObjectGivenValidUuid()
+			throws Exception {
+		String uuid = "6519d653-393b-4118-9c83-a3715b82d4ac";
+		Encounter encounter = Context.getEncounterService().getEncounterByUuid(uuid);
+		Assert.assertEquals(3, (int)encounter.getEncounterId());
+	}
+
+	/**
+	 * @see {@link EncounterService#getEncounterByUuid(String)}
+	 * 
+	 */
+	@Test
+	@Verifies(value = "should return null if no object found with given uuid", method = "getEncounterByUuid(String)")
+	public void getEncounterByUuid_shouldReturnNullIfNoObjectFoundWithGivenUuid()
+			throws Exception {
+		Assert.assertNull(Context.getEncounterService().getEncounterByUuid("some invalid uuid"));
+	}
+
+	/**
+	 * @see {@link EncounterService#getEncounterTypeByUuid(String)}
+	 * 
+	 */
+	@Test
+	@Verifies(value = "should find object given valid uuid", method = "getEncounterTypeByUuid(String)")
+	public void getEncounterTypeByUuid_shouldFindObjectGivenValidUuid()
+			throws Exception {
+		String uuid = "02c533ab-b74b-4ee4-b6e5-ffb6d09a0ac8";
+		EncounterType encounterType = Context.getEncounterService().getEncounterTypeByUuid(uuid);
+		Assert.assertEquals(6, (int)encounterType.getEncounterTypeId());
+	}
+
+	/**
+	 * @see {@link EncounterService#getEncounterTypeByUuid(String)}
+	 * 
+	 */
+	@Test
+	@Verifies(value = "should return null if no object found with given uuid", method = "getEncounterTypeByUuid(String)")
+	public void getEncounterTypeByUuid_shouldReturnNullIfNoObjectFoundWithGivenUuid()
+			throws Exception {
+		Assert.assertNull(Context.getEncounterService().getEncounterTypeByUuid("some invalid uuid"));
 	}
 	
 }

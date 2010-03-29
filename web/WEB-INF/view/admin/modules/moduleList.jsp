@@ -4,6 +4,10 @@
 	
 <%@ include file="/WEB-INF/template/header.jsp" %>
 <%@ include file="localHeader.jsp" %>
+<openmrs:htmlInclude file="/scripts/jquery/jquery-1.3.2.min.js" />
+<script type="text/javascript">
+	var $j = jQuery.noConflict(); 
+</script>
 
 <h2><spring:message code="Module.header" /></h2>	
 
@@ -69,7 +73,7 @@
 					<input type="hidden" name="moduleId" value="${module.moduleId}" />
 					<tr class="<c:choose><c:when test="${varStatus.index % 2 == 0}">oddRow</c:when><c:otherwise>evenRow</c:otherwise></c:choose>" id="${module.moduleId}">
 						<c:choose>
-							<c:when test="${allowAdmin=='true' && module.mandatory == false}">
+							<c:when test="${allowAdmin=='true' && module.mandatory == false && module.coreModule == false}">
 								<td valign="top">
 									<c:choose>
 										<c:when test="${not module.started}">
@@ -83,9 +87,10 @@
 								<td valign="top"><input type="image" src="${pageContext.request.contextPath}/images/trash.gif" name="unload" onclick="return confirm('<spring:message code="Module.unloadWarning"/>');" title="<spring:message code="Module.unload.help"/>" title="<spring:message code="Module.unload"/>" alt="<spring:message code="Module.unload"/>" /></td>
 							</c:when>
 							<c:otherwise>
-								<td valign="top" align="left" colspan="2">
+								<td valign="top">
 									<img src="${pageContext.request.contextPath}/images/lock.gif" title="<spring:message code="Module.locked.help"/>" alt="<spring:message code="Module.locked"/>" />
 								</td>
+								<td></td>
 							</c:otherwise>
 						</c:choose>
 						<td valign="top">${module.name} <c:if test="${not module.started}"><b id="moduleNotStarted" style="white-space: nowrap">[<spring:message code="Module.notStarted"/>]</b></c:if></td>

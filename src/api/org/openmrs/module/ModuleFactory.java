@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -94,6 +95,7 @@ public class ModuleFactory {
 	 * 
 	 * @param module
 	 * @param replaceIfExists unload a module that has the same moduleId if one is loaded already
+	 * @return module the module that was loaded or if the module exists already with the same version, the old module
 	 */
 	public static Module loadModule(Module module, Boolean replaceIfExists) throws ModuleException {
 		
@@ -102,11 +104,23 @@ public class ModuleFactory {
 		
 		Module oldModule = getLoadedModulesMap().get(module.getModuleId());
 		if (oldModule != null) {
-			if (replaceIfExists == true) {
-				// TODO need to stop the module in the web layer as well.
+			int versionComparison = ModuleUtil.compareVersion(oldModule.getVersion(), module.getVersion());
+			if (versionComparison < 0) {
+				// if oldModule version is lower, unload it and use the new
 				unloadModule(oldModule);
-			} else
-				throw new ModuleException("A module with the same id already exists", module.getModuleId());
+			} else if (versionComparison == 0) {
+				if (replaceIfExists) {
+					// if the versions are the same and we're told to replaceIfExists, use the new
+					unloadModule(oldModule);
+				}
+				else
+					// if the versions are equal and we're not told to replaceIfExists, jump out of here in a bad way
+					throw new ModuleException("A module with the same id and version already exists", module.getModuleId());
+			}
+			else {
+				// if the older (already loaded) module is newer, keep that original one that was loaded. return that one.
+				return oldModule;
+			}
 		}
 		
 		getLoadedModulesMap().put(module.getModuleId(), module);
@@ -137,12 +151,12 @@ public class ModuleFactory {
 	 * @param modulesToLoad the list of files to try and load
 	 */
 	public static void loadModules(List<File> modulesToLoad) {
-		// loop over the modules and load the modules that we can
+		// loop over the modules and load all the modules that we can
 		for (File f : modulesToLoad) {
 			// ignore .svn folder and the like
 			if (!f.getName().startsWith(".")) {
 				try {
-					Module mod = loadModule(f);
+					Module mod = loadModule(f, true); // last module loaded wins
 					log.debug("Loaded module: " + mod + " successfully");
 				}
 				catch (Throwable t) {
@@ -167,18 +181,20 @@ public class ModuleFactory {
 				Context.addProxyPrivilege("");
 				AdministrationService as = Context.getAdministrationService();
 				// try and start the modules that should be started
-				for (Module mod : getLoadedModules()) {
+				for (Module mod : getLoadedModulesCoreFirst()) {
 					if (mod.isStarted())
 						continue; // skip over modules that are already started
 						
 					String key = mod.getModuleId() + ".started";
 					String startedProp = as.getGlobalProperty(key, null);
 					String mandatoryProp = as.getGlobalProperty(mod.getModuleId() + ".mandatory", null);
+					// if this is a core module and we're not ignoring core modules, this module should always start
+					boolean isCoreToOpenmrs = ModuleConstants.CORE_MODULES.containsKey(mod.getModuleId()) && !ModuleUtil.ignoreCoreModules();
 					
 					// if a 'moduleid.started' property doesn't exist, start the module anyway
 					// as this is probably the first time they are loading it
 					if (startedProp == null || startedProp.equals("true") || "true".equalsIgnoreCase(mandatoryProp)
-					        || mod.isMandatory()) {
+					        || mod.isMandatory() || isCoreToOpenmrs) {
 						if (requiredModulesStarted(mod))
 							try {
 								if (log.isDebugEnabled())
@@ -258,6 +274,25 @@ public class ModuleFactory {
 		
 	}
 	
+	/**
+     * Returns all modules found/loaded into the system (started and not started), with the core modules at the start of that list
+	 * 
+	 * @return <code>List<Module></code> of the modules loaded into the system, with the core modules first.
+     */
+    public static List<Module> getLoadedModulesCoreFirst() {
+	    List<Module> list = new ArrayList<Module>(getLoadedModules());
+	    final Collection<String> coreModuleIds = ModuleConstants.CORE_MODULES.keySet();
+	    Collections.sort(list, new Comparator<Module>() {
+			@Override
+            public int compare(Module left, Module right) {
+				Integer leftVal = coreModuleIds.contains(left.getModuleId()) ? 0 : 1;
+				Integer rightVal = coreModuleIds.contains(right.getModuleId()) ? 0 : 1;
+				return leftVal.compareTo(rightVal);
+			}
+	    });
+	    return list;
+    }
+
 	/**
 	 * Convenience method to return a List of Strings containing a description of which modules the
 	 * passed module requires but which are not started. The returned description of each module is
@@ -391,7 +426,7 @@ public class ModuleFactory {
 				// of OpenMRS code
 				String requireVersion = module.getRequireOpenmrsVersion();
 				if (requireVersion != null && !requireVersion.equals(""))
-					if (ModuleUtil.compareVersion(OpenmrsConstants.OPENMRS_VERSION_SHORT, requireVersion) < 0)
+					if (!ModuleUtil.matchRequiredVersions(OpenmrsConstants.OPENMRS_VERSION_SHORT, requireVersion))
 						throw new ModuleException("Module requires at least version '" + requireVersion
 						        + "'.  Current code version is only '" + OpenmrsConstants.OPENMRS_VERSION_SHORT + "'",
 						        module.getName());
@@ -512,7 +547,7 @@ public class ModuleFactory {
 				try {
 					boolean skipOverStartedProperty = false;
 					
-					if (e instanceof MandatoryModuleException)
+					if (e instanceof ModuleMustStartException)
 						skipOverStartedProperty = true;
 					
 					stopModule(module, skipOverStartedProperty, true);
@@ -672,7 +707,7 @@ public class ModuleFactory {
 	 */
 	@SuppressWarnings("unchecked")
 	public static List<Module> stopModule(Module mod, boolean skipOverStartedProperty, boolean isFailedStartup)
-	                                                                                                           throws MandatoryModuleException {
+	                                                                                                           throws ModuleMustStartException {
 		
 		List<Module> dependentModulesStopped = new Vector<Module>();
 		
@@ -683,6 +718,10 @@ public class ModuleFactory {
 			// don't use database checks here because spring might be in a bad state
 			if (!isFailedStartup && mod.isMandatory()) {
 				throw new MandatoryModuleException(moduleId);
+			}
+			
+			if (!isFailedStartup && ModuleConstants.CORE_MODULES.containsKey(moduleId)) {
+				throw new OpenmrsCoreModuleException(moduleId);
 			}
 			
 			String modulePackage = mod.getPackageName();
@@ -930,15 +969,14 @@ public class ModuleFactory {
 	 * Get a module's classloader
 	 * 
 	 * @param mod Module to fetch the class loader for
-	 * @return ModuleClassLoader pertaining to this module
+	 * @return ModuleClassLoader pertaining to this module. Returns null if the module is not started
 	 * @throws ModuleException if the module does not have a registered classloader
 	 */
 	public static ModuleClassLoader getModuleClassLoader(Module mod) throws ModuleException {
-		
 		ModuleClassLoader mcl = getModuleClassLoaderMap().get(mod);
 		
 		if (mcl == null)
-			throw new ModuleException("Module not found", mod.getName());
+			log.debug("Module classloader not found for module with id: " + mod.getModuleId());
 		
 		return mcl;
 	}
@@ -947,14 +985,14 @@ public class ModuleFactory {
 	 * Get a module's classloader via the module id
 	 * 
 	 * @param moduleId <code>String</code> id of the module
-	 * @return ModuleClassLoader pertaining to this module
+	 * @return ModuleClassLoader pertaining to this module.  Returns null if the module is not started
 	 * @throws ModuleException if this module isn't started or doesn't have a classloader
 	 * @see #getModuleClassLoader(Module)
 	 */
 	public static ModuleClassLoader getModuleClassLoader(String moduleId) throws ModuleException {
 		Module mod = getStartedModulesMap().get(moduleId);
 		if (mod == null)
-			throw new ModuleException("Module id not found in list of started modules: ", moduleId);
+			log.debug("Module id not found in list of started modules: " + mod.getModuleId());
 		
 		return getModuleClassLoader(mod);
 	}

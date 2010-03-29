@@ -40,7 +40,7 @@
         		// this is the first time there was an error, save the current
         		// onSubmit for the form and replace it with a 
         		origOnSubmit = obj.form.onsubmit;
-        		obj.form.onsubmit = function() { alert(<spring:message code="fix.error" />); return false; };
+        		obj.form.onsubmit = function() { alert('<spring:message code="fix.error" javaScriptEscape="true"/>'); return false; };
         	}
         }
         
@@ -199,9 +199,9 @@
 											<input type="hidden" name="_${status.expression}"/>
 											<input type="checkbox" name="${status.expression}" 
 												   <c:if test="${status.value == true}">checked="checked"</c:if> 
+										</spring:bind>
 												   onClick="toggleLayer('<spring:bind path="personAddressId">voidReasonRow-${status.value}</spring:bind>'); if (voidedBoxClicked) voidedBoxClicked(this); "
 											/>
-										</spring:bind>
 									</td>
 								</tr>
 								<tr id="<spring:bind path="personAddressId">voidReasonRow-${status.value}</spring:bind>"

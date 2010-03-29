@@ -23,6 +23,7 @@ import org.openmrs.ConceptAnswer;
 import org.openmrs.ConceptClass;
 import org.openmrs.ConceptComplex;
 import org.openmrs.ConceptDatatype;
+import org.openmrs.ConceptDescription;
 import org.openmrs.ConceptMap;
 import org.openmrs.ConceptName;
 import org.openmrs.ConceptNameTag;
@@ -96,6 +97,14 @@ public interface ConceptService extends OpenmrsService {
 	@Authorized( { OpenmrsConstants.PRIV_MANAGE_CONCEPTS })
 	public void updateConcept(Concept concept) throws APIException;
 	
+	/**
+	 * Get Concept by its UUID
+	 * 
+	 * @param uuid
+	 * @return
+	 * @should find object given valid uuid
+	 * @should return null if no object found with given uuid
+	 */
 	@Transactional(readOnly = true)
 	public Concept getConceptByUuid(String uuid);
 	
@@ -338,6 +347,9 @@ public interface ConceptService extends OpenmrsService {
 	 * @should get concept by name
 	 * @should get concept by partial name
 	 * @should return null given null parameter
+	 * @should find concepts with names in more specific locales
+	 * @should find concepts with names in more generic locales
+	 * @should find concepts with names in same specific locale
 	 */
 	@Transactional(readOnly = true)
 	@Authorized(OpenmrsConstants.PRIV_VIEW_CONCEPTS)
@@ -426,6 +438,14 @@ public interface ConceptService extends OpenmrsService {
 	                                      List<ConceptDatatype> requireDatatypes, List<ConceptDatatype> excludeDatatypes)
 	                                                                                                                     throws APIException;
 	
+	/**
+	 * Get Drug by its UUID
+	 * 
+	 * @param uuid
+	 * @return
+	 * @should find object given valid uuid
+	 * @should return null if no object found with given uuid
+	 */
 	@Transactional(readOnly = true)
 	public Drug getDrugByUuid(String uuid);
 	
@@ -576,18 +596,58 @@ public interface ConceptService extends OpenmrsService {
 	@Authorized(OpenmrsConstants.PRIV_VIEW_CONCEPT_CLASSES)
 	public List<ConceptClass> getAllConceptClasses(boolean includeRetired) throws APIException;
 	
+	/**
+	 * Get ConceptClass by its UUID
+	 * 
+	 * @param uuid
+	 * @return
+	 * @should find object given valid uuid
+	 * @should return null if no object found with given uuid
+	 */
 	@Transactional(readOnly = true)
 	public ConceptClass getConceptClassByUuid(String uuid);
 	
+	/**
+	 * Get ConceptAnswer by its UUID
+	 * 
+	 * @param uuid
+	 * @return
+	 * @should find object given valid uuid
+	 * @should return null if no object found with given uuid
+	 */
 	@Transactional(readOnly = true)
 	public ConceptAnswer getConceptAnswerByUuid(String uuid);
 	
+	/**
+	 * Get ConceptName by its UUID
+	 * 
+	 * @param uuid
+	 * @return
+	 * @should find object given valid uuid
+	 * @should return null if no object found with given uuid
+	 */
 	@Transactional(readOnly = true)
 	public ConceptName getConceptNameByUuid(String uuid);
 	
+	/**
+	 * Get ConceptSet by its UUID
+	 * 
+	 * @param uuid
+	 * @return
+	 * @should find object given valid uuid
+	 * @should return null if no object found with given uuid
+	 */
 	@Transactional(readOnly = true)
 	public ConceptSet getConceptSetByUuid(String uuid);
 	
+	/**
+	 * Get ConceptSource by its UUID
+	 * 
+	 * @param uuid
+	 * @return
+	 * @should find object given valid uuid
+	 * @should return null if no object found with given uuid
+	 */
 	@Transactional(readOnly = true)
 	public ConceptSource getConceptSourceByUuid(String uuid);
 	
@@ -670,6 +730,14 @@ public interface ConceptService extends OpenmrsService {
 	@Authorized(OpenmrsConstants.PRIV_VIEW_CONCEPT_DATATYPES)
 	public ConceptDatatype getConceptDatatype(Integer i) throws APIException;
 	
+	/**
+	 * Get ConceptDatatype by its UUID
+	 * 
+	 * @param uuid
+	 * @return
+	 * @should find object given valid uuid
+	 * @should return null if no object found with given uuid
+	 */
 	@Transactional(readOnly = true)
 	public ConceptDatatype getConceptDatatypeByUuid(String uuid);
 	
@@ -770,6 +838,14 @@ public interface ConceptService extends OpenmrsService {
 	@Authorized(OpenmrsConstants.PRIV_VIEW_CONCEPT_PROPOSALS)
 	public List<ConceptProposal> getAllConceptProposals(boolean includeCompleted) throws APIException;
 	
+	/**
+	 * Get ConceptNumeric by its UUID
+	 * 
+	 * @param uuid
+	 * @return
+	 * @should find object given valid uuid
+	 * @should return null if no object found with given uuid
+	 */
 	@Transactional(readOnly = true)
 	public ConceptNumeric getConceptNumericByUuid(String uuid);
 	
@@ -953,6 +1029,14 @@ public interface ConceptService extends OpenmrsService {
 	@Transactional(readOnly = true)
 	public void checkIfLocked() throws ConceptsLockedException;
 	
+	/**
+	 * Get ConceptProposal by its UUID
+	 * 
+	 * @param uuid
+	 * @return
+	 * @should find object given valid uuid
+	 * @should return null if no object found with given uuid
+	 */
 	@Transactional(readOnly = true)
 	public ConceptProposal getConceptProposalByUuid(String uuid);
 	
@@ -984,6 +1068,14 @@ public interface ConceptService extends OpenmrsService {
 	@Authorized( { OpenmrsConstants.PRIV_MANAGE_CONCEPTS })
 	public void updateConceptWords() throws APIException;
 	
+	/**
+	 * Get ConceptNameTag by its UUID
+	 * 
+	 * @param uuid
+	 * @return
+	 * @should find object given valid uuid
+	 * @should return null if no object found with given uuid
+	 */
 	@Transactional(readOnly = true)
 	public ConceptNameTag getConceptNameTagByUuid(String uuid);
 	
@@ -1054,6 +1146,8 @@ public interface ConceptService extends OpenmrsService {
 	 * @throws APIException
 	 * @should not set creator if one is supplied already
 	 * @should not set date created if one is supplied already
+	 * @should save a ConceptSource with a null hl7Code
+	 * @should not save a ConceptSource if voided is null
 	 */
 	@Authorized(OpenmrsConstants.PRIV_MANAGE_CONCEPT_SOURCES)
 	public ConceptSource saveConceptSource(ConceptSource conceptSource) throws APIException;
@@ -1066,6 +1160,19 @@ public interface ConceptService extends OpenmrsService {
 	 */
 	@Authorized(OpenmrsConstants.PRIV_PURGE_CONCEPT_SOURCES)
 	public ConceptSource purgeConceptSource(ConceptSource cs) throws APIException;
+	
+	/**
+	 * This effectively removes a concept source from the database. The source can still be
+	 * referenced by old data, but no new data should use this source.
+	 * 
+	 * @param cs the concept source to retire
+	 * @param reason why the concept source is to be retired, must not be empty of null
+	 * @return the retired concept source
+	 * @throws APIException
+	 * @should retire concept source
+	 */
+	@Authorized(OpenmrsConstants.PRIV_PURGE_CONCEPT_SOURCES)
+	public ConceptSource retireConceptSource(ConceptSource cs, String reason) throws APIException;
 	
 	/**
 	 * Creates a new Concept name tag.
@@ -1114,7 +1221,7 @@ public interface ConceptService extends OpenmrsService {
 	@Transactional(readOnly = true)
 	@Authorized(OpenmrsConstants.PRIV_VIEW_CONCEPTS)
 	public Concept getConceptByMapping(String conceptCode, String mappingCode) throws APIException;
-
+	
 	/**
 	 * Get all the concept name tags defined in the database, included voided ones
 	 * 
@@ -1135,8 +1242,16 @@ public interface ConceptService extends OpenmrsService {
 	@Authorized( { OpenmrsConstants.PRIV_VIEW_CONCEPTS })
 	public ConceptNameTag getConceptNameTag(Integer id);
 	
+	/**
+	 * Get ConceptDescription by its UUID
+	 * 
+	 * @param uuid
+	 * @return
+	 * @should find object given valid uuid
+	 * @should return null if no object found with given uuid
+	 */
 	@Transactional(readOnly = true)
-	public Object getConceptDescriptionByUuid(String uuid);
+	public ConceptDescription getConceptDescriptionByUuid(String uuid);
 	
 	/**
 	 * 
@@ -1146,7 +1261,7 @@ public interface ConceptService extends OpenmrsService {
 	 * @return ConceptSource 
 	 * @throws APIException
 	 * @should get ConceptSource with the given name
-	 * @should return null if no ConceptSource with that name is found.
+	 * @should return null if no ConceptSource with that name is found
 	 */
 	@Transactional(readOnly = true)
 	@Authorized(OpenmrsConstants.PRIV_VIEW_CONCEPTS)
@@ -1159,8 +1274,8 @@ public interface ConceptService extends OpenmrsService {
 	 * @param conceptSource
 	 * @return a List<ConceptMap> object
 	 * @throws APIException
-	 * @should return a List<ConceptMap> if concept mappings found
-	 * @should return empty List<ConceptMap> if none found
+	 * @should return a List of ConceptMaps if concept mappings found
+	 * @should return empty List of ConceptMaps if none found
 	 */
 	@Transactional(readOnly = true)
 	@Authorized(OpenmrsConstants.PRIV_VIEW_CONCEPTS)

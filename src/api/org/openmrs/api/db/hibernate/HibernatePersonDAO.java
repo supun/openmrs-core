@@ -34,8 +34,10 @@ import org.openmrs.PersonAttributeType;
 import org.openmrs.PersonName;
 import org.openmrs.Relationship;
 import org.openmrs.RelationshipType;
+import org.openmrs.api.context.Context;
 import org.openmrs.api.db.DAOException;
 import org.openmrs.api.db.PersonDAO;
+import org.openmrs.util.OpenmrsConstants;
 
 /**
  * Hibernate specific Person database methods. <br/>
@@ -53,7 +55,7 @@ import org.openmrs.api.db.PersonDAO;
  */
 public class HibernatePersonDAO implements PersonDAO {
 	
-	protected final Log log = LogFactory.getLog(getClass());
+	protected final static Log log = LogFactory.getLog(HibernatePersonDAO.class);
 	
 	/**
 	 * Hibernate session factory
@@ -74,7 +76,7 @@ public class HibernatePersonDAO implements PersonDAO {
 	 * @see org.openmrs.api.db.PersonDAO#getSimilarPeople(java.lang.String,java.lang.Integer,java.lang.String,java.lang.String)
 	 */
 	@SuppressWarnings("unchecked")
-	public Set<Person> getSimilarPeople(String name, Integer birthyear, String gender, String personType) throws DAOException {
+	public Set<Person> getSimilarPeople(String name, Integer birthyear, String gender) throws DAOException {
 		if (birthyear == null)
 			birthyear = 0;
 		
@@ -226,12 +228,6 @@ public class HibernatePersonDAO implements PersonDAO {
 			q += " and " + genderMatch;
 		}
 		
-		if (personType.equals("patient"))
-			q += " and p.user = 0";
-		
-		if (personType.equals("user"))
-			q += " and p.patient = 0";
-		
 		q += " order by pname.givenName asc,";
 		q += " pname.middleName asc,";
 		q += " pname.familyName asc";
@@ -274,7 +270,26 @@ public class HibernatePersonDAO implements PersonDAO {
 			criteria.add(Expression.eq("dead", dead));
 		criteria.addOrder(Order.asc("personId"));
 		criteria.setResultTransformer(Criteria.DISTINCT_ROOT_ENTITY);
+		criteria.setMaxResults(getMaximumSearchResults());
 		return criteria.list();
+	}
+	
+	/**
+	 * Fetch the max results value from the global properties table
+	 * 
+	 * @return Integer value for the person search max results global property
+	 */
+	protected static Integer getMaximumSearchResults() {
+		try {
+			return Integer.valueOf(Context.getAdministrationService().getGlobalProperty(
+			    OpenmrsConstants.GLOBAL_PROPERTY_PERSON_SEARCH_MAX_RESULTS, String.valueOf(OpenmrsConstants.GLOBAL_PROPERTY_PERSON_SEARCH_MAX_RESULTS_DEFAULT_VALUE)));
+		}
+		catch (Exception e) {
+			log.warn("Unable to convert the global property " + OpenmrsConstants.GLOBAL_PROPERTY_PERSON_SEARCH_MAX_RESULTS
+			        + "to a valid integer. Returning the default " + OpenmrsConstants.GLOBAL_PROPERTY_PERSON_SEARCH_MAX_RESULTS_DEFAULT_VALUE);
+		}
+		
+		return OpenmrsConstants.GLOBAL_PROPERTY_PERSON_SEARCH_MAX_RESULTS_DEFAULT_VALUE;
 	}
 	
 	/**
@@ -330,7 +345,7 @@ public class HibernatePersonDAO implements PersonDAO {
 			criteria.add(Expression.eq("retired", false));
 		}
 		
-		criteria.addOrder(Order.asc("name"));
+		criteria.addOrder(Order.asc("sortWeight"));
 		
 		return criteria.list();
 	}
@@ -433,24 +448,6 @@ public class HibernatePersonDAO implements PersonDAO {
 		
 		if (preferred != null)
 			criteria.add(Expression.eq("preferred", preferred));
-		
-		return criteria.list();
-	}
-	
-	/**
-	 * @see org.openmrs.api.PersonService#getAllRelationshipTypes()
-	 * @see org.openmrs.api.db.PersonDAO#getAllRelationshipTypes()
-	 */
-	@SuppressWarnings("unchecked")
-	public List<RelationshipType> getAllRelationshipTypes() throws DAOException {
-		
-		Criteria criteria = sessionFactory.getCurrentSession().createCriteria(RelationshipType.class, "t");
-		
-		/**
-		 * if (!includeRetired) criteria.add(Expression.eq("retired", false));
-		 */
-		
-		criteria.addOrder(Order.asc("weight"));
 		
 		return criteria.list();
 	}
@@ -593,4 +590,20 @@ public class HibernatePersonDAO implements PersonDAO {
 		return (RelationshipType) sessionFactory.getCurrentSession().createQuery(
 		    "from RelationshipType rt where rt.uuid = :uuid").setString("uuid", uuid).uniqueResult();
 	}
+
+	/**
+     * @see org.openmrs.api.db.PersonDAO#getAllRelationshipTypes(boolean)
+     */
+    @SuppressWarnings("unchecked")
+    public List<RelationshipType> getAllRelationshipTypes(boolean includeRetired) {
+		Criteria criteria = sessionFactory.getCurrentSession().createCriteria(RelationshipType.class);
+		criteria.addOrder(Order.asc("weight"));
+		
+		if (includeRetired == false) {
+			criteria.add(Expression.eq("retired", false));
+		}
+		
+		return criteria.list();
+    }
+
 }

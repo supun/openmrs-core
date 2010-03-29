@@ -49,7 +49,6 @@ import org.springframework.web.servlet.mvc.SimpleFormController;
  * This class controls the generic person properties (address, name, attributes). The Patient and
  * User form controllers extend this class.
  * 
- * @see org.openmrs.web.controller.user.UserFormController
  * @see org.openmrs.web.controller.patient.PatientFormController
  */
 public class PersonFormController extends SimpleFormController {
@@ -85,9 +84,9 @@ public class PersonFormController extends SimpleFormController {
 			errors.reject("auth.invalid");
 		} else {
 			// Make sure they assign a name
-			if (person.getPersonName().getGivenName() == "")
+			if (person.getPersonName().getGivenName().trim().equals(""))
 				errors.rejectValue("names[0].givenName", "Person.name.required");
-			if (person.getPersonName().getFamilyName() == "")
+			if (person.getPersonName().getFamilyName().trim().equals(""))
 				errors.rejectValue("names[0].familyName", "Person.name.required");
 			
 			// Make sure they choose a gender
@@ -159,7 +158,7 @@ public class PersonFormController extends SimpleFormController {
 	
 	/**
 	 * Setup the person object. Should be called by the
-	 * PersonFormController/UserFormController.formBackingObject(request)
+	 * PersonFormController.formBackingObject(request)
 	 * 
 	 * @param person
 	 * @return
@@ -183,7 +182,7 @@ public class PersonFormController extends SimpleFormController {
 	
 	/**
 	 * Setup the reference map object. Should be called by the
-	 * PersonFormController/UserFormController.referenceData(...)
+	 * PersonFormController.referenceData(...)
 	 * 
 	 * @param person
 	 * @return

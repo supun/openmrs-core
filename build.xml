@@ -3,7 +3,7 @@
 <!-- ** Ant build script for OpenMRS                          ** -->
 <!-- **                                                       ** -->
 <!-- *********************************************************** -->
-<project name="OpenMRS-1.5.x" default="dist">
+<project name="OpenMRS-1.6.x" default="dist">
 
 	<tstamp>
 		<format property="timestamp" pattern="MMM dd yyyy hh:mm aa" />
@@ -195,7 +195,7 @@
 			<fileset file="${metadata.dir}/images/openmrs-logo-small.gif" />
 		</copy>
 		<javadoc packagenames="org.openmrs.*" destdir="${doc.dir}/api" classpathref="api.compile.classpath" author="true" version="true" windowtitle="${doc.title}" header="${doc.header}" footer="${doc.footer}" bottom="${doc.bottom}">
-			<tag name="should" scope="all" description="Behavior test descriptor for a method" /> 
+			<tag name="should" scope="all" description="Expected behavior: " />
 			<packageset dir="${src.dir}/api" defaultexcludes="yes">
 				<include name="org/openmrs/**" />
 				<exclude name="**/.svn" />
@@ -329,7 +329,7 @@
 				<include name="**/web/**/*.class" />
 				<include name="**/web/**/*.vm" /> <!-- velocity macro files for initial setup -->
 				<exclude name="**/test/" />
-				<exclude name="**/*Test*.class" /><!-- more inclusive with trailing wildcard --> 
+				<exclude name="**/*Test*.class" /><!-- more inclusive with trailing wildcard -->
 			</classes>
 			<classes file="${metadata.dir}/api/log4j/log4j.xml" />
 			<classes file="${metadata.dir}/api/log4j/velocity.properties" />
@@ -575,92 +575,6 @@
 			<arg value="file:///${junit-reports.dir}/index.html"/>
 		</exec>
 		
-	</target>
-	
-	<target name="liquibase-init" description="setup the path and properties for liquibase targets">
-		<mkdir dir="build" />
-		<path id="classpath">
-            <fileset dir="${liquibase.dir}">
-                <include name="*.jar"/>
-            </fileset>
-            <fileset dir="${database.dir}">
-                <include name="*.jar"/>
-            </fileset>
-			<path refid="api.compile.classpath"/>
-			<pathelement location="${build.dir}" />
-        </path>
-
-        <property name="db.changelog.file" value="root.changelog.xml"/>
-        <property name="database.url" value="jdbc:mysql://localhost:3306/openmrs-trunk"/>
-        <property name="database.username" value="root"/>
-        <property name="database.password" value="password"/>
-        <property name="database.driver" value="com.mysql.jdbc.Driver"/>
-        <property name="prompt.user.if.not.local.database" value="true"/>
-
-        <taskdef resource="liquibasetasks.properties">
-        	<classpath refid="classpath"/>
-        </taskdef>
-    </target>
-	
-	<!--
-	<target name="liquibase-generate-change-log" depends="liquibase-init" description="Create changelog xml file from database for table schema only">
-		<generateChangeLog
-                driver="${database.driver}"
-                url="${database.url}"
-                username="${database.username}"
-                password="${database.password}"
-                promptOnNonLocalDatabase="${prompt.user.if.not.local.database}"
-                classpathref="classpath"
-				databaseChangeLogTableName="liquibasechangelog"
-				databaseChangeLogLockTableName="liquibasechangeloglock"
-							
-                outputFile="build/liquibase-tables.xml"
-                >
-        </generateChangeLog>
-    </target>
-	
-	<target name="liquibase-diff-change-log" depends="liquibase-init" description="Create changelog xml file with rows comparing two databases">
-		<diffDatabaseToChangeLog
-                changeLogFile="${db.changelog.file}"
-                driver="${database.driver}"
-                url="${database.url}"
-                username="${database.username}"
-                password="${database.password}"
-                promptOnNonLocalDatabase="${prompt.user.if.not.local.database}"
-                classpathref="classpath"
-				diffTypes="data"
-
-                baseUrl="jdbc:mysql://localhost/openmrs-with-core"
-                baseUsername="${database.username}"
-                basePassword="${database.password}"
-                baseDefaultSchemaName="liquibase"
-
-				databaseChangeLogTableName="liquibasechangelog"
-				databaseChangeLogLockTableName="liquibasechangeloglock"
-							
-				outputFile="build/liquibase-diff.xml"
-                >
-        </diffDatabaseToChangeLog>
-    </target>
-	-->
-	
-	<target name="liquibase-generate-offline-sql-diff-mysql" depends="liquibase-init" description="Create the /dist/update-to-latest-mysql-diff.sql file for running on systems that don't use the openmrs webapp">
-		<updateDatabase 
-				changeLogFile="${metadata.dir}/model/liquibase-update-to-latest.xml"
-				driver="${database.driver}"
-				url="${database.url}"
-				username="${database.username}"
-				password="${database.password}"
-				promptOnNonLocalDatabase="${prompt.user.if.not.local.database}"
-				dropFirst="false"
-				classpathref="classpath"
-				databaseChangeLogTableName="liquibasechangelog"
-				databaseChangeLogLockTableName="liquibasechangeloglock"
-				
-				outputFile="dist/update-to-latest-mysql-diff.sql"
-				>
-		</updateDatabase>
-		<echo>Created dist/update-to-latest.sql</echo>
 	</target>
 	
 </project>

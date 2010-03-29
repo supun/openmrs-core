@@ -25,8 +25,8 @@ import org.openmrs.Person;
 import org.openmrs.module.Extension;
 import org.openmrs.module.ModuleFactory;
 import org.openmrs.module.Extension.MEDIA_TYPE;
+import org.openmrs.module.web.FormEntryContext;
 import org.openmrs.module.web.extension.FormEntryHandler;
-
 
 /**
  * Controller for the patientEncounters portlet.

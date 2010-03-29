@@ -286,6 +286,9 @@
 	</changeSet>
 	
 	<changeSet id="20090224-1229" author="Keelhaul+bwolfe">
+		<preConditions onFail="MARK_RAN">
+			<not><tableExists tableName="location_tag"/></not>
+		</preConditions>
 		<comment>
 			Add location tags table
 		</comment>
@@ -323,6 +326,9 @@
 	</changeSet>
 	
 	<changeSet id="20090224-1250" author="Keelhaul+bwolfe">
+		<preConditions onFail="MARK_RAN">
+			<not><tableExists tableName="location_tag_map"/></not>
+		</preConditions>
 		<comment>
 			Add location tag map table
 		</comment>
@@ -369,6 +375,9 @@
 	</changeSet>
 	
 	<changeSet id="20090225-1551" author="dthomas">
+		<preConditions onFail="MARK_RAN">
+			<columnExists tableName="location_tag" columnName="name"/>
+		</preConditions>
 		<comment>
 			Change location_tag.name to location_tag.tag and location_tag.retired_reason to location_tag.retire_reason
 		</comment>
@@ -807,65 +816,6 @@
 		<delete tableName="concept_word">
 			<where>concept_name_id = 0</where>
 		</delete>
-	</changeSet>
-	
-	<changeSet id="20090831-1039-38-scheduler_task_config" author="bwolfe">
-		<preConditions onFail="MARK_RAN"><not><columnExists tableName="scheduler_task_config" columnName="uuid"/></not></preConditions>
-		<comment>Adding "uuid" column to scheduler_task_config table</comment>
-		<addColumn tableName="scheduler_task_config">
-			<column name="uuid" type="char(38)" />
-		</addColumn>
-	</changeSet>
-	
-	<changeSet id="20090831-1040-scheduler_task_config" author="bwolfe">
-		<preConditions onFail="MARK_RAN"><or><dbms type="mysql" /><dbms type="oracle" /><dbms type="mssql" /></or></preConditions>
-		<comment>Generating UUIDs for all rows in scheduler_task_config table via built in uuid function.</comment>
-		<update tableName="scheduler_task_config" >
-			<column name="uuid" valueNumeric="name-of-uuid-function" />
-			<where>uuid is null</where>
-		</update>
-		<modifySql dbms="mysql"><replace replace="name-of-uuid-function" with="UUID()"/></modifySql>
-		<modifySql dbms="oracle"><replace replace="name-of-uuid-function" with="SYS_GUID()"/></modifySql>
-		<modifySql dbms="mssql"><replace replace="name-of-uuid-function" with="NEWSEQUENTIALID()"/></modifySql>
-	</changeSet>
-	
-	<changeSet id="20090831-1041-scheduler_task_config" author="bwolfe">
-		<preConditions onFail="MARK_RAN">
-			<not>
-				<or>
-					<dbms type="mysql" />
-					<dbms type="oracle" />
-					<dbms type="mssql" />
-				</or>
-			</not>
-		</preConditions>
-		<comment>
-			Adding UUIDs to all rows in scheduler_task_config table via a java class for non mysql/oracle/mssql databases.
-		</comment>
-		<customChange class="org.openmrs.util.databasechange.GenerateUuid">
-			<param name="tableNames">
-				scheduler_task_config
-			</param>
-			<param name="columnName" value="uuid"/>
-			<param name="idExceptions">
-				scheduler_task_config=task_config_id
-			</param>
-		</customChange>
-	</changeSet>
-	
-	<changeSet id="20090831-1042-scheduler_task_config" author="bwolfe">
-		<comment>
-			Now that UUID generation is done for scheduler_task_config, set the uuid column to not "NOT NULL" 
-		</comment>
-		<addNotNullConstraint tableName="scheduler_task_config" columnName="uuid" columnDataType="char(38)"/>
-	</changeSet>
-	
-	<changeSet id="20090831-1043-scheduler_task_config" author="bwolfe">
-		<preConditions onFail="MARK_RAN"><not><indexExists indexName="scheduler_task_config_uuid_index"/></not></preConditions>
-		<comment>Creating unique index on scheduler_task_config.uuid column</comment>
-		<createIndex tableName="scheduler_task_config" unique="true" indexName="scheduler_task_config_uuid_index" >
-			<column name="uuid" />
-		</createIndex>
 	</changeSet>
 	
 	<changeSet id="200905071626" author="bwolfe" failOnError="false">
@@ -2457,7 +2407,36 @@
 		<dropColumn tableName="concept_word" columnName="synonym"/>
 	</changeSet>
 	
-		<changeSet id="200907161638-1" author="bwolfe">
+	<changeSet id="200902142212" author="ewolodzko">
+		<comment>
+			Add a sortWeight field to PersonAttributeType
+		</comment>
+		<addColumn tableName="person_attribute_type">
+			<column name="sort_weight" type="int" />
+		</addColumn>
+	</changeSet>
+	
+	<changeSet id="200902142213" author="ewolodzko">
+		<comment>
+			Add default sortWeights to all current PersonAttributeTypes
+		</comment>
+		<update tableName="person_attribute_type" >
+			<!-- The weird (select * from person_attribute_type) is needed here instead of just (person_attribute_type) to avoid sql ERROR 1093 -->
+			<column name="sort_weight" valueNumeric="((select count(*) from (select * from person_attribute_type) pat where pat.name &lt; person_attribute_type.name))" />
+			<where>sort_weight is null</where>
+		</update>
+	</changeSet>
+	
+	<changeSet id="200906301606" author="bwolfe">
+		<comment>
+			Change person_attribute_type.sort_weight from an integer to a float
+		</comment>
+		<modifyColumn tableName="person_attribute_type" >
+			<column name="sort_weight" type="double" />
+		</modifyColumn>
+	</changeSet>
+	
+	<changeSet id="200907161638-1" author="bwolfe">
 		<comment>Change obs.value_numeric from a double(22,0) to a double</comment>
 		<modifyColumn tableName="obs"><column name="value_numeric" type="double" /></modifyColumn>
 	</changeSet>
@@ -2501,8 +2480,125 @@
 		</modifyColumn>
 	</changeSet>
 	
+	<changeSet id="20100128-1" author="djazayeri">
+		<preConditions onFail="MARK_RAN">
+			<sqlCheck expectedResult="0">
+				SELECT COUNT(*) FROM role where role = 'System Developer'
+			</sqlCheck>
+		</preConditions>
+		<comment>Adding 'System Developer' role again (see ticket #1499)</comment>
+		<insert tableName="role">
+			<column name="role" value="System Developer"/>
+			<column name="description" value="Assigned to Administrators of OpenMRS. Gives additional access to change core aspects of the system."/>
+			<column name="uuid" valueNumeric="name-of-uuid-function"/>
+		</insert>
+		<modifySql dbms="mysql"><replace replace="name-of-uuid-function" with="UUID()"/></modifySql>
+		<modifySql dbms="oracle"><replace replace="name-of-uuid-function" with="SYS_GUID()"/></modifySql>
+		<modifySql dbms="mssql"><replace replace="name-of-uuid-function" with="NEWSEQUENTIALID()"/></modifySql>
+		<modifySql><replace replace="name-of-uuid-function" with="current_timestamp * 99999999999999"/></modifySql>
+	</changeSet>
+	
+	<changeSet id="20100128-2" author="djazayeri">
+		<preConditions onFail="MARK_RAN">
+			<changeSetExecuted id="20090803-1" author="jkariuki" changeLogFile="liquibase-update-to-latest.xml"/>
+		</preConditions>
+		<comment>Switching users back from 'Administrator' to 'System Developer' (see ticket #1499)</comment>
+		<update tableName="user_role">
+			<column name="role" value="System Developer"/>
+			<where>role='Administrator'</where>
+		</update>
+	</changeSet>
+	
+	<changeSet id="20100128-3" author="djazayeri">
+		<preConditions onFail="MARK_RAN">
+			<changeSetExecuted id="20090803-1" author="jkariuki" changeLogFile="liquibase-update-to-latest.xml"/>
+		</preConditions>
+		<comment>Deleting 'Administrator' role (see ticket #1499)</comment>
+		<delete tableName="role">
+			<where>role='Administrator'</where>
+		</delete>
+	</changeSet>
+    
+	<changeSet id="20090831-1039-38-scheduler_task_config" author="bwolfe">
+		<preConditions onFail="MARK_RAN"><not><columnExists tableName="scheduler_task_config" columnName="uuid"/></not></preConditions>
+		<comment>Adding "uuid" column to scheduler_task_config table</comment>
+		<addColumn tableName="scheduler_task_config">
+			<column name="uuid" type="char(38)" />
+		</addColumn>
+	</changeSet>
+	
+	<changeSet id="20090831-1040-scheduler_task_config" author="bwolfe">
+		<preConditions onFail="MARK_RAN"><or><dbms type="mysql" /><dbms type="oracle" /><dbms type="mssql" /></or></preConditions>
+		<comment>Generating UUIDs for all rows in scheduler_task_config table via built in uuid function.</comment>
+		<update tableName="scheduler_task_config" >
+			<column name="uuid" valueNumeric="name-of-uuid-function" />
+			<where>uuid is null</where>
+		</update>
+		<modifySql dbms="mysql"><replace replace="name-of-uuid-function" with="UUID()"/></modifySql>
+		<modifySql dbms="oracle"><replace replace="name-of-uuid-function" with="SYS_GUID()"/></modifySql>
+		<modifySql dbms="mssql"><replace replace="name-of-uuid-function" with="NEWSEQUENTIALID()"/></modifySql>
+	</changeSet>
+	
+	<changeSet id="20090831-1041-scheduler_task_config" author="bwolfe">
+		<preConditions onFail="MARK_RAN">
+			<not>
+				<or>
+					<dbms type="mysql" />
+					<dbms type="oracle" />
+					<dbms type="mssql" />
+				</or>
+			</not>
+		</preConditions>
+		<comment>
+			Adding UUIDs to all rows in scheduler_task_config table via a java class for non mysql/oracle/mssql databases.
+		</comment>
+		<customChange class="org.openmrs.util.databasechange.GenerateUuid">
+			<param name="tableNames">
+				scheduler_task_config
+			</param>
+			<param name="columnName" value="uuid"/>
+			<param name="idExceptions">
+				scheduler_task_config=task_config_id
+			</param>
+		</customChange>
+	</changeSet>
+	
+	<changeSet id="20090831-1042-scheduler_task_config" author="bwolfe">
+		<comment>
+			Now that UUID generation is done for scheduler_task_config, set the uuid column to not "NOT NULL" 
+		</comment>
+		<addNotNullConstraint tableName="scheduler_task_config" columnName="uuid" columnDataType="char(38)"/>
+	</changeSet>
+	
+	<changeSet id="20090831-1043-scheduler_task_config" author="bwolfe">
+		<preConditions onFail="MARK_RAN"><not><indexExists indexName="scheduler_task_config_uuid_index"/></not></preConditions>
+		<comment>Creating unique index on scheduler_task_config.uuid column</comment>
+		<createIndex tableName="scheduler_task_config" unique="true" indexName="scheduler_task_config_uuid_index" >
+			<column name="uuid" />
+		</createIndex>
+	</changeSet>
+	
+	<changeSet id="20090907-1" author="Knoll_Frank">
+		<comment>Rename the concept_source.date_voided column to date_retired</comment>
+		<renameColumn tableName="concept_source" oldColumnName="date_voided" newColumnName="date_retired" columnDataType="datetime" />
+	</changeSet>
+	<changeSet id="20090907-2" author="Knoll_Frank">
+		<comment>Rename the concept_source.voided_by column to retired_by</comment>	
+		<dropForeignKeyConstraint baseTableName="concept_source" constraintName="user_who_voided_concept_source" />
+		<renameColumn tableName="concept_source" oldColumnName="voided_by" newColumnName="retired_by" columnDataType="int" />
+		<addForeignKeyConstraint baseColumnNames="retired_by" baseTableName="concept_source" constraintName="user_who_retired_concept_source" deferrable="false" initiallyDeferred="false" referencedColumnNames="user_id" referencedTableName="users" />
+	</changeSet>
+	<changeSet id="20090907-3" author="Knoll_Frank">
+		<comment>Rename the concept_source.voided column to retired</comment>
+		<renameColumn tableName="concept_source" oldColumnName="voided" newColumnName="retired" columnDataType="smallint" />
+	</changeSet>
+	<changeSet id="20090907-4" author="Knoll_Frank">
+		<comment>Rename the concept_source.void_reason column to retire_reason</comment>
+		<renameColumn tableName="concept_source" oldColumnName="void_reason" newColumnName="retire_reason" columnDataType="varchar(255)" />
+	</changeSet>
+	
 	<changeSet id="200908291938-1" author="dthomas">
-		<comment>set hl7_code in ConceptSource to null</comment>
+		<comment>set hl7_code in ConceptSource to nullable column</comment>
 		<modifyColumn tableName="concept_source">
 			<column name="hl7_code" type="varchar(50)">
 				<constraints nullable="true" />
@@ -2510,16 +2606,111 @@
 		</modifyColumn>
 	</changeSet>
 	
-	<changeSet id="200908291938-2" author="dthomas">
-		<comment>set voided in ConceptSource to tinyint(1) not null</comment>
+	<changeSet id="200908291938-2a" author="dthomas">
+		<comment>set retired in ConceptSource to tinyint(1) not null</comment>
 		<modifyColumn tableName="concept_source">
-			<column name="voided" type="tinyint(1)">
+			<column name="retired" type="tinyint(1)">
 				<constraints nullable="false" />
 			</column>
 		</modifyColumn>
 	</changeSet>
 	
-	<changeSet id="200910271049-1" author="bwolfe">
+    <changeSet id="200909281005-1" author="nribeka">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="logic_rule_token"/>
+            </not>
+        </preConditions>
+        <comment>Create logic token table to store all registered token</comment>
+        <createTable tableName="logic_rule_token">
+            <column name="logic_rule_token_id" type="int">
+                <constraints primaryKey="true" nullable="false" />
+            </column>
+            <column name="creator" type="int">
+                <constraints nullable="false"/>
+            </column>
+            <column defaultValueDate="0002-11-30T00:00:00.0" name="date_created" type="datetime">
+                <constraints nullable="false"/>
+            </column>
+            <column name="changed_by" type="int"/>
+            <column name="date_changed" type="datetime"/>
+            <column name="token" type="varchar(512)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="class_name" type="varchar(512)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="state" type="varchar(512)" />
+        </createTable>
+    </changeSet>
+    
+    <changeSet id="200909281005-2" author="nribeka">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="logic_rule_token_tag"/>
+            </not>
+        </preConditions>
+        <comment>Create logic token tag table to store all tag associated with a token</comment>
+        <createTable tableName="logic_rule_token_tag">
+            <column name="logic_rule_token_id" type="int">
+                <constraints primaryKey="true" nullable="false" />
+            </column>
+            <column name="tag" type="varchar(512)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+    
+    <changeSet id="200909281005-3" author="nribeka">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <foreignKeyConstraintExists foreignKeyName="token_tag"/>
+            </not>
+        </preConditions>
+        <comment>Adding foreign key for primary key of logic_rule_token_tag</comment>
+        <addForeignKeyConstraint baseTableName="logic_rule_token_tag" baseColumnNames="logic_rule_token_id" constraintName="token_tag"
+                                 referencedTableName="logic_rule_token" referencedColumnNames="logic_rule_token_id" />
+    </changeSet>
+    
+    <changeSet id="200909281005-4a" author="nribeka">
+        <preConditions onFail="MARK_RAN">
+            <foreignKeyConstraintExists foreignKeyName="token_tag_creator"/>
+        </preConditions>
+        <comment>Removing bad foreign key for logic_rule_token.creator</comment>
+        <dropForeignKeyConstraint baseTableName="logic_rule_token" constraintName="token_tag_creator" />
+    </changeSet>
+    
+    <changeSet id="200909281005-4aa" author="nribeka">
+        <preConditions onFail="MARK_RAN">
+            <foreignKeyConstraintExists foreignKeyName="token_creator"/>
+        </preConditions>
+        <comment>Removing bad foreign key for logic_rule_token.creator</comment>
+        <dropForeignKeyConstraint baseTableName="logic_rule_token" constraintName="token_creator" />
+    </changeSet>
+    
+    <changeSet id="200909281005-4b" author="nribeka">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <foreignKeyConstraintExists foreignKeyName="token_creator_fk"/>
+            </not>
+        </preConditions>
+        <comment>Adding correct foreign key for logic_rule_token.creator</comment>
+        <addForeignKeyConstraint baseTableName="logic_rule_token" baseColumnNames="creator" constraintName="token_creator_fk"
+                                 referencedTableName="users" referencedColumnNames="user_id" />
+    </changeSet>
+    
+    <changeSet id="200909281005-5a" author="nribeka">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <foreignKeyConstraintExists foreignKeyName="token_changed_by"/>
+            </not>
+        </preConditions>
+        <comment>Adding foreign key for logic_rule_token.changed_by</comment>
+        <addForeignKeyConstraint baseTableName="logic_rule_token" baseColumnNames="changed_by" constraintName="token_changed_by"
+                                 referencedTableName="users" referencedColumnNames="user_id" />
+    </changeSet>
+   
+    <changeSet id="200910271049-1" author="bwolfe">
 		<comment>Setting core field types to have standard UUIDs</comment>
 		<update tableName="field_type"><column name="uuid" value="8d5e7d7c-c2cc-11de-8d13-0010c6dffd0f"/><where>field_type_id= '1' and name = 'Concept'</where></update>
 		<update tableName="field_type"><column name="uuid" value="8d5e8196-c2cc-11de-8d13-0010c6dffd0f"/><where>field_type_id= '2' and name = 'Database element'</where></update>
@@ -2613,5 +2804,323 @@
 		<update tableName="role"><column name="uuid" value="8d94f280-c2cc-11de-8d13-0010c6dffd0f"/><where> role = 'Provider'</where></update>
 		<update tableName="role"><column name="uuid" value="8d94f852-c2cc-11de-8d13-0010c6dffd0f"/><where> role = 'System Developer'</where></update>
 	</changeSet>
-	 
+	
+	<changeSet id="200912071501-1" author="arthurs"> 
+		<comment>Change name for patient.searchMaxResults global property to person.searchMaxResults</comment> 
+		<update tableName="global_property"><column name="property" value="person.searchMaxResults"/><where> property = 'patient.searchMaxResults'</where></update> 
+	</changeSet>
+
+	<changeSet id="200912141552" author="madanmohan">
+		<preConditions onFail="MARK_RAN">
+			<not>
+				<columnExists tableName="encounter" columnName="changed_by" />
+			</not>
+		</preConditions>
+		<comment>
+			Add changed_by column to encounter table
+		</comment>
+		<addColumn tableName="encounter">
+			<column name="changed_by" type="int" />
+		</addColumn>
+		<addForeignKeyConstraint constraintName="encounter_changed_by"
+			baseTableName="encounter" baseColumnNames="changed_by"
+			referencedTableName="users" referencedColumnNames="user_id" />
+	</changeSet>
+		
+	<changeSet id="200912141553" author="madanmohan">
+		<preConditions onFail="MARK_RAN">
+			<not>
+				<columnExists tableName="encounter" columnName="date_changed" />
+			</not>
+		</preConditions>
+		<comment>
+			Add date_changed column to encounter table
+		</comment>
+		<addColumn tableName="encounter">
+			<column name="date_changed" type="datetime" />
+		</addColumn>
+	</changeSet>	
+
+	<changeSet id="200912031842" author="djazayeri">
+		<!-- This is safe to re-run, and the pre-condition is hard to write, so I'm not writing one -->
+		<comment>Changing encounter.provider_id to reference person instead of users</comment>
+		<dropForeignKeyConstraint baseTableName="encounter" constraintName="encounter_provider"/>
+		<addForeignKeyConstraint baseTableName="encounter" baseColumnNames="provider_id" constraintName="encounter_provider"
+                                 referencedTableName="person" referencedColumnNames="person_id"/>
+	</changeSet>
+	
+	<changeSet id="200912031846-1" author="djazayeri">
+		<preConditions onFail="MARK_RAN">
+			<not>
+				<columnExists tableName="users" columnName="person_id"/>
+			</not>
+		</preConditions>
+		<comment>Adding person_id column to users table</comment>
+		<dropForeignKeyConstraint baseTableName="users" constraintName="person_id_for_user"/>
+		<addColumn tableName="users">
+			<column name="person_id" type="int"/>
+		</addColumn>
+		<update tableName="users">
+			<column name="person_id" valueNumeric="user_id"/>
+		</update>
+	</changeSet>
+
+	<changeSet id="200912031846-2" author="djazayeri">
+		<preConditions onFail="MARK_RAN">
+			<not>
+				<sqlCheck expectedResult="0">
+					select count(*) from users where person_id is null
+				</sqlCheck>
+			</not>
+		</preConditions>
+		<comment>Populating users.person_id</comment>
+		<update tableName="users">
+			<column name="person_id" valueNumeric="user_id"/>
+			<where>person_id is null</where>
+		</update>
+		<addNotNullConstraint tableName="users" columnName="person_id" columnDataType="int"/>
+	</changeSet>
+
+	<changeSet id="200912031846-3" author="djazayeri">
+		<preConditions onFail="MARK_RAN">
+			<not>
+				<foreignKeyConstraintExists foreignKeyName="person_id_for_user"/>
+			</not>
+		</preConditions>
+		<comment>Restoring foreign key constraint on users.person_id</comment>
+		<addForeignKeyConstraint constraintName="person_id_for_user"
+								 baseTableName="users" baseColumnNames="person_id"
+								 referencedTableName="person" referencedColumnNames="person_id"/>
+		<addAutoIncrement tableName="users" columnName="user_id" columnDataType="int"/>
+	</changeSet>
+	
+	<changeSet id="200912091819" author="djazayeri">
+		<preConditions onFail="MARK_RAN">
+			<not>
+				<columnExists tableName="users" columnName="retired"/>
+			</not>
+		</preConditions>
+		<comment>Adding retired metadata columns to users table</comment>
+		<addColumn tableName="users">
+			<column name="retired" type="tinyint" defaultValueNumeric="0">
+				<constraints nullable="false"/>
+			</column>
+			<column name="retired_by" type="int(11)"/>
+			<column name="date_retired" type="datetime" />
+			<column name="retire_reason" type="varchar(255)" defaultValue="null"/>
+		</addColumn>
+		<addForeignKeyConstraint constraintName="user_who_retired_this_user"
+			baseTableName="users" baseColumnNames="retired_by"
+			referencedTableName="users" referencedColumnNames="user_id"
+		/>
+	</changeSet>
+	
+	<changeSet id="200912091820" author="djazayeri">
+		<preConditions onFail="MARK_RAN">
+			<and>
+				<columnExists tableName="users" columnName="retired"/>
+				<columnExists tableName="users" columnName="voided"/>
+			</and>
+		</preConditions>
+		<comment>Migrating voided metadata to retired metadata for users table</comment>
+		<update tableName="users">
+			<column name="retired" valueNumeric="voided"/>
+			<column name="retired_by" valueNumeric="voided_by"/>
+			<column name="date_retired" valueNumeric="date_voided"/>
+			<column name="retire_reason" valueNumeric="void_reason"/>
+		</update>
+	</changeSet>
+	
+	<changeSet id="200912091821" author="djazayeri">
+		<preConditions onFail="HALT">
+			<and>
+				<columnExists tableName="users" columnName="retired"/>
+				<columnExists tableName="users" columnName="voided"/>
+				<sqlCheck expectedResult="0">
+					select count(*) from users where voided != retired
+				</sqlCheck>
+			</and>
+		</preConditions>
+		<comment>Dropping voided metadata columns from users table</comment>
+		<dropForeignKeyConstraint baseTableName="users" constraintName="user_who_voided_user"/>
+		<dropColumn tableName="users" columnName="voided"/>
+		<dropColumn tableName="users" columnName="voided_by"/>
+		<dropColumn tableName="users" columnName="date_voided"/>
+		<dropColumn tableName="users" columnName="void_reason"/>
+	</changeSet>
+	
+	<changeSet id="200912140038" author="djazayeri">
+		<preConditions onFail="MARK_RAN"><not><columnExists tableName="users" columnName="uuid"/></not></preConditions>
+		<comment>Adding "uuid" column to users table</comment>
+		<addColumn tableName="users">
+			<column name="uuid" type="char(38)" />
+		</addColumn>
+	</changeSet>
+
+	<changeSet id="200912140039" author="djazayeri">
+		<preConditions onFail="MARK_RAN"><or><dbms type="mysql" /><dbms type="oracle" /><dbms type="mssql" /></or></preConditions>
+		<comment>Generating UUIDs for all rows in users table via built in uuid function.</comment>
+		<update tableName="users" >
+			<column name="uuid" valueNumeric="name-of-uuid-function" />
+			<where>uuid is null</where>
+		</update>
+		<modifySql dbms="mysql"><replace replace="name-of-uuid-function" with="UUID()"/></modifySql>
+		<modifySql dbms="oracle"><replace replace="name-of-uuid-function" with="SYS_GUID()"/></modifySql>
+		<modifySql dbms="mssql"><replace replace="name-of-uuid-function" with="NEWSEQUENTIALID()"/></modifySql>
+	</changeSet>
+
+	<changeSet id="200912140040" author="djazayeri">
+		<preConditions onFail="MARK_RAN">
+			<not>
+				<or>
+					<dbms type="mysql" />
+					<dbms type="oracle" />
+					<dbms type="mssql" />
+				</or>
+			</not>
+		</preConditions>
+		<comment>
+			Adding UUIDs to users table via a java class. (This will take a long time on large databases)
+		</comment>
+		<customChange class="org.openmrs.util.databasechange.GenerateUuid">
+			<param name="tableNames">
+				users
+			</param>
+			<param name="columnName" value="uuid"/>
+			<param name="idExceptions">
+				users_id=user_id
+			</param>
+		</customChange>
+	</changeSet>
+
+	<changeSet id="200912151032" author="n.nehete">
+		<preConditions onFail="HALT">
+			<sqlCheck expectedResult="All encounters have a non-null encounter type.">
+				<![CDATA[
+					SELECT case when count(*) > 0 
+							then 'There are rows in the encounter table with an empty encounter type.  Encounter type is a required field and must be populated.  These encounters need to be fixed manually by setting an appropriate encounter type.' 
+							else 'All encounters have a non-null encounter type.' end 
+					FROM encounter where encounter_type is null;
+				]]>
+			</sqlCheck>
+		</preConditions>	
+		<comment>Encounter Type should not be null when saving an Encounter</comment>
+		<addNotNullConstraint tableName="encounter" columnName="encounter_type" columnDataType="int" />
+	</changeSet>	
+	
+	<changeSet id="201001072007" author="upul">
+		<preConditions onFail="MARK_RAN">
+			<not><columnExists tableName="scheduler_task_config" columnName="last_execution_time"/></not>
+		</preConditions>
+		<comment>
+			Add last execution time column to scheduler_task_config table
+		</comment>		
+		<addColumn tableName="scheduler_task_config">
+			<column name="last_execution_time" type="DATETIME">
+				<constraints nullable="true"/>
+			</column>
+		</addColumn>
+	</changeSet>    	
+	
+    <changeSet id="20091001-1023" author="rcrichton">
+    	<preConditions onFail="MARK_RAN">
+    		<not>
+    			<columnExists tableName="relationship_type" columnName="retired"/>
+    		</not>
+    	</preConditions>
+		<comment>add retired column to relationship_type table</comment>
+		<addColumn tableName="relationship_type">
+			<column name="retired" type="tinyint(1)" defaultValue="0">
+				<constraints nullable="false" />
+			</column>
+		</addColumn>
+	</changeSet>
+	
+	<changeSet id="20091001-1024" author="rcrichton">
+		<preConditions onFail="MARK_RAN">
+    		<not>
+    			<columnExists tableName="relationship_type" columnName="retired_by"/>
+    		</not>
+    	</preConditions>
+		<comment>add retired_by column to relationship_type table</comment>
+		<addColumn tableName="relationship_type">
+			<column name="retired_by" type="int"/>
+		</addColumn>
+	</changeSet>
+	
+	<changeSet id="20091001-1025" author="rcrichton">
+		<preConditions onFail="MARK_RAN">
+			<not><foreignKeyConstraintExists foreignKeyName="user_who_retired_relationship_type"/></not>
+		</preConditions>
+		<comment>
+			Create the foreign key from the relationship.retired_by to users.user_id.
+		</comment>
+		<addForeignKeyConstraint constraintName="user_who_retired_relationship_type"
+			baseTableName="relationship_type" baseColumnNames="retired_by"
+			referencedTableName="users" referencedColumnNames="user_id" />
+    </changeSet>
+	
+	<changeSet id="20091001-1026" author="rcrichton">
+		<preConditions onFail="MARK_RAN">
+    		<not>
+    			<columnExists tableName="relationship_type" columnName="date_retired"/>
+    		</not>
+    	</preConditions>
+		<comment>add date_retired column to relationship_type table</comment>
+		<addColumn tableName="relationship_type">
+			<column name="date_retired" type="datetime" />
+		</addColumn>
+	</changeSet>
+	
+	<changeSet id="20091001-1027" author="rcrichton">
+		<preConditions onFail="MARK_RAN">
+    		<not>
+    			<columnExists tableName="relationship_type" columnName="retire_reason"/>
+    		</not>
+    	</preConditions>
+		<comment>add retire_reason column to relationship_type table</comment>
+		<addColumn tableName="relationship_type">
+			<column name="retire_reason" type="varchar(255)" />
+		</addColumn>
+	</changeSet>
+
+	<changeSet id="20091215-0208" author="sunbiz">
+		<comment>
+			Prune concepts rows orphaned in concept_numeric tables
+		</comment>
+		<sql>
+			<![CDATA[
+				DELETE concept_numeric FROM concept_numeric
+				INNER JOIN concept ON concept.concept_id = concept_numeric.concept_id
+				AND concept.datatype_id NOT IN (1,12)
+			]]>
+		</sql>
+	</changeSet>
+
+	<changeSet id="20091215-0209" author="jmiranda">
+		<comment>
+			Prune concepts rows orphaned in concept_complex tables
+		</comment>
+		<sql>
+			<![CDATA[
+				DELETE concept_complex FROM concept_complex
+				INNER JOIN concept ON concept.concept_id = concept_complex.concept_id 
+				AND concept.datatype_id NOT IN (5, 13)
+			]]>
+		</sql>
+	</changeSet>
+
+	<changeSet id="20091215-0210" author="jmiranda">
+		<comment>
+			Prune concepts rows orphaned in concept_derived tables
+		</comment>
+		<sql>
+			<![CDATA[			
+				DELETE concept_derived FROM concept_derived
+				INNER JOIN concept ON concept.concept_id = concept_derived.concept_id 
+				AND concept.datatype_id <> 11	
+			]]>
+		</sql>
+	</changeSet>
+	
 </databaseChangeLog>

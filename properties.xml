@@ -8,8 +8,8 @@
 	<property name="webapp.description" value="An Open-Source EMR System" />
 
 	<!-- Properties for running unit tests and webapp [un]deploy with tomcat -->
-	<property name="tomcat.home" value="${env.CATALINA_HOME}"/>
-	<property name="catalina.home" value="${env.CATALINA_HOME}"/>
+    <property name="tomcat.home" value="${env.CATALINA_HOME}"/>
+    <property name="catalina.home" value="${env.CATALINA_HOME}"/>
     <property name="tomcat.server" value="localhost" />
 	<property name="tomcat.port" value="8080" />
     <property name="tomcat.manager.url" value="http://${tomcat.server}:${tomcat.port}/manager" />
@@ -46,7 +46,7 @@
     <path id="api.compile.classpath">
 		<!--<fileset dir="${activemq.dir}" includes="*.jar" />-->
 		<fileset dir="${antlr.dir}" includes="*.jar" />
-    	<fileset dir="${cglib.dir}" includes="*.jar" /> 
+    	<fileset dir="${cglib.dir}" includes="*.jar" />
 		<fileset dir="${commons-io.dir}" includes="*.jar" />
     	<fileset dir="${commons-lang.dir}" includes="*.jar"/>
     	<fileset dir="${commons-collections.dir}" includes="*.jar" />
@@ -82,6 +82,7 @@
 		<fileset dir="${commons-lang.dir}" includes="*.jar" />
 		<fileset dir="${commons-beanutils.dir}" includes="*.jar" />
 		<fileset dir="${commons-collections.dir}" includes="*.jar" />
+		<fileset dir="${commons-fileupload.dir}" includes="*.jar" />
 		<fileset dir="${dwr.dir}" includes="*.jar" />
 		<fileset dir="${hibernate.dir}" includes="*.jar" />
     	<fileset dir="${hl7api.dir}" includes="*.jar" />

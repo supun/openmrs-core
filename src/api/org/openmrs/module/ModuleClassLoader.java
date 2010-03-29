@@ -42,6 +42,7 @@ import java.util.WeakHashMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.openmrs.api.APIException;
 import org.openmrs.util.OpenmrsClassLoader;
 import org.openmrs.util.OpenmrsUtil;
 
@@ -262,6 +263,20 @@ public class ModuleClassLoader extends URLClassLoader {
 	protected void collectRequiredModuleImports() {
 		// collect imported modules (exclude duplicates)
 		Map<String, Module> publicImportsMap = new WeakHashMap<String, Module>(); //<module ID, Module>
+
+		for(String moduleId : ModuleConstants.CORE_MODULES.keySet()) { 
+			Module module = ModuleFactory.getModuleById(moduleId); 
+			
+			if (module == null && !ModuleUtil.ignoreCoreModules()) { 
+				log.error("Unable to find an openmrs core loaded module with id: " + moduleId);  
+				throw new APIException("Should not be here.  All 'core' required modules by the api should be started and their classloaders should be available"); 
+			} 
+			
+			// if this is already the classloader for one of the core modules, don't put it on the import list 
+			if (module != null && !moduleId.equals(this.getModule().getModuleId())) { 
+				publicImportsMap.put(moduleId, module); 
+			}
+		} 
 		
 		for (String requiredPackage : getModule().getRequiredModules()) {
 			Module requiredModule = ModuleFactory.getModuleByPackage(requiredPackage);
@@ -473,7 +488,7 @@ public class ModuleClassLoader extends URLClassLoader {
 		// add this module to the list of modules we've tried already
 		seenModules.add(getModule().getModuleId());
 		
-		// look through this module's imports to see if it the class
+		// look through this module's imports to see if the class
 		// can be loaded from them
 		for (Module publicImport : requiredModules) {
 			if (seenModules.contains(publicImport.getModuleId()))
@@ -481,7 +496,10 @@ public class ModuleClassLoader extends URLClassLoader {
 			
 			ModuleClassLoader mcl = ModuleFactory.getModuleClassLoader(publicImport);
 			
-			result = mcl.loadClass(name, resolve, requestor, seenModules);
+			// the mcl will be null if a required module isn't started yet (like at openmrs startup)
+			if (mcl != null) {
+				result = mcl.loadClass(name, resolve, requestor, seenModules);
+			}
 			
 			if (result != null) {
 				/*if (resolve) {
@@ -762,7 +780,8 @@ public class ModuleClassLoader extends URLClassLoader {
 			
 			ModuleClassLoader mcl = ModuleFactory.getModuleClassLoader(publicImport);
 			
-			result = mcl.findResource(name, requestor, seenModules);
+			if (mcl != null)
+				result = mcl.findResource(name, requestor, seenModules);
 			
 			if (result != null) {
 				break; // found resource in publicly imported module
@@ -814,7 +833,8 @@ public class ModuleClassLoader extends URLClassLoader {
 			
 			ModuleClassLoader mcl = ModuleFactory.getModuleClassLoader(publicImport);
 			
-			mcl.findResources(result, name, requestor, seenModules);
+			if (mcl != null)
+				mcl.findResources(result, name, requestor, seenModules);
 		}
 		
 	}

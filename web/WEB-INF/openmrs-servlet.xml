@@ -76,12 +76,9 @@
 				<prop key="admin/patients/patientIdentifierType.list">patientIdentifierTypeList</prop>
 				<prop key="admin/patients/patientIdentifierType.form">patientIdentifierTypeForm</prop>
 
-				<prop key="admin/person/relationship.list">relationshipList</prop>
-				<prop key="admin/person/relationship.form">relationshipForm</prop>
 				<prop key="admin/person/relationshipType.list">relationshipTypeList</prop>
 				<prop key="admin/person/relationshipType.form">relationshipTypeForm</prop>
 				<prop key="admin/person/relationshipTypeViews.form">relationshipTypeViewForm</prop>
-				<prop key="admin/person/personAttributeType.list">personAttributeTypeList</prop>
 				<prop key="admin/person/personAttributeType.form">personAttributeTypeForm</prop>
 				<prop key="admin/person/addPerson.htm">addPerson</prop>
 
@@ -89,7 +86,6 @@
 				<prop key="admin/observations/personObs.form">personObsForm</prop>
 
 				<prop key="admin/users/user.list">userList</prop>
-				<prop key="admin/users/user.form">userForm</prop>
 				<prop key="admin/users/role.list">roleList</prop>
 				<prop key="admin/users/role.form">roleForm</prop>
 				<prop key="admin/users/alert.list">alertList</prop>
@@ -100,9 +96,10 @@
 				<prop key="admin/encounters/encounter.form">encounterForm</prop>
 				<prop key="admin/encounters/encounterType.list">encounterTypeList</prop>
 				<prop key="admin/encounters/encounterType.form">encounterTypeForm</prop>
-				<prop key="admin/encounters/location.list">locationList</prop>
-				<prop key="admin/encounters/location.form">locationForm</prop>
 				<prop key="admin/encounters/encounterDisplay.list">encounterDisplayController</prop>
+
+				<prop key="admin/locations/location.list">locationList</prop>
+				<prop key="admin/locations/location.form">locationForm</prop>
 
 				<prop key="dictionary/concept.form">conceptForm</prop>
 				<prop key="dictionary/conceptStats.form">conceptStatsForm</prop>
@@ -415,20 +412,6 @@
 	<!-- ============================= -->
 	<!-- ======  Person Sector  ====== -->
 	<!-- ============================= -->
-	<!-- **  Relationship   ** -->
-	<bean id="relationshipList"
-		class="org.openmrs.web.controller.person.RelationshipListController">
-		<property name="commandName"><value>relationshipList</value></property>
-		<property name="formView"><value>/admin/person/relationshipList</value></property>
-		<property name="successView"><value>relationship.list</value></property>
-	</bean>
-	<bean id="relationshipForm"
-		class="org.openmrs.web.controller.person.RelationshipFormController">
-		<property name="commandName"><value>person</value></property>
-		<property name="formView"><value>/admin/person/relationshipForm</value></property>
-		<property name="successView"><value>relationship.list</value></property>
-	</bean>
-	<!-- **  /Relationship ** -->
 	<!-- **  Relationship Type   ** -->
 	<bean id="relationshipTypeList"
 		class="org.openmrs.web.controller.person.RelationshipTypeListController">
@@ -452,15 +435,6 @@
 		<property name="successView"><value>relationshipType.list</value></property>
 	</bean>
 	<!-- ** /Relationship Type   ** -->
-
-	<!-- **  PersonAttribute Type   ** -->
-	<bean id="personAttributeTypeList"
-		class="org.openmrs.web.controller.person.PersonAttributeTypeListController">
-		<property name="sessionForm"><value>true</value></property>
-		<property name="commandName"><value>personAttributeTypeList</value></property>
-		<property name="formView"><value>/admin/person/personAttributeTypeList</value></property>
-		<property name="successView"><value>personAttributeType.list</value></property>
-	</bean>
 
 	<bean id="personAttributeTypeValidator" class="org.openmrs.validator.PersonAttributeTypeValidator" />
 	<bean id="personAttributeTypeForm"
@@ -496,15 +470,6 @@
 		<property name="successView"><value>user.list</value></property>
 	</bean>
 	<bean id="userValidator" class="org.openmrs.validator.UserValidator" />
-	<bean id="userForm" class="org.openmrs.web.controller.user.UserFormController">
-		<property name="sessionForm"><value>true</value></property>
-		<property name="commandName"><value>user</value></property>
-		<property name="validator">
-			<ref bean="userValidator" />
-		</property>
-		<property name="formView"><value>/admin/users/userForm</value></property>
-		<property name="successView"><value>user.list</value></property>
-	</bean>
 	<!-- ** /User ** -->
 	<!-- ** Role  ** -->
 	<bean id="roleList" class="org.openmrs.web.controller.user.RoleListController">
@@ -598,7 +563,7 @@
 	<!-- ** Location ** -->
 	<bean id="locationList" class="org.openmrs.web.controller.encounter.LocationListController">
 		<property name="commandName"><value>locationList</value></property>
-		<property name="formView"><value>/admin/encounters/locationList</value></property>
+		<property name="formView"><value>/admin/locations/locationList</value></property>
 		<property name="successView"><value>location.list</value></property>
 	</bean>
 
@@ -609,7 +574,7 @@
 		<property name="validator">
 			<ref bean="locationValidator" />
 		</property>
-		<property name="formView"><value>/admin/encounters/locationForm</value></property>
+		<property name="formView"><value>/admin/locations/locationForm</value></property>
 		<property name="successView"><value>location.list</value></property>
 	</bean>
 	<!-- ** /Location ** -->
@@ -1038,6 +1003,9 @@
 				<prop key="java.lang.String">org.openmrs.web.taglib.fieldgen.StringHandler</prop>
 				<prop key="org.openmrs.Patient">
 					org.openmrs.web.taglib.fieldgen.PatientHandler
+				</prop>
+				<prop key="org.openmrs.Person">
+					org.openmrs.web.taglib.fieldgen.PersonHandler
 				</prop>
 				<prop key="org.openmrs.Concept">
 					org.openmrs.web.taglib.fieldgen.ConceptHandler

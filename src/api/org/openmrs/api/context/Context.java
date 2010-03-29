@@ -56,7 +56,7 @@ import org.openmrs.arden.ArdenService;
 import org.openmrs.hl7.HL7Service;
 import org.openmrs.logic.LogicService;
 import org.openmrs.messagesource.MessageSourceService;
-import org.openmrs.module.MandatoryModuleException;
+import org.openmrs.module.ModuleMustStartException;
 import org.openmrs.module.ModuleUtil;
 import org.openmrs.notification.AlertService;
 import org.openmrs.notification.MessageException;
@@ -683,11 +683,19 @@ public class Context {
 	}
 	
 	/**
-	 * Used to clear cached objects out of a session in the middle of a unit of work.
+	 * Clears cached changes made so far during this unit of work without writing them to the database
 	 */
 	public static void clearSession() {
 		log.trace("clearing session");
 		getContextDAO().clearSession();
+	}
+	
+	/**
+	 * Forces any changes made so far in this unit of work to be written to the database
+	 */
+	public static void flushSession() {
+		log.trace("flushing session");
+		getContextDAO().flushSession();
 	}
 	
 	/**
@@ -724,11 +732,13 @@ public class Context {
 	 * @param props Runtime properties to use for startup
 	 * @throws InputRequiredException if the {@link DatabaseUpdater} has determined that updates
 	 *             cannot continue without input from the user
+	 * @throws DatabaseUpdateException if database updates are required, see {@link DatabaseUpdater#executeChangelog()}
+	 * @throws ModuleMustStartException if a module that should be started is not able to
 	 * @see InputRequiredException#getRequiredInput() InputRequiredException#getRequiredInput() for
 	 *      the required question/datatypes
 	 */
 	public static void startup(Properties props) throws DatabaseUpdateException, InputRequiredException,
-	                                            MandatoryModuleException {
+	                                            ModuleMustStartException {
 		// do any context database specific startup
 		getContextDAO().startup(props);
 		
@@ -764,6 +774,8 @@ public class Context {
 	 * @param properties Other startup properties
 	 * @throws InputRequiredException if the {@link DatabaseUpdater} has determined that updates
 	 *             cannot continue without input from the user
+	 * @throws DatabaseUpdateException if the database must be updated.  See {@link DatabaseUpdater}
+	 * @throws ModuleMustStartException if a module that should start is not able to
 	 * @see #startup(Properties)
 	 * @see InputRequiredException#getRequiredInput() InputRequiredException#getRequiredInput() for
 	 *      the required question/datatypes
@@ -771,7 +783,7 @@ public class Context {
 	public static void startup(String url, String username, String password, Properties properties)
 	                                                                                               throws DatabaseUpdateException,
 	                                                                                               InputRequiredException,
-	                                                                                               MandatoryModuleException {
+	                                                                                               ModuleMustStartException {
 		if (properties == null)
 			properties = new Properties();
 		

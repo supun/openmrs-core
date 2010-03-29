@@ -39,6 +39,7 @@ import org.openmrs.Location;
 import org.openmrs.Obs;
 import org.openmrs.api.ConceptService;
 import org.openmrs.api.EncounterService;
+import org.openmrs.api.LocationService;
 import org.openmrs.api.ObsService;
 import org.openmrs.api.context.Context;
 import org.openmrs.util.OpenmrsConstants;
@@ -102,6 +103,7 @@ public class QuickReportServlet extends HttpServlet {
 	                                                                                                               throws ServletException {
 		ObsService os = Context.getObsService();
 		EncounterService es = Context.getEncounterService();
+		LocationService ls = Context.getLocationService();
 		ConceptService cs = Context.getConceptService();
 		
 		DateFormat dateFormat = Context.getDateFormat();
@@ -176,6 +178,7 @@ public class QuickReportServlet extends HttpServlet {
 	private void doAttendedClinic(VelocityContext velocityContext, PrintWriter report, HttpServletRequest request)
 	                                                                                                              throws ServletException {
 		EncounterService es = Context.getEncounterService();
+		LocationService ls = Context.getLocationService();
 		
 		DateFormat dateFormat = Context.getDateFormat();
 		velocityContext.put("date", dateFormat);
@@ -222,10 +225,10 @@ public class QuickReportServlet extends HttpServlet {
 		Collection<Encounter> encounters = null;
 		
 		if (location == null || location.equals(""))
-			encounters = es.getEncounters(start, end);
+			encounters = es.getEncounters(null, null, start, end, null, null, null, true);
 		else {
-			Location locationObj = es.getLocation(Integer.valueOf(location));
-			encounters = es.getEncounters(locationObj, start, end);
+			Location locationObj = ls.getLocation(Integer.valueOf(location));
+			encounters = es.getEncounters(null, locationObj, start, end, null, null, null, true);
 		}
 		
 		if (encounters != null) {

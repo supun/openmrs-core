@@ -24,6 +24,7 @@ import org.openmrs.logic.datasource.LogicDataSource;
 import org.openmrs.logic.result.Result;
 import org.openmrs.logic.result.Result.Datatype;
 import org.openmrs.logic.rule.RuleParameterInfo;
+import org.springframework.transaction.annotation.Transactional;
 
 /**
  * The Logic Service provides a mechanism for both registering and consuming business logic in the
@@ -67,22 +68,46 @@ import org.openmrs.logic.rule.RuleParameterInfo;
  * @see org.openmrs.logic.LogicCriteria
  * @see org.openmrs.logic.datasource.LogicDataSource
  */
+@Transactional
 public interface LogicService {
 	
 	/**
 	 * Fetch all known (registered) tokens
 	 * 
 	 * @return all known (registered) tokens
+	 * @deprecated use {@link #getAllTokens()}
 	 */
+	@Deprecated
 	public Set<String> getTokens();
+	
+	/**
+	 * Fetch all known (registered) tokens
+	 * 
+	 * @return all known (registered) tokens
+	 * @should return all registered token
+	 */
+	public List<String> getAllTokens();
 	
 	/**
 	 * Fetch all known (registered) tokens matching a given string
 	 * 
 	 * @param token full or partial token name
 	 * @return all tokens containing the given string
+	 * @deprecated use {@link #getTokens(String)}
 	 */
+	@Deprecated
 	public Set<String> findToken(String token);
+	
+	/**
+	 * Fetch all known (registered) tokens matching a given string
+	 * 
+	 * @param token full or partial token name
+	 * @return all tokens containing the given string
+	 * @should return all registered token matching the input fully
+	 * @should return all registered token matching the input partially
+	 * @should not fail when input is null
+	 */
+	public List<String> getTokens(String partialToken);
 	
 	/**
 	 * Registers a new rule with the logic service.
@@ -91,6 +116,8 @@ public interface LogicService {
 	 * @param rule new rule to be registered
 	 * @throws LogicException
 	 * @see org.openmrs.logic.Rule
+	 * @should not fail when another rule is registered on the same token
+	 * @should persist the rule and associate it with the token
 	 */
 	public void addRule(String token, Rule rule) throws LogicException;
 	
@@ -101,6 +128,8 @@ public interface LogicService {
 	 * @param tags words or phrases associated with this token (do not need to be unique)
 	 * @param rule new rule to be registered
 	 * @throws LogicException
+	 * @should not fail when no tags is specified
+	 * @should persist rule with the tags
 	 */
 	public void addRule(String token, String[] tags, Rule rule) throws LogicException;
 	
@@ -110,6 +139,9 @@ public interface LogicService {
 	 * @param token lookup key ("token") under which the rule is registered
 	 * @return rule registered under the given token
 	 * @throws LogicException if no rule by that name is found
+	 * @should return Rule associated with the input token
+	 * @should fail when no Rule is associated with the input token
+	 * @should return ReferenceRule
 	 */
 	public Rule getRule(String token) throws LogicException;
 	
@@ -119,6 +151,7 @@ public interface LogicService {
 	 * @param token lookup key ("token") for the rule to be updated
 	 * @param rule new version of rule (replaces existing rule)
 	 * @throws LogicException
+	 * @should update Rule when another Rule is registered under the same token
 	 */
 	public void updateRule(String token, Rule rule) throws LogicException;
 	
@@ -127,6 +160,7 @@ public interface LogicService {
 	 * 
 	 * @param token lookup key ("token") under which rule to be removed is registered
 	 * @throws LogicException
+	 * @should remove rule
 	 */
 	public void removeRule(String token) throws LogicException;
 	
@@ -165,8 +199,8 @@ public interface LogicService {
 	 * Evaluates a query for a given patient
 	 * 
 	 * @param who <code>Patient</code> for whom the query is to be run
-	 * @param criteria <code>LogicCriteria</code> question to be answered (along with the token) for
-	 *            the given patient
+	 * @param criteria <code>Criteria</code> question to be answered (along with the token) for the
+	 *            given patient
 	 * @param parameters <code>Map</code> of arguments to be passed to the rule
 	 * @return <code>Result</code> of query
 	 * @throws LogicException
@@ -232,6 +266,7 @@ public interface LogicService {
 	 * 
 	 * @param token
 	 * @param tag
+	 * @should add tag for a token
 	 */
 	public void addTokenTag(String token, String tag);
 	
@@ -240,6 +275,7 @@ public interface LogicService {
 	 * 
 	 * @param token
 	 * @param tag
+	 * @should remove tag from a token
 	 */
 	public void removeTokenTag(String token, String tag);
 	
@@ -248,24 +284,57 @@ public interface LogicService {
 	 * 
 	 * @param token token to look up by
 	 * @return collection of tags
+	 * @deprecated use {@link #getTokenTags(String)}
 	 */
+	@Deprecated
 	public Collection<String> getTagsByToken(String token);
+	
+	/**
+	 * Gets all tags associated with this token.
+	 * 
+	 * @param token token to look up by
+	 * @return collection of tags
+	 * @should return set of tags for a certain token
+	 */
+	public Set<String> getTokenTags(String token);
 	
 	/**
 	 * Gets all tokens associated with this tag.
 	 * 
 	 * @param tag tag to look up by
 	 * @return collection of tokens
+	 * @deprecated use {@link #getTokensWithTag(String)}
 	 */
+	@Deprecated
 	public Set<String> getTokensByTag(String tag);
+	
+	/**
+	 * Gets all tokens associated with this tag.
+	 * 
+	 * @param tag tag to look up by
+	 * @return collection of tokens
+	 * @should return set of token associated with a tag
+	 */
+	public List<String> getTokensWithTag(String tag);
 	
 	/**
 	 * Performs a partial match search for token tags among all known tokens.
 	 * 
 	 * @param partialTag partial match string
 	 * @return collection of tags
+	 * @deprecated use {@link #getTags(String)}
 	 */
+	@Deprecated
 	public Set<String> findTags(String partialTag);
+	
+	/**
+	 * Performs a partial match search for token tags among all known tokens.
+	 * 
+	 * @param partialTag partial match string
+	 * @return collection of tags
+	 * @should return set of tags matching input tag partially
+	 */
+	public List<String> getTags(String partialTag);
 	
 	/**
 	 * Fetches the default datatype this token will return when fed to an eval() call. Results
@@ -325,14 +394,28 @@ public interface LogicService {
 	 */
 	public void removeLogicDataSource(String name);
 	
-	public void loadRule(String tokenName, String ruleClassName) throws Exception;
+	/**
+	 * Parse a criteria String to create a new LogicCriteria. <br /><br />
+	 * 
+	 * Example: <br />
+	 * <code>logicService.parseString("LAST 'CD4 COUNT' < 200");</code>
+	 * 
+	 * @param inStr LogicCriteria expression in a plain String object.
+	 * @return LogicCriteria using all possible operand and operator from the String input
+	 * @deprecated use {@link LogicService#parse(String)}
+	 */
+	@Deprecated
+	public LogicCriteria parseString(String inStr);
 	
 	/**
-	 * Constructs a new LogicCriteria from the passed input String
-	 * @param inStr the input string to parse
-	 * @return the LogicCriteria parsed from the passed input String
-	 * @should correctly parse expression with only aggregator and token
+	 * Parse a criteria String to create a new LogicCriteria. <br /><br />
+	 * 
+	 * Example: <br />
+	 * <code>logicService.parseString("LAST 'CD4 COUNT' < 200");</code>
+	 * 
+	 * @param criteria LogicCriteria expression in a plain String object.
+	 * @return LogicCriteria using all possible operand and operator from the String input
 	 */
-	public LogicCriteria parseString(String inStr);
+	public LogicCriteria parse(String criteria);
 	
 }

@@ -110,7 +110,7 @@
 			<th><spring:message code="Encounter.provider"/></th>
 			<td>
 				<spring:bind path="encounter.provider">
-					<openmrs_tag:userField formFieldName="providerId" searchLabelCode="Encounter.provider.find" initialValue="${status.value.userId}" roles="Provider;" linkUrl="${pageContext.request.contextPath}/admin/users/user.form" callback="enableSaveButton"/>
+					<openmrs_tag:personField formFieldName="providerId" initialValue="${status.value.personId}" roles="Provider" callback="enableSaveButton"/>
 					<c:if test="${status.errorMessage != ''}"><span class="error">${status.errorMessage}</span></c:if>
 				</spring:bind>
 			</td>
@@ -176,7 +176,7 @@
 				</spring:bind>
 			</td>
 		</tr>
-		<c:if test="${encounter.creator != null}">
+		<c:if test="${encounter.encounterId != null}">
 			<tr>
 				<th><spring:message code="general.createdBy" /></th>
 				<td>
@@ -184,34 +184,34 @@
 					<openmrs:formatDate date="${encounter.dateCreated}" type="medium" />
 				</td>
 			</tr>
-		</c:if>
-		<tr>
-			<th><spring:message code="general.voided" /></th>
-			<td>
-				<spring:bind path="encounter.voided">
-					<input type="hidden" name="_${status.expression}" />
-					<input type="checkbox" name="${status.expression}" id="voided" onClick="voidedClicked(this)" <c:if test="${encounter.voided}">checked</c:if> />					
-					<c:if test="${status.errorMessage != ''}"><span class="error">${status.errorMessage}</span></c:if>
-				</spring:bind>
-			</td>
-		</tr>
-		<tr id="voidReason">
-			<th><spring:message code="general.voidReason" /></th>
-			<td>
-				<spring:bind path="encounter.voidReason">
-					<input type="text" value="${status.value}" name="${status.expression}" size="40" />
-					<c:if test="${status.errorMessage != ''}"><span class="error">${status.errorMessage}</span></c:if>
-				</spring:bind>
-			</td>
-		</tr>
-		<c:if test="${encounter.voidedBy != null}">
-			<tr id="voidedBy">
-				<th><spring:message code="general.voidedBy" /></th>
+			<tr>
+				<th><spring:message code="general.voided" /></th>
 				<td>
-					<a href="#View User" onclick="return gotoUser(null, '${encounter.voidedBy.userId}')">${encounter.voidedBy.personName}</a> -
-					<openmrs:formatDate date="${encounter.dateVoided}" type="medium" />
+					<spring:bind path="encounter.voided">
+						<input type="hidden" name="_${status.expression}" />
+						<input type="checkbox" name="${status.expression}" id="voided" onClick="voidedClicked(this)" <c:if test="${encounter.voided}">checked</c:if> />					
+						<c:if test="${status.errorMessage != ''}"><span class="error">${status.errorMessage}</span></c:if>
+					</spring:bind>
 				</td>
 			</tr>
+			<tr id="voidReason">
+				<th><spring:message code="general.voidReason" /></th>
+				<td>
+					<spring:bind path="encounter.voidReason">
+						<input type="text" value="${status.value}" name="${status.expression}" size="40" />
+						<c:if test="${status.errorMessage != ''}"><span class="error">${status.errorMessage}</span></c:if>
+					</spring:bind>
+				</td>
+			</tr>
+			<c:if test="${encounter.voidedBy != null}">
+				<tr id="voidedBy">
+					<th><spring:message code="general.voidedBy" /></th>
+					<td>
+						<a href="#View User" onclick="return gotoUser(null, '${encounter.voidedBy.userId}')">${encounter.voidedBy.personName}</a> -
+						<openmrs:formatDate date="${encounter.dateVoided}" type="medium" />
+					</td>
+				</tr>
+			</c:if>
 		</c:if>
 	</table>
 	
@@ -248,10 +248,28 @@
 		</c:forEach>
 	</table>
 	</div>
+	
+	<br />
+	<div id="encounterFormAddObsMenu">
+		<openmrs:hasPrivilege privilege="Add Observations">
+			<div>
+				<a href="${pageContext.request.contextPath}/admin/observations/obs.form?encounterId=${encounter.encounterId}">
+					<spring:message code="Obs.add"/>
+				</a>
+			</div>
+		</openmrs:hasPrivilege>
+		<openmrs:extensionPoint pointId="org.openmrs.admin.encounters.encounterFormAddObsMenu" type="html" requiredClass="org.openmrs.module.web.extension.LinkProviderExtension">
+			<c:forEach items="${extension.links}" var="link">
+				<openmrs:hasPrivilege privilege="${link.requiredPrivilege}">
+					<div>
+						<a href="<c:url value="${link.url}" />"><spring:message code="${link.label}"/></a>
+					</div>
+				</openmrs:hasPrivilege>
+			</c:forEach>
+		</openmrs:extensionPoint>
+	</div>
+	<br />
+	
 </c:if>
-
-<br />
-<a href="${pageContext.request.contextPath}/admin/observations/obs.form?encounterId=${encounter.encounterId}"><spring:message code="Obs.add"/></a>
-<br />
 
 <%@ include file="/WEB-INF/template/footer.jsp" %>

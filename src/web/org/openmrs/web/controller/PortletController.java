@@ -119,8 +119,15 @@ public class PortletController implements Controller {
 			HttpSession session = request.getSession();
 			String uniqueRequestId = (String) request.getAttribute(WebConstants.INIT_REQ_UNIQUE_ID);
 			String lastRequestId = (String) session.getAttribute(WebConstants.OPENMRS_PORTLET_LAST_REQ_ID);
-			if (uniqueRequestId.equals(lastRequestId))
+			if (uniqueRequestId.equals(lastRequestId)) {
 				model = (Map<String, Object>) session.getAttribute(WebConstants.OPENMRS_PORTLET_CACHED_MODEL);
+				
+				// remove cached parameters 
+				List<String> parameterKeys = (List<String>)model.get("parameterKeys");
+				for (String key : parameterKeys) {
+					model.remove(key);
+				}
+			}
 			if (model == null) {
 				log.debug("creating new portlet model");
 				model = new HashMap<String, Object>();
@@ -152,10 +159,13 @@ public class PortletController implements Controller {
 			model.put("size", size);
 			model.put("locale", Context.getLocale());
 			model.put("portletUUID", UUID.randomUUID().toString().replace("-", ""));
+			List<String> parameterKeys = new ArrayList<String>(params.keySet());
 			model.putAll(params);
 			if (moreParams != null) {
 				model.putAll(moreParams);
+				parameterKeys.addAll(moreParams.keySet());
 			}
+			model.put("parameterKeys", parameterKeys); // so we can clean these up in the next request
 			
 			// if there's an authenticated user, put them, and their patient set, in the model
 			if (Context.getAuthenticatedUser() != null) {
@@ -297,9 +307,10 @@ public class PortletController implements Controller {
 						
 						if (Context.hasPrivilege(OpenmrsConstants.PRIV_VIEW_PROGRAMS)
 						        && Context.hasPrivilege(OpenmrsConstants.PRIV_VIEW_PATIENT_PROGRAMS)) {
-							model.put("patientPrograms", Context.getProgramWorkflowService().getPatientPrograms(p));
-							model.put("patientCurrentPrograms", Context.getProgramWorkflowService().getCurrentPrograms(p,
-							    null));
+							model.put("patientPrograms", Context.getProgramWorkflowService().getPatientPrograms(p, null,
+							    null, null, null, null, false));
+							model.put("patientCurrentPrograms", Context.getProgramWorkflowService().getPatientPrograms(p,
+							    null, null, new Date(), new Date(), null, false));
 						}
 						
 						model.put("patientId", patientId);

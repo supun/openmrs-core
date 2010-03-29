@@ -143,8 +143,8 @@ public class UpdateFilter extends StartupFilter {
 					log.error("Unable to sleep", e);
 					throw new ServletException("Got interrupted while trying to sleep thread", e);
 				}
-				errors.add("Unable to authenticate as a " + OpenmrsConstants.SUPERUSER_ROLE
-				        + ". Invalid username or password");
+				errors.add("Unable to authenticate as a User with the " + OpenmrsConstants.SUPERUSER_ROLE
+				        + " role. Invalid username or password");
 				renderTemplate(DEFAULT_PAGE, referenceMap, httpResponse);
 			}
 		} // step two
@@ -202,7 +202,7 @@ public class UpdateFilter extends StartupFilter {
 	 * @should return false if given invalid credentials
 	 * @should return false if given user is not superuser
 	 * @should return true if given user is superuser
-	 * @should not authorize voided superusers
+	 * @should not authorize retired superusers
 	 * @should authenticate with systemId
 	 */
 	protected boolean authenticateAsSuperUser(String usernameOrSystemId, String password) throws ServletException {
@@ -210,11 +210,11 @@ public class UpdateFilter extends StartupFilter {
 		try {
 			connection = DatabaseUpdater.getConnection();
 			
-			String select = "select user_id, password, salt from users where (username = ? or system_id = ?) and voided = 0";
+			String select = "select user_id, password, salt from users where (username = ? or system_id = ?) and retired = 0";
 			PreparedStatement statement = connection.prepareStatement(select);
 			statement.setString(1, usernameOrSystemId);
 			statement.setString(2, usernameOrSystemId);
-			
+
 			if (statement.execute()) {
 				ResultSet results = statement.getResultSet();
 				if (results.next()) {
@@ -227,7 +227,29 @@ public class UpdateFilter extends StartupFilter {
 			}
 		}
 		catch (Throwable t) {
-			log.error("Error while trying to authenticate as super user", t);
+			log.error("Error while trying to authenticate as super user. Ignore this if you are upgrading from OpenMRS 1.5 to 1.6", t);
+			
+			// we may not have upgraded User to have retired instead of voided yet, so if the query above fails, we try
+			// again the old way
+			try {
+				String select = "select user_id, password, salt from users where (username = ? or system_id = ?) and voided = 0";
+				PreparedStatement statement = connection.prepareStatement(select);
+				statement.setString(1, usernameOrSystemId);
+				statement.setString(2, usernameOrSystemId);
+	
+				if (statement.execute()) {
+					ResultSet results = statement.getResultSet();
+					if (results.next()) {
+						Integer userId = results.getInt(1);
+						String storedPassword = results.getString(2);
+						String salt = results.getString(3);
+						String passwordToHash = password + salt;
+						return Security.hashMatches(storedPassword, passwordToHash) && isSuperUser(connection, userId);
+					}
+				}
+			} catch (Throwable t2) {
+				log.error("Error while trying to authenticate as super user (voided version)", t);
+			}
 		}
 		finally {
 			if (connection != null)
@@ -253,7 +275,10 @@ public class UpdateFilter extends StartupFilter {
 	 * @should return false if given user does not have the super user role
 	 */
 	protected boolean isSuperUser(Connection connection, Integer userId) throws Exception {
-		String select = "select 1 from user_role where user_id = ? and role = ?";
+		// the 'Administrator' part of this string is necessary because if the database was upgraded
+		// by OpenMRS 1.6 alpha then System Developer was renamed to that. This has to be here so we
+		// can roll back that change in 1.6 beta+
+		String select = "select 1 from user_role where user_id = ? and (role = ? or role = 'Administrator')";
 		PreparedStatement statement = connection.prepareStatement(select);
 		statement.setInt(1, userId);
 		statement.setString(2, OpenmrsConstants.SUPERUSER_ROLE);
@@ -298,11 +323,10 @@ public class UpdateFilter extends StartupFilter {
 		
 		log.debug("Initializing the UpdateFilter");
 		
-		model = new UpdateFilterModel();
-		
 		Properties properties = Listener.getRuntimeProperties();
 		
 		if (properties != null) {
+			model = new UpdateFilterModel();
 			Context.setRuntimeProperties(properties);
 			try {
 				if (model.changes == null)

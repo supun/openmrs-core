@@ -27,13 +27,16 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Enumeration;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 import java.util.Vector;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.openmrs.GlobalProperty;
@@ -56,7 +59,7 @@ public class ModuleUtil {
 	 * 
 	 * @param props Properties (OpenMRS runtime properties)
 	 */
-	public static void startup(Properties props) throws MandatoryModuleException {
+	public static void startup(Properties props) throws ModuleMustStartException, OpenmrsCoreModuleException {
 		
 		String moduleListString = props.getProperty(ModuleConstants.RUNTIMEPROPERTY_MODULE_LIST_TO_LOAD);
 		
@@ -126,6 +129,9 @@ public class ModuleUtil {
 				log.debug("Found and loaded " + modules.size() + " module(s)");
 		}
 		
+		// make sure all openmrs required moduls are loaded and started
+		checkOpenmrsCoreModulesStarted();
+		
 		// make sure all mandatory modules are loaded and started
 		checkMandatoryModulesStarted();
 	}
@@ -168,7 +174,7 @@ public class ModuleUtil {
 		if (OpenmrsUtil.folderContains(folder, filename))
 			throw new ModuleException(filename + " is already associated with a loaded module.");
 		
-		File file = new File(folder.getAbsolutePath() + File.separator + filename);
+		File file = new File(folder.getAbsolutePath(), filename);
 		
 		FileOutputStream outputStream = null;
 		try {
@@ -196,6 +202,87 @@ public class ModuleUtil {
 	}
 	
 	/**
+	 * This method is an enhancement of {@link #compareVersion(String, String)} and adds support
+	 * for wildcard characters and upperbounds.
+	 * <br/><br/>
+	 * The require version number in the config file can be in the following
+	 * format:
+	 * <ul>
+	 *   <li>1.2.3</li>
+	 *   <li>1.2.*</li>
+	 *   <li>1.2.2 - 1.2.3</li>
+	 *   <li>1.2.* - 1.3.*</li>
+	 * </ul>
+	 * @param version openmrs version number to be compared
+	 * @param value value in the config file for required openmrs version
+	 * @return true if the <code>version</code> is within the <code>value</code>
+	 * @should allow ranged required version
+	 * @should allow ranged required version with wild card
+	 * @should allow ranged required version with wild card on one end
+	 * @should allow single entry for required version
+	 * @should allow required version with wild card
+	 * @should allow non numeric character required version
+	 * @should allow ranged non numeric character required version
+	 * @should allow ranged non numeric character with wild card
+	 * @should allow ranged non numeric character with wild card on one end
+	 * @should return false when openmrs version beyond wild card range
+	 * @should return false when required version beyond openmrs version
+	 * @should return false when required version with wild card beyond openmrs version
+	 * @should return false when required version with wild card on one end beyond openmrs version
+	 * @should return false when single entry required version beyond openmrs version
+	 * @should allow release type in the version
+	 */
+	public static boolean matchRequiredVersions(String version, String value) {
+		// need to externalize this string
+		String separator = "-";
+		if (value.indexOf("*") > 0 || value.indexOf(separator) > 0) {
+			// if it contains "*" or "-" then we must separate those two
+			// assume it's always going to be two part
+			// assign the upper and lower bound
+			// if there's no "-" to split lower and upper bound
+			// then assign the same value for the lower and upper
+			String lowerBound = value;
+			String upperBound = value;
+			
+			int indexOfSeparator = value.indexOf(separator);
+			while(indexOfSeparator > 0) {
+				lowerBound = value.substring(0, indexOfSeparator);
+				upperBound = value.substring(indexOfSeparator + 1);
+				if (upperBound.matches("^\\s?\\d+.*"))
+					break;
+				indexOfSeparator = value.indexOf(separator, indexOfSeparator + 1);
+			}
+			
+			// only preserve part of the string that match the following format:
+			// - xx.yy.*
+			// - xx.yy.zz*
+			lowerBound = StringUtils.remove(lowerBound, lowerBound.replaceAll("^\\s?\\d+[\\.\\d+\\*?|\\.\\*]+", ""));
+			upperBound = StringUtils.remove(upperBound, upperBound.replaceAll("^\\s?\\d+[\\.\\d+\\*?|\\.\\*]+", ""));
+			
+			// if the lower contains "*" then change it to zero
+			if (lowerBound.indexOf("*") > 0)
+				lowerBound = lowerBound.replaceAll("\\*", "0");
+				
+			// if the upper contains "*" then change it to 999
+			// assuming 999 will be the max revision number for openmrs
+			if (upperBound.indexOf("*") > 0)
+				upperBound = upperBound.replaceAll("\\*", "999");
+			
+			int lowerReturn = compareVersion(version, lowerBound);
+			
+			int upperReturn = compareVersion(version, upperBound);
+			
+			if (lowerReturn >= 0 && upperReturn <= 0)
+				return true;
+			else
+				return false;
+			
+		} else {
+			return (compareVersion(version, value) >= 0);
+		}
+	}
+	
+	/**
 	 * Compares <code>version</code> to <code>value</code> version and value are strings like
 	 * w.x.y.z Returns <code>0</code> if either <code>version</code> or <code>value</code> is null.
 	 * 
@@ -209,7 +296,6 @@ public class ModuleUtil {
 	 */
 	public static int compareVersion(String version, String value) {
 		try {
-			
 			if (version == null || value == null)
 				return 0;
 			
@@ -610,6 +696,54 @@ public class ModuleUtil {
 	}
 	
 	/**
+	 * Looks at the list of modules in {@link ModuleConstants#CORE_MODULES} to make
+	 * sure that all modules that are core to OpenMRS are started and have at least
+	 * a minimum version that OpenMRS needs.
+	 * 
+	 * @throws ModuleException if a module that is core to OpenMRS is not started
+	 * @should throw ModuleException if a core module is not started
+	 */
+	protected static void checkOpenmrsCoreModulesStarted() throws OpenmrsCoreModuleException {
+		
+		// if there is a property telling us to ignore required modules, drop out early
+		if (ignoreCoreModules())
+			return;
+		
+		// make a copy of the constant so we can modify the list
+		Map<String, String> coreModules = new HashMap<String, String>(ModuleConstants.CORE_MODULES);
+		
+		Collection<Module> startedModules = ModuleFactory.getStartedModulesMap().values();
+		
+		// loop through the current modules and test them
+		for (Module mod : startedModules) {
+			String moduleId = mod.getModuleId();
+			if (coreModules.containsKey(moduleId)) {
+				String coreReqVersion = coreModules.get(moduleId);
+				if (compareVersion(mod.getVersion(), coreReqVersion) >= 0)
+					coreModules.remove(moduleId);
+				else
+					log.debug("Module: " + moduleId + " is a core module and is started, but its version: " + mod.getVersion()
+				        + " is not within the required version: " + coreReqVersion);
+			}
+		}
+		
+		// any module ids left in the list are not started
+		if (coreModules.size() > 0) {
+			throw new OpenmrsCoreModuleException(coreModules);
+		}
+	}
+	
+	/**
+	 * Uses the runtime properties to determine if the core modules should be enforced or not.
+	 * 
+	 * @return true if the core modules list can be ignored.
+	 */
+	public static boolean ignoreCoreModules() {
+		String ignoreCoreModules = Context.getRuntimeProperties().getProperty(ModuleConstants.IGNORE_CORE_MODULES_PROPERTY, "false");
+		return Boolean.parseBoolean(ignoreCoreModules);
+	}
+	
+	/**
 	 * Returns all modules that are marked as mandatory. Currently this means there is a
 	 * <moduleid>.mandatory=true global property.
 	 * 
@@ -635,7 +769,6 @@ public class ModuleUtil {
 		
 		return mandatoryModuleIds;
 	}
-	
 	
 	/**
 	 * <pre>
@@ -694,4 +827,5 @@ public class ModuleUtil {
     		path = path.substring(1);
     	return path.substring(module.getModuleIdAsPath().length());
     }
+
 }

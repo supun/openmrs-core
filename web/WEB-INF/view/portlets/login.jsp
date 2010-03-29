@@ -43,7 +43,7 @@
 	
 	<input type="hidden" name="refererURL" value='<request:header name="referer" />' />
 	
-</form>	
+</form>
 
 <openmrs:extensionPoint pointId="org.openmrs.login" type="html" />
 

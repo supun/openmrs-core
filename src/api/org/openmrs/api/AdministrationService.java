@@ -44,7 +44,6 @@ import org.springframework.transaction.annotation.Transactional;
  * Contains methods pertaining to doing some administrative tasks in OpenMRS
  * <p>
  * Use:<br/>
- * 
  * <pre>
  * List&lt;GlobalProperty&gt; globalProperties = Context.getAdministrationService().getGlobalProperties();
  * </pre>
@@ -393,7 +392,7 @@ public interface AdministrationService extends OpenmrsService {
 	 * 
 	 * @param cp
 	 * @deprecated moved to
-	 *             {@link org.openmrs.api#ConceptServicerejectConceptProposal(ConceptProposal)}
+	 *             {@link org.openmrs.api.ConceptService#rejectConceptProposal(ConceptProposal)}
 	 */
 	public void rejectConceptProposal(ConceptProposal cp);
 	
@@ -426,6 +425,7 @@ public interface AdministrationService extends OpenmrsService {
 	 * Get a listing or important variables used in openmrs
 	 * 
 	 * @return a map from variable name to variable value
+	 * @should return all registered system variables
 	 */
 	@Transactional(readOnly = true)
 	@Authorized(OpenmrsConstants.PRIV_VIEW_ADMIN_FUNCTIONS)
@@ -447,9 +447,12 @@ public interface AdministrationService extends OpenmrsService {
 	public String getGlobalProperty(String propertyName) throws APIException;
 	
 	/**
-	 * Gets the global property that has the given <code>propertyName</code> If propertyName is not
-	 * found in the list of Global Properties currently in the database, a <code>defaultValue</code>
-	 * is returned This method should not have any authorization check
+	 * Gets the global property that has the given <code>propertyName</code>
+	 * <p>
+	 * If propertyName is not found in the list of Global Properties currently in the database, a
+	 * <code>defaultValue</code> is returned
+	 * <p>
+	 * This method should not have any authorization check
 	 * 
 	 * @param propertyName property key to look for
 	 * @param defaultValue value to return if propertyName is not found
@@ -465,6 +468,7 @@ public interface AdministrationService extends OpenmrsService {
 	 * 
 	 * @param propertyName property key to look for
 	 * @return the global property that matches the given <code>propertyName</code>
+	 * @should return null when no global property match given property name
 	 */
 	@Transactional(readOnly = true)
 	public GlobalProperty getGlobalPropertyObject(String propertyName);
@@ -650,6 +654,7 @@ public interface AdministrationService extends OpenmrsService {
 	 * @return list of allowed locales
 	 * @should return at least one locale if no locales defined in database yet
 	 * @should not fail if not global property for locales allowed defined yet
+	 * @should not return duplicates even if the global property has them
 	 */
 	@Transactional(readOnly = true)
 	public List<Locale> getAllowedLocales();

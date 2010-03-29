@@ -114,5 +114,4 @@ public class SerializationServiceImplTest {
 		ssi.setSerializers(null); // clear out our serializers
 		ssi.setSerializers(currentSerializers); // reset the serializers that were here before this class
 	}
-	
 }

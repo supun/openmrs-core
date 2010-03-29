@@ -19,7 +19,7 @@ dojo.require("dojo.validate.common");
 */
 dojo.validate.isGermanCurrency = function(value) {
 	var flags = {
-		symbol: "ï¿œ",
+		symbol: "�",
 		placement: "after",
 		decimal: ",",
 		separator: "."

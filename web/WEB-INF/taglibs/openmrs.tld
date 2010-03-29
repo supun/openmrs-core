@@ -136,6 +136,11 @@
 		<required>false</required>
 		<rtexprvalue>true</rtexprvalue>
 	</attribute>
+		<attribute>
+		<name>inheritedItems</name>
+		<required>false</required>
+		<rtexprvalue>true</rtexprvalue>
+	</attribute>
 	<attribute>
 		<name>cols</name>
 		<required>false</required>
@@ -1105,6 +1110,16 @@
 	</attribute>
 	<attribute>
 		<name>userId</name>
+		<required>false</required>
+		<rtexprvalue>true</rtexprvalue>
+	</attribute>
+	<attribute>
+		<name>personId</name>
+		<required>false</required>
+		<rtexprvalue>true</rtexprvalue>
+	</attribute>
+	<attribute>
+		<name>person</name>
 		<required>false</required>
 		<rtexprvalue>true</rtexprvalue>
 	</attribute>

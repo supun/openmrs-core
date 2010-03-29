@@ -130,6 +130,7 @@ public class PersonName extends BaseOpenmrsData implements java.io.Serializable,
 	 * 
 	 * @param otherName PersonName with which to compare
 	 * @return boolean true/false whether or not they are the same names
+	 * @should return true if given middle and family name are equal
 	 */
 	@SuppressWarnings("unchecked")
 	public boolean equalsContent(PersonName otherName) {
@@ -172,6 +173,7 @@ public class PersonName extends BaseOpenmrsData implements java.io.Serializable,
 	 * PersonName.person object in this object AND the cloned object will point at the same person
 	 * 
 	 * @return New PersonName object
+	 * @should copy every property of given personName
 	 */
 	public static PersonName newInstance(PersonName pn) {
 		PersonName newName = new PersonName(new Integer(pn.getPersonNameId()));
@@ -252,6 +254,7 @@ public class PersonName extends BaseOpenmrsData implements java.io.Serializable,
 	
 	/**
 	 * @return Returns the familyName.
+	 * @should return obscured name if obscure_patients is set to true 
 	 */
 	@Element(data = true, required = false)
 	public String getFamilyName() {
@@ -270,6 +273,7 @@ public class PersonName extends BaseOpenmrsData implements java.io.Serializable,
 	
 	/**
 	 * @return Returns the familyName2.
+	 * @should return null if obscure_patients is set to true
 	 */
 	@Element(data = true, required = false)
 	public String getFamilyName2() {
@@ -288,6 +292,7 @@ public class PersonName extends BaseOpenmrsData implements java.io.Serializable,
 	
 	/**
 	 * @return Returns the familyNamePrefix.
+	 * @should return null if obscure_patients is set to true
 	 */
 	@Element(data = true, required = false)
 	public String getFamilyNamePrefix() {
@@ -306,6 +311,7 @@ public class PersonName extends BaseOpenmrsData implements java.io.Serializable,
 	
 	/**
 	 * @return Returns the familyNameSuffix.
+	 * @should return null if obscure_patients is set to true
 	 */
 	@Element(data = true, required = false)
 	public String getFamilyNameSuffix() {
@@ -324,6 +330,7 @@ public class PersonName extends BaseOpenmrsData implements java.io.Serializable,
 	
 	/**
 	 * @return Returns the givenName.
+	 * @should return obscured name if obscure_patients is set to true
 	 */
 	@Element(data = true, required = false)
 	public String getGivenName() {
@@ -342,6 +349,7 @@ public class PersonName extends BaseOpenmrsData implements java.io.Serializable,
 	
 	/**
 	 * @return Returns the middleName.
+	 * @should return obscured name if obscure_patients is set to true
 	 */
 	@Element(data = true, required = false)
 	public String getMiddleName() {
@@ -414,6 +422,7 @@ public class PersonName extends BaseOpenmrsData implements java.io.Serializable,
 	
 	/**
 	 * @return Returns the prefix.
+	 * @should return null if obscure_patients is set to true
 	 */
 	@Element(data = true, required = false)
 	public String getPrefix() {
@@ -489,9 +498,15 @@ public class PersonName extends BaseOpenmrsData implements java.io.Serializable,
 	}
 	
 	/**
-	 * @see java.lang.Object#toString()
+	 * Convenience method to get all the names of this
+	 * PersonName and concatonating them together with
+	 * spaces in between.  If any part of {@link #getPrefix()},
+	 * {@link #getGivenName()}, {@link #getMiddleName()}, etc
+	 * are null, they are not included in the returned name
+	 * 
+	 * @return all of the parts of this {@link PersonName} joined with spaces
 	 */
-	public String toString() {
+	public String getFullName() {
 		List<String> temp = new ArrayList<String>();
 		if (getPrefix() != null)
 			temp.add(getPrefix());
@@ -516,11 +531,33 @@ public class PersonName extends BaseOpenmrsData implements java.io.Serializable,
 	}
 	
 	/**
+     * @see java.lang.Object#toString()
+     */
+    @Override
+    public String toString() {
+    	// TODO find all uses of this toString() method and 
+    	// change them to use the getFullName() method.  This
+    	// to string should print out the #getPersonNameId() and 
+    	// all of the values for each part
+    	
+    	return getFullName();
+    }
+
+	/**
 	 * TODO: the behavior of this method needs to be controlled by some sort of global property
 	 * because an implementation can define how they want their names to look (which fields to
 	 * show/hide)
 	 * 
 	 * @see java.lang.Comparable#compareTo(java.lang.Object)
+	 * @should return negative if other name is voided
+	 * @should return negative if this name is preferred
+	 * @should return negative if other familyName is greater
+	 * @should return negative if other familyName2 is greater
+	 * @should return negative if other givenName is greater
+	 * @should return negative if other middleName is greater
+	 * @should return negative if other familynamePrefix is greater
+	 * @should return negative if other familyNameSuffix is greater
+	 * @should return negative if other dateCreated is greater
 	 */
 	public int compareTo(PersonName other) {
 		int ret = isVoided().compareTo(other.isVoided());

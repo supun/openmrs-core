@@ -7,7 +7,7 @@
 
 <h2><spring:message code="User.manage.title"/></h2>
 
-<a href="${pageContext.request.contextPath}/admin/person/addPerson.htm?personType=user"><spring:message code="User.add"/></a>
+<a href="user.form"><spring:message code="User.add"/></a>
 
 <br/><br/>
 
@@ -65,7 +65,7 @@
 </script>
 
 <div class="box">
-	<div dojoType="UserSearch" widgetId="uSearch" searchLabel='<spring:message code="User.find"/>' showIncludeVoided="true" showRoles="true"></div>
+	<div dojoType="UserSearch" widgetId="uSearch" searchLabel='<spring:message code="User.find"/>' showIncludeRetired="true" showRoles="true"></div>
 </div>
 
 <br/><br/>

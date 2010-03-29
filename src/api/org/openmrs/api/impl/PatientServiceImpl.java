@@ -166,6 +166,12 @@ public class PatientServiceImpl extends BaseOpenmrsService implements PatientSer
 	 */
 	public List<Patient> getPatients(String name, String identifier, List<PatientIdentifierType> identifierTypes,
 	                                 boolean matchIdentifierExactly) throws APIException {
+
+		if (name != null && (name.contains("%") || name.contains("*")))
+			throw new APIException(Context.getMessageSourceService().getMessage("SearchResults.noWildcardsAllowed"));
+		
+		if (identifier != null && (identifier.contains("%") || identifier.contains("*")))
+			throw new APIException(Context.getMessageSourceService().getMessage("SearchResults.noWildcardsAllowed"));
 		
 		if (identifierTypes == null)
 			identifierTypes = Collections.emptyList();
@@ -178,8 +184,8 @@ public class PatientServiceImpl extends BaseOpenmrsService implements PatientSer
 	 */
 	public void checkPatientIdentifiers(Patient patient) throws PatientIdentifierException {
 		// check patient has at least one identifier
-		if (patient.getIdentifiers().size() < 1)
-			throw new InsufficientIdentifiersException("At least one Patient Identifier is required");
+		if (!patient.isVoided() && patient.getActiveIdentifiers().size() < 1)
+			throw new InsufficientIdentifiersException("At least one nonvoided Patient Identifier is required");
 		
 		List<PatientIdentifier> identifiers = new Vector<PatientIdentifier>();
 		identifiers.addAll(patient.getIdentifiers());
@@ -212,6 +218,10 @@ public class PatientServiceImpl extends BaseOpenmrsService implements PatientSer
 			}
 			
 			// TODO: check patient has at least one "sufficient" identifier
+			// TODO: what makes a patient identifier unique ... can you have the 
+			// 		 same identifier number at different locations?  if so, then this
+			// 		 check duplicate algorithm does not handle this case
+			
 			
 			// check this patient for duplicate identifiers+identifierType
 			if (identifiersUsed.contains(pi.getIdentifier() + " id type #: "
@@ -320,23 +330,7 @@ public class PatientServiceImpl extends BaseOpenmrsService implements PatientSer
 		if (patient == null)
 			return null;
 		
-		User voidedBy = Context.getAuthenticatedUser();
-		Date voidDate = new Date();
-		
-		if (patient.getIdentifiers() != null)
-			for (PatientIdentifier pi : patient.getIdentifiers()) {
-				if (!pi.isVoided()) {
-					pi.setVoided(true);
-					pi.setVoidReason(reason);
-					pi.setDateVoided(voidDate);
-					pi.setVoidedBy(voidedBy);
-				}
-			}
-		
-		patient.setVoided(true);
-		patient.setVoidedBy(voidedBy);
-		patient.setDateVoided(voidDate);
-		patient.setVoidReason(reason);
+		// patient and patientidentifier attributes taken care of by the BaseUnvoidHandler
 		
 		return savePatient(patient);
 	}
@@ -348,22 +342,7 @@ public class PatientServiceImpl extends BaseOpenmrsService implements PatientSer
 		if (patient == null)
 			return null;
 		
-		String voidReason = patient.getVoidReason();
-		if (voidReason == null)
-			voidReason = "";
-		
-		for (PatientIdentifier pi : patient.getIdentifiers()) {
-			if (voidReason.equals(pi.getDateVoided())) {
-				pi.setVoided(false);
-				pi.setVoidReason(null);
-				pi.setDateVoided(null);
-				pi.setVoidedBy(null);
-			}
-		}
-		patient.setVoided(false);
-		patient.setVoidedBy(null);
-		patient.setDateVoided(null);
-		patient.setVoidReason(null);
+		// patient and patientidentifier attributes taken care of by the BaseUnvoidHandler
 		
 		return savePatient(patient);
 	}
@@ -595,6 +574,7 @@ public class PatientServiceImpl extends BaseOpenmrsService implements PatientSer
 			minSearchCharacters = Integer.valueOf(minSearchCharactersStr);
 		}
 		catch (NumberFormatException e) {
+			// TODO: Should be an application constant
 			minSearchCharacters = 3;
 		}
 		
@@ -854,7 +834,7 @@ public class PatientServiceImpl extends BaseOpenmrsService implements PatientSer
 			preferred.setCauseOfDeath(notPreferred.getCauseOfDeath());
 		
 		// void the non preferred patient
-		voidPatient(notPreferred, "Merged with patient #" + preferred.getPatientId());
+		Context.getPatientService().voidPatient(notPreferred, "Merged with patient #" + preferred.getPatientId());
 		
 		// Save the newly update preferred patient
 		// This must be called _after_ voiding the nonPreferred patient so that
@@ -907,7 +887,6 @@ public class PatientServiceImpl extends BaseOpenmrsService implements PatientSer
 	 * @param exitDate
 	 * @param cause
 	 */
-	// TODO: Patients should actually be allowed to exit multiple times 
 	private void saveReasonForExitObs(Patient patient, Date exitDate, Concept cause) throws APIException {
 		
 		if (patient == null)

@@ -53,8 +53,10 @@ public class PersonListItem {
 	private Date birthdate;
 	
 	private Boolean birthdateEstimated = false;
-	
-	private String address1;
+
+    private Integer age;
+
+    private String address1;
 	
 	private String address2;
 	
@@ -64,20 +66,17 @@ public class PersonListItem {
 	
 	/**
 	 * Creates an instance of a subclass of PersonListItem which is best suited for the parameter.
-	 * If a {@link Patient} is passed in, a {@link PatientListItem} is returned. If a {@link User}
-	 * is passed in, a {@link UserListItem} is returned.
+	 * If a {@link Patient} is passed in, a {@link PatientListItem} is returned, otherwise a
+	 * {@link PersonListItem} is returned.
 	 * 
 	 * @param person the {@link Person} object to covert to a {@link PersonListItem}
 	 * @return a {@link PersonListItem} or subclass thereof
 	 * @should return PatientListItem given patient parameter
-	 * @should return UserListItem given user parameter
 	 * @should return PersonListItem given person parameter
 	 */
 	public static PersonListItem createBestMatch(Person person) {
 		if (person instanceof Patient) {
 			return new PatientListItem((Patient) person);
-		} else if (person instanceof User) {
-			return new UserListItem((User) person);
 		} else {
 			return new PersonListItem(person);
 		}
@@ -128,7 +127,8 @@ public class PersonListItem {
 			gender = person.getGender();
 			birthdate = person.getBirthdate();
 			birthdateEstimated = person.isBirthdateEstimated();
-			voided = person.isPersonVoided();
+            age = person.getAge();
+            voided = person.isPersonVoided();
 			
 			// add in the person attributes
 			for (PersonAttribute attribute : person.getActiveAttributes()) {
@@ -267,25 +267,6 @@ public class PersonListItem {
 	}
 	
 	public Integer getAge() {
-		
-		if (birthdate == null)
-			return null;
-		
-		Calendar today = Calendar.getInstance();
-		
-		Calendar bday = Calendar.getInstance();
-		bday.setTime(birthdate);
-		
-		int age = today.get(Calendar.YEAR) - bday.get(Calendar.YEAR);
-		
-		//tricky bit:
-		// set birthday calendar to this year
-		// if the current date is less that the new 'birthday', subtract a year
-		bday.set(Calendar.YEAR, today.get(Calendar.YEAR));
-		if (today.before(bday)) {
-			age = age - 1;
-		}
-		
 		return age;
 	}
 	

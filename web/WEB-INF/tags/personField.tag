@@ -1,9 +1,11 @@
 <%@ include file="/WEB-INF/template/include.jsp" %>
 
 <%@ attribute name="formFieldName" required="true" %>
+<%@ attribute name="formFieldId" required="false" %>
 <%@ attribute name="searchLabel" required="false" %>
 <%@ attribute name="searchLabelCode" required="false" %>
 <%@ attribute name="searchLabelArguments" required="false" %>
+<%@ attribute name="roles" required="false" %>
 <%@ attribute name="initialValue" required="false" %> <%-- This should be a personId --%>
 <%@ attribute name="linkUrl" required="false" %>
 <%@ attribute name="callback" required="false" %>
@@ -56,11 +58,10 @@
 	}
 </script>
 
-<div class="personSearchLabel">${searchLabel}</div>
 <div dojoType="PersonSearch" widgetId="${formFieldName}_search" personId="${initialValue}" roles="${roles}" canAddNewPerson="${canAddNewPerson}" useOnKeyDown="${useOnKeyDown}" ></div>
 <c:if test="${not empty searchLabelCode}">
-	<div dojoType="OpenmrsPopup" widgetId="${formFieldName}_selection" hiddenInputName="${formFieldName}" searchWidget="${formFieldName}_search" searchTitle="<spring:message code="${searchLabelCode}" arguments="${searchLabelArguments}" />" ></div>
+	<div dojoType="OpenmrsPopup" widgetId="${formFieldName}_selection" hiddenInputName="${formFieldName}" hiddenInputId="${formFieldId}" searchWidget="${formFieldName}_search" searchTitle="<spring:message code="${searchLabelCode}" arguments="${searchLabelArguments}" />" ></div>
 </c:if> 
 <c:if test="${empty searchLabelCode}">
-	<div dojoType="OpenmrsPopup" widgetId="${formFieldName}_selection" hiddenInputName="${formFieldName}" searchWidget="${formFieldName}_search" searchTitle="${searchLabel}" ></div>
+	<div dojoType="OpenmrsPopup" widgetId="${formFieldName}_selection" hiddenInputName="${formFieldName}" hiddenInputId="${formFieldId}" searchWidget="${formFieldName}_search" searchTitle="${searchLabel}" ></div>
 </c:if> 

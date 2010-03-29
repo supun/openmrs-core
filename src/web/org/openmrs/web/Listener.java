@@ -42,6 +42,8 @@ import org.openmrs.api.context.Context;
 import org.openmrs.module.MandatoryModuleException;
 import org.openmrs.module.Module;
 import org.openmrs.module.ModuleFactory;
+import org.openmrs.module.ModuleMustStartException;
+import org.openmrs.module.OpenmrsCoreModuleException;
 import org.openmrs.module.web.WebModuleUtil;
 import org.openmrs.scheduler.SchedulerUtil;
 import org.openmrs.util.DatabaseUpdateException;
@@ -162,7 +164,7 @@ public final class Listener extends ContextLoaderListener {
 			return true;
 		
 		try {
-			return DatabaseUpdater.updatesRequired();
+			return DatabaseUpdater.updatesRequired() && !DatabaseUpdater.allowAutoUpdate();
 		}
 		catch (Throwable t) {
 			throw new ServletException(t);
@@ -179,6 +181,10 @@ public final class Listener extends ContextLoaderListener {
 		// start openmrs
 		try {
 			Context.openSession();
+			
+			// load bundled modules that are packaged into the webapp
+			Listener.loadBundledModules(servletContext);
+			
 			Context.startup(getRuntimeProperties());
 		}
 		catch (DatabaseUpdateException updateEx) {
@@ -190,14 +196,16 @@ public final class Listener extends ContextLoaderListener {
 		catch (MandatoryModuleException mandatoryModEx) {
 			throw new ServletException(mandatoryModEx);
 		}
+		catch (OpenmrsCoreModuleException coreModEx) {
+			// don't wrap this error in a ServletException because we want to deal with it differently
+			// in the StartupErrorFilter class
+			throw coreModEx;
+		}
 		
 		
 		// TODO catch openmrs errors here and drop the user back out to the setup screen
 		
 		try {
-			
-			// load modules
-			Listener.loadAndStartCoreModules(servletContext);
 			
 			// web load modules
 			Listener.performWebStartOfModules(servletContext);
@@ -401,46 +409,41 @@ public final class Listener extends ContextLoaderListener {
 	}
 	
 	/**
-	 * Load the core modules This method assumes that the WebModuleUtil.startup() will be called
-	 * later for modules loaded here
+	 * Load the pre-packaged modules from web/WEB-INF/bundledModules. <br/>
+	 * <br/>
+	 * This method assumes that the api startup() and WebModuleUtil.startup() will be called later
+	 * for modules that loaded here
 	 * 
-	 * @param servletContext
+	 * @param servletContext the current servlet context for the webapp
 	 */
-	public static void loadAndStartCoreModules(ServletContext servletContext) {
+	public static void loadBundledModules(ServletContext servletContext) {
 		Log log = LogFactory.getLog(Listener.class);
 		
 		String path = servletContext.getRealPath("");
-		path += File.separator + "WEB-INF" + File.separator + "coreModules";
+		path += File.separator + "WEB-INF" + File.separator + "bundledModules";
 		File folder = new File(path);
 		
 		if (!folder.exists()) {
-			log.warn("Core module repository doesn't exist: " + folder.getAbsolutePath());
+			log.warn("Bundled module folder doesn't exist: " + folder.getAbsolutePath());
 			return;
 		}
 		if (!folder.isDirectory()) {
-			log.warn("Core module repository isn't a directory: " + folder.getAbsolutePath());
+			log.warn("Bundled module folder isn't really a directory: " + folder.getAbsolutePath());
 			return;
 		}
-		
-		// to know if we need to start any modules
-		boolean aModuleLoaded = false;
 		
 		// loop over the modules and load the modules that we can
 		for (File f : folder.listFiles()) {
 			if (!f.getName().startsWith(".")) { // ignore .svn folder and the like
 				try {
-					Module mod = ModuleFactory.loadModule(f, false);
-					aModuleLoaded = true;
-					log.debug("Loaded module: " + mod + " successfully");
+					Module mod = ModuleFactory.loadModule(f);
+					log.debug("Loaded bundled module: " + mod + " successfully");
 				}
 				catch (Throwable t) {
-					log.warn("Error while trying to load module " + f.getName() + "", t);
+					log.warn("Error while trying to load bundled module " + f.getName() + "", t);
 				}
 			}
 		}
-		
-		if (aModuleLoaded)
-			ModuleFactory.startModules();
 	}
 	
 	/**
@@ -581,9 +584,10 @@ public final class Listener extends ContextLoaderListener {
 	 * Call WebModuleUtil.startModule on each started module
 	 * 
 	 * @param servletContext
-	 * @throws MandatoryModuleException if the context cannot restart due to a mandatory module exception
+	 * @throws ModuleMustStartException if the context cannot restart due to a
+	 *             {@link MandatoryModuleException} or {@link OpenmrsCoreModuleException}
 	 */
-	public static void performWebStartOfModules(ServletContext servletContext) throws MandatoryModuleException {
+	public static void performWebStartOfModules(ServletContext servletContext) throws ModuleMustStartException {
 		Log log = LogFactory.getLog(Listener.class);
 		
 		List<Module> startedModules = new ArrayList<Module>();
@@ -604,22 +608,22 @@ public final class Listener extends ContextLoaderListener {
 			try {
 				WebModuleUtil.refreshWAC(servletContext);
 			}
-			catch (MandatoryModuleException mme) {
+			catch (ModuleMustStartException ex) {
 				// pass this up to the calling method so that openmrs loading stops
-				throw mme;
+				throw ex;
 			}
 			catch (Throwable t) {
 				log.fatal("Unable to refresh the spring application context. Unloading all modules,  Error was:", t);
 				try {
 					WebModuleUtil.shutdownModules(servletContext);
 					for (Module mod : ModuleFactory.getLoadedModules()) {// use loadedModules to avoid a concurrentmodificationexception
-						ModuleFactory.stopModule(mod, true); // pass in the true value here so that the global properties aren't written to
+						ModuleFactory.stopModule(mod, true, true); // pass in one true value here so that the global properties aren't written to and the second true so core modules can be stopped 
 					}
 					WebModuleUtil.refreshWAC(servletContext);
 				}
-				catch (MandatoryModuleException mme) {
+				catch (ModuleMustStartException ex) {
 					// pass this up to the calling method so that openmrs loading stops
-					throw mme;
+					throw ex;
 				}
 				catch (Throwable t2) {
 					log.warn("caught another error: ", t2);
