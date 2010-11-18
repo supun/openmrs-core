@@ -21,8 +21,8 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.openmrs.Person;
 import org.openmrs.User;
+import org.openmrs.annotation.Handler;
 import org.springframework.util.StringUtils;
-import org.springframework.validation.BindingResult;
 import org.springframework.validation.Errors;
 import org.springframework.validation.Validator;
 
@@ -31,6 +31,7 @@ import org.springframework.validation.Validator;
  * 
  * @since 1.5
  */
+@Handler(supports = { User.class }, order = 50)
 public class UserValidator implements Validator {
 	
 	/** Log for this class and subclasses */
@@ -101,14 +102,17 @@ public class UserValidator implements Validator {
 	 * @should not validate username with less than minimumLength
 	 * @should not validate username with invalid character
 	 * @should not validate username with more than maximum size
-	 * @should not validate when username is null
+	 * @should validate when username is null
+	 * @should validate when username is the empty string
+	 * @should not validate when username is whitespace only
 	 */
 	public boolean isUserNameValid(String username) {
 		//Initialize reg ex for userName pattern 
 		String expression = "^[\\w][\\Q_\\E\\w-\\.]{1,49}$";
 		
-		if (username == null)
-			return false;
+		// empty usernames are allowed
+		if (!StringUtils.hasLength((username)))
+			return true;
 		
 		try {
 			//Make the comparison case-insensitive.

@@ -15,6 +15,7 @@ package org.openmrs.web.taglib;
 
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.Map;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.jsp.JspException;
@@ -26,6 +27,13 @@ import org.apache.commons.logging.LogFactory;
 import org.openmrs.util.OpenmrsConstants;
 import org.openmrs.web.WebConstants;
 
+/**
+ * Lets you conveniently include js and css resources in your jsp pages and fragments. If this tag
+ * is used to include the same file more than once in different page fragments (e.g. header,
+ * portlets) then it will silently include the file just once. Also, this tag will silently replace
+ * certain resources with others (e.g. jquery-1.3.2.min.js maps to jquery.min.js). See
+ * openmrs_static_content-servlet.xml for example usage and to see what core resources are remapped.
+ */
 public class HtmlIncludeTag extends TagSupport {
 	
 	public static final long serialVersionUID = 13472382822L;
@@ -40,13 +48,23 @@ public class HtmlIncludeTag extends TagSupport {
 	
 	public static final String OPENMRS_HTML_INCLUDE_MAP_KEY = "org.openmrs.htmlInclude.includeMap";
 	
+	public static final Map<String, String> rewrites = new HashMap<String, String>();
+
 	private String type;
 	
 	private String file;
 	
-	public int doStartTag() throws JspException {
+	public void setRewrites(Map<String, String> rules) {
+		rewrites.putAll(rules);
+	}
+
+	@Override
+    public int doStartTag() throws JspException {
 		log.debug("\n\n");
 		
+		if (rewrites.containsKey(file))
+			file = rewrites.get(file);
+
 		// see if this is a JS or CSS file
 		boolean isJs = false;
 		boolean isCss = false;
@@ -72,9 +90,12 @@ public class HtmlIncludeTag extends TagSupport {
 		if (isJs || isCss) {
 			String initialRequestId = getInitialRequestUniqueId();
 			HttpServletRequest request = (HttpServletRequest) pageContext.getRequest();
-			log.debug("initialRequest id: [" + initialRequestId + "]");
-			log.debug("Object at pageContext." + HtmlIncludeTag.OPENMRS_HTML_INCLUDE_MAP_KEY + " is "
-			        + pageContext.getAttribute(HtmlIncludeTag.OPENMRS_HTML_INCLUDE_MAP_KEY, PageContext.SESSION_SCOPE) + "");
+			if (log.isDebugEnabled()) {
+				log.debug("initialRequest id: [" + initialRequestId + "]");
+				log.debug("Object at pageContext." + HtmlIncludeTag.OPENMRS_HTML_INCLUDE_MAP_KEY + " is "
+				        + pageContext.getAttribute(HtmlIncludeTag.OPENMRS_HTML_INCLUDE_MAP_KEY, PageContext.SESSION_SCOPE)
+				        + "");
+			}
 			
 			if (!isAlreadyUsed(file, initialRequestId)) {
 				String output = "";
@@ -95,7 +116,8 @@ public class HtmlIncludeTag extends TagSupport {
 					output = "<link href=\"" + prefix + file + "?v=" + OpenmrsConstants.OPENMRS_VERSION_SHORT + "\" type=\"text/css\" rel=\"stylesheet\" />";
 				}
 				
-				log.debug("isAlreadyUsed() is FALSE - printing " + this.file + " to output.");
+				if (log.isDebugEnabled())
+					log.debug("isAlreadyUsed() is FALSE - printing " + this.file + " to output.");
 				
 				try {
 					pageContext.getOut().print(output);
@@ -104,7 +126,8 @@ public class HtmlIncludeTag extends TagSupport {
 					log.debug("Could not produce output in HtmlIncludeTag.java");
 				}
 			} else {
-				log.debug("isAlreadyUsed() is TRUE - suppressing file print for " + this.file + "");
+				if (log.isDebugEnabled())
+					log.debug("isAlreadyUsed() is TRUE - suppressing file print for " + this.file + "");
 			}
 		}
 		
@@ -118,7 +141,8 @@ public class HtmlIncludeTag extends TagSupport {
 		Object attr = pageRequest.getAttribute(WebConstants.INIT_REQ_UNIQUE_ID);
 		if (attr != null) {
 			String uniqueId = (String) attr;
-			log.debug("Returning initial request: " + uniqueId);
+			if (log.isDebugEnabled())
+				log.debug("Returning initial request: " + uniqueId);
 			return uniqueId;
 		} else {
 			log.error("Could not find value for " + WebConstants.INIT_REQ_UNIQUE_ID + " in pageContext");
@@ -158,11 +182,11 @@ public class HtmlIncludeTag extends TagSupport {
 				
 				hmIncludeMap.put(fileName, "true");
 				
-				// save the hmIncludeMap to the  
+				// save the hmIncludeMap to the
 				pageContext.setAttribute(HtmlIncludeTag.OPENMRS_HTML_INCLUDE_MAP_KEY, hmIncludeMap,
 				    PageContext.SESSION_SCOPE);
 				
-				// save the name of the initial page 
+				// save the name of the initial page
 				pageContext.setAttribute(HtmlIncludeTag.OPENMRS_HTML_INCLUDE_REQUEST_ID_KEY, initialRequestId,
 				    PageContext.SESSION_SCOPE);
 			}

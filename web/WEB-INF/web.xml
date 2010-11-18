@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="ISO-8859-1"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <web-app xmlns="http://java.sun.com/xml/ns/j2ee"
 	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 	xsi:schemaLocation="http://java.sun.com/xml/ns/j2ee http://java.sun.com/xml/ns/j2ee/web-app_2_4.xsd"
@@ -21,6 +21,18 @@
     <context-param>
         <param-name>build.timestamp</param-name>
         <param-value>@TIMESTAMP@</param-value>
+    </context-param>
+    <context-param>
+      <param-name>module.repository.url</param-name>
+      <!-- <param-value>http://localhost:8080/modules</param-value> -->
+      <param-value>http://modules.openmrs.org/modules</param-value>
+    </context-param>
+    <!-- Optional init parameter to specify runtime properties directory -->
+    <!-- when environment variables cannot be modified and user's home -->
+    <!-- directory cannot be used. Note: A trailing slash MUST be used -->
+    <context-param>
+        <param-name>application.data.directory</param-name>
+        <param-value></param-value>
     </context-param>
 	<!-- // End init parameters -->
 	
@@ -305,6 +317,24 @@
         <url-pattern>*.xsn</url-pattern>
     </filter-mapping>
 
+	<filter>
+		<filter-name>forcePasswordChangeFilter</filter-name>
+		<filter-class>org.openmrs.module.web.filter.ForcePasswordChangeFilter</filter-class>
+		<init-param>
+			<param-name>changePasswordForm</param-name>
+			<param-value>/admin/users/changePassword.form</param-value>
+		</init-param>
+		<init-param>
+			<param-name>excludeURL</param-name>
+			<param-value>changePasswordForm,logout,.js,.css,.gif,.jpg,.jpeg,.png</param-value>
+		</init-param>
+	</filter>
+	
+	<filter-mapping>
+		<filter-name>forcePasswordChangeFilter</filter-name> 
+		<url-pattern>/*</url-pattern> 
+	</filter-mapping>
+		
 	<welcome-file-list>
 		<welcome-file>index.html</welcome-file>
 		<welcome-file>index.form</welcome-file>
@@ -393,6 +423,11 @@
 	<servlet-mapping>
  		<servlet-name>openmrs</servlet-name>
  		<url-pattern>*.list</url-pattern>
+	</servlet-mapping>
+	
+	<servlet-mapping>
+ 		<servlet-name>openmrs</servlet-name>
+ 		<url-pattern>*.json</url-pattern>
 	</servlet-mapping>
 
 	<servlet-mapping>

@@ -18,9 +18,17 @@
 	<head>
 		<openmrs:htmlInclude file="/openmrs.js" />
 		<openmrs:htmlInclude file="/openmrs.css" />
+		<link href="<openmrs:contextPath/><spring:theme code='stylesheet' />" type="text/css" rel="stylesheet" />
 		<openmrs:htmlInclude file="/style.css" />
 		<openmrs:htmlInclude file="/dwr/engine.js" />
 		<openmrs:htmlInclude file="/dwr/interface/DWRAlertService.js" />
+		<c:if test="${empty DO_NOT_INCLUDE_JQUERY}">
+			<openmrs:htmlInclude file="/scripts/jquery/jquery.min.js" />
+			<openmrs:htmlInclude file="/scripts/jquery-ui/js/jquery-ui.custom.min.js" />
+			<openmrs:htmlInclude file="/scripts/jquery-ui/js/jquery-ui-datepicker-i18n.js" />
+			<openmrs:htmlInclude file="/scripts/jquery-ui/css/redmond/jquery-ui.custom.css" />
+		</c:if>
+		<link rel="icon" type="image/ico" href="<openmrs:contextPath/><spring:theme code='favicon' />">
 
 		<c:choose>
 			<c:when test="${!empty pageTitle}">
@@ -33,8 +41,30 @@
 
 
 		<script type="text/javascript">
+			<c:if test="${empty DO_NOT_INCLUDE_JQUERY}">
+				var $j = jQuery.noConflict();
+			</c:if>
 			/* variable used in js to know the context path */
 			var openmrsContextPath = '${pageContext.request.contextPath}';
+			var dwrLoadingMessage = '<spring:message code="general.loading" />';
+			var jsDateFormat = '<openmrs:datePattern localize="false"/>';
+			var jsLocale = '<%= org.openmrs.api.context.Context.getLocale() %>';
+			
+			/* prevents users getting false dwr errors msgs when leaving pages */
+			var pageIsExiting = false;
+			$j(window).bind('beforeunload', function () { pageIsExiting = true; } );
+			
+			var handler = function(msg, ex) {
+				if (!pageIsExiting) {
+					var div = document.getElementById("openmrs_dwr_error");
+					div.style.display = ""; // show the error div
+					var msgDiv = document.getElementById("openmrs_dwr_error_msg");
+					msgDiv.innerHTML = '<spring:message code="error.dwr"/>' + " <b>" + msg + "</b>";
+				}
+				
+			};
+			dwr.engine.setErrorHandler(handler);
+			dwr.engine.setWarningHandler(handler);
 		</script>
 
 		<openmrs:extensionPoint pointId="org.openmrs.headerFullIncludeExt" type="html" requiredClass="org.openmrs.module.web.extension.HeaderIncludeExt">
@@ -47,6 +77,7 @@
 
 <body>
 	<div id="pageBody">
+        
 		<div id="userBar">
 			<openmrs:authentication>
 				<c:if test="${authenticatedUser != null}">
@@ -75,9 +106,7 @@
 			</span>
 		</div>
 
-		<div id="banner">
-			<%@ include file="/WEB-INF/template/banner.jsp" %>
-		</div>
+		<%@ include file="/WEB-INF/template/banner.jsp" %>
 
 		<%-- This is where the My Patients popup used to be. I'm leaving this placeholder here
 			as a reminder of where to put back an extension point when I've figured out what it should
@@ -86,26 +115,7 @@
 		</div>
 		--%>
 
-		<openmrs:hasPrivilege privilege="View Navigation Menu">
-			<div id="gutter">
-				<%@ include file="/WEB-INF/template/gutter.jsp" %>
-			</div>
-		</openmrs:hasPrivilege>
-
 		<div id="content">
-
-			<script type="text/javascript">
-				// prevents users getting popup alerts when viewing pages
-				var handler = function(msg, ex) {
-					var div = document.getElementById("openmrs_dwr_error");
-					div.style.display = ""; // show the error div
-					var msgDiv = document.getElementById("openmrs_dwr_error_msg");
-					msgDiv.innerHTML = '<spring:message code="error.dwr"/>' + " <b>" + msg + "</b>";
-					
-				};
-				dwr.engine.setErrorHandler(handler);
-				dwr.engine.setWarningHandler(handler);
-			</script>
 
 			<openmrs:forEachAlert>
 				<c:if test="${varStatus.first}"><div id="alertOuterBox"><div id="alertInnerBox"></c:if>
@@ -135,7 +145,9 @@
 			<div id="openmrs_dwr_error" style="display:none" class="error">
 				<div id="openmrs_dwr_error_msg"></div>
 				<div id="openmrs_dwr_error_close" class="smallMessage">
-					<i><spring:message code="error.dwr.stacktrace"/></i> &nbsp; 
+					<i><spring:message code="error.dwr.stacktrace"/></i> 
 					<a href="#" onclick="this.parentNode.parentNode.style.display='none'"><spring:message code="error.dwr.hide"/></a>
 				</div>
 			</div>
+			
+			

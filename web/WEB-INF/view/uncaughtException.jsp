@@ -9,7 +9,14 @@
 
 <%@ include file="/WEB-INF/template/headerMinimal.jsp" %>
 
-&nbsp;<br />
+&nbsp;
+<%@page import="org.openmrs.util.OpenmrsUtil"%>
+<%@page import="org.openmrs.api.context.Context"%>
+<%@page import="org.openmrs.module.ModuleFactory"%>
+<%@page import="org.openmrs.module.Module"%>
+<%@page import="org.openmrs.ImplementationId" %>
+
+<br />
 
 <h2>An Internal Error has Occurred</h2>
 
@@ -95,12 +102,49 @@ try {
 				// It's not a ServletException, so we'll just show it
 				elements = exception.getStackTrace(); 
 			}
+
+            // Collect stack trace for reporting bug description
+            StringBuilder description = new StringBuilder("Stack trace:\n");
 			for (StackTraceElement element : elements) {
+                description.append(element + "\n");
 				if (element.getClassName().contains("openmrs"))
 					out.println("<b>" + element + "</b><br/>");
 				else
 					out.println(element + "<br/>");
 			}
+			
+			pageContext.setAttribute("reportBugUrl", Context.getAdministrationService().getGlobalProperty(OpenmrsConstants.GLOBAL_PROPERTY_REPORT_BUG_URL)); 
+            pageContext.setAttribute("stackTrace", OpenmrsUtil.shortenedStackTrace(description.toString()));
+            pageContext.setAttribute("errorMessage", exception.toString());
+            pageContext.setAttribute("openmrs_version", OpenmrsConstants.OPENMRS_VERSION);
+            pageContext.setAttribute("server_info", session.getServletContext().getServerInfo());
+            String username = Context.getAuthenticatedUser().getUsername();
+            if (username == null || username.length() == 0)
+            	username = Context.getAuthenticatedUser().getSystemId();
+            pageContext.setAttribute("username", username);
+            ImplementationId id = Context.getAdministrationService().getImplementationId();
+            String implementationId = ""; 
+            if (id != null) {
+            	implementationId = id.getImplementationId();
+            	implementationId += " = " + id.getName();
+            }
+            pageContext.setAttribute("implementationId", (implementationId != null) ? implementationId : "");
+            StringBuilder sb = new StringBuilder();
+            boolean isFirst = true;
+            for(Module module : ModuleFactory.getStartedModules()){
+            	if(isFirst){
+            		sb.append(module.getModuleId())
+            		  .append(" v")
+            		  .append(module.getVersion());
+            		isFirst = false;
+            	}
+            	else
+            		sb.append(", ")
+            		  .append(module.getModuleId())
+            		  .append(" v")
+            		  .append(module.getVersion());
+            }
+            pageContext.setAttribute("startedModules", sb.toString());            
 		}
 	} 
 	else  {
@@ -115,7 +159,38 @@ try {
 }
 %>
 	</div> <!-- close stack trace box -->
-	
+
+<br/>
 <openmrs:extensionPoint pointId="org.openmrs.uncaughtException" type="html" />
+
+<div>
+The following data will be submitted with the report to enable the team to resolve the problem.
+<ul>
+<li>The error message and stack trace</li>
+<li>OpenMRS version</li>
+<li>Application server name and version</li>
+<li>Username of the user currently logged in</li>
+<li>The implementation id of this installation (if defined)</li>
+<li>Names and versions of all installed modules</li>
+</ul>
+</div>
+
+<div>
+
+<form action="${reportBugUrl}" target="_blank" method="POST">
+	<input type="hidden" name="openmrs_version" value="${openmrs_version}" />
+	<input type="hidden" name="server_info" value="${server_info}" />
+	<input type="hidden" name="username" value="${username}" />
+	<input type="hidden" name="implementationId" value="${implementationId}" />
+	<input type="hidden" name="startedModules" value="${startedModules}" />
+	<input type="hidden" name="errorMessage" value="${errorMessage}" />
+	<input type="hidden" name="stackTrace" value="${stackTrace}" />
+	<br/>
+	<input type="submit" value="Report Problem">
+</form>
+
+</div>
+	
+
 
 <%@ include file="/WEB-INF/template/footerMinimal.jsp" %>

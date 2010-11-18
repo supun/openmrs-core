@@ -15,6 +15,65 @@ body {
 	position: relative;
 	min-height: 100%;
 }
+#logocell {
+	width: 61px;
+}
+.barsmall {
+	background-image:url(images/openmrs_green_bar_repeat.gif);
+	background-repeat:repeat-x;
+	height:27px;
+	margin-left: 0px;
+    font-family: Verdana,Arial,Helvetica,sans-serif;
+    color: #ffffff;
+}
+#logosmall {
+	margin-left: 49px; 
+	margin-top:2px;
+}
+#bannerbar {
+	text-align:center;
+	line-height:40px;
+	margin-top:-18px;
+	width:100%;
+}
+img.logo-reduced61 {
+	width:61px;
+	height:61px;
+}
+img.bar-round-reduced50 {
+	height:27px;
+	margin-left:-5px;
+	margin-top:0px;
+}
+
+.navList {
+		padding: 5px 0 2px 0;
+		margin: 0px;
+		text-align: center;
+		color: #ffffff;
+		width: 100%;
+	}
+	.navList li {
+		padding: 0 15px 0 18px;
+		margin-top:0px;
+		border-left: 2px solid white;
+		display:inline;
+		line-height: 1.0em;
+		white-space: nowrap;
+		font-size: 1.3em;
+        font-family: Verdana,Arial,Helvetica,sans-serif;
+	}
+	.navList > li:first-child {
+		border-left-style: none;
+	}
+	.navList li.firstChild {
+		/* IE hack to get around lack of first-child support */
+		border-left-style: none;
+	}
+	.navList a:link, .navList a:active, .navList a:visited,.navList a:hover {
+		text-decoration: none;
+		color: #ffffff;
+	}
 
 * html #pageBody {
 	height: 100%;
@@ -32,18 +91,22 @@ h1, h2, h3, h4, h5 {
 
 a, a:link, a:hover, a:visited, a:active {
 	text-decoration: underline;
-	color: #8FABC7;
+	color: #ffffff;
 }
 a:hover {
 	text-decoration: none;
+ 	text-align: left;
+ 	z-index: 6;
 }
 
 #openmrs_msg {
 	background: url(images/info.gif) no-repeat center left;
+	background-color: lightyellow;
 }
 
 #openmrs_error {
 	background: url(images/error.gif) no-repeat center left;
+	background-color: lightpink;
 }
 
 #openmrs_msg, #openmrs_error { 
@@ -51,7 +114,6 @@ a:hover {
 	margin-bottom: 5px;
 	border: 1px dashed lightgrey;
 	padding: 2px 2px 2px 18px;
-	background-color: InfoBackground;
 }
 
 #userBar {
@@ -59,17 +121,17 @@ a:hover {
 	top: 0px;
 	left: 0px;
 	text-align: right;
-	padding: 0px 3px 0px 3px;
+	padding-top: 3px;
+    padding-right:5px;
 	margin: 0px;
-	z-index: 5;
+	z-index: 10;
 	width: 100%;
 	color: #333333;
 	line-height: 26px;
-	background-color: #ffffff;
 }
 	#userBar a:link, #userBar a:active, #userBar a:visited, #userBar a:hover,
 	#content a.offColor, #content a.offColor:link, #content a.offColor:active, #content a.offColor:visited, #content a.offColor:hover {
-		color: #eebb33;
+		color: #f57439;
 	}
 	#userBar span {
 		border-left: 1px solid #333333;
@@ -89,55 +151,13 @@ a:hover {
 	left: 0px;
 	text-align: left;
 	z-index: 6;
-	padding-left: 3px;
-}
-
-#gutter {
-	padding: 1px 0 1px 0;
-	position: absolute;
-	top: 26px;
 	width: 100%;
-	z-index: 5;
-	border-color: #8FABC7;
-	border-style: solid;
-	border-width: 1px 0 1px 0;
-	font-size: 1.05em;
-	background-color: #ffffff;
-	}
-	#navList {
-		padding: 2px 0 2px 0;
-		margin: 0px;
-		text-align: center;
-		color: #ffffff;
-		background-color: #8FABC7;
-		width: 100%;
-	}
-	#navList li {
-		padding: 0 15px 0 18px;
-		margin: auto 0 auto 0;
-		border-left: 2px solid white;
-		display: inline;
-		line-height: 1.1em;
-		white-space: nowrap;
-	}
-	#navList > li:first-child {
-		border-left-style: none;
-	}
-	#navList li.firstChild {
-		/* IE hack to get around lack of first-child support */
-		border-left-style: none;
-	}
-	#navList a:link, #navList a:active, #navList a:visited, #navList a:hover {
-		text-decoration: none;
-		font-size: 1.4em;
-		color: #ffffff;
 	}
 	
 #content {
 	margin: 0px 0 0 0;
 	width: 100%;
-	padding: 60px 10px 10px 10px;
-	font-size: 1.2em;
+	padding: 80px 10px 10px 10px;	font-size: 1.2em;
 	background-color: #ffffff;
 	z-index: 8;
 }
@@ -168,6 +188,10 @@ a:hover {
 	background-color: #eeeeee;
 }
 
+#footer a, a:link, #footer a:active, #footer a:visited, #footer a:hover {
+	color: #003366;
+}
+
 #footer span {
 	margin-right: 5px;
 }
@@ -178,6 +202,18 @@ a:hover {
 
 #footerInner {
 	border-top: 1px solid #bbbbbb;
+}
+
+#footer #poweredBy {
+	float: right;
+}
+
+#footer #poweredBy img {
+	height: 1.4em;
+}
+
+#footer #poweredBy a, #poweredBy a:link, #poweredBy a:active, #poweredBy a:visited {
+	text-decoration: none;
 }
 
 #menu {
@@ -467,7 +503,7 @@ table.patientTreatmentPrograms td {
 	width: 7em;
 }
 .box, .boxHeader, .boxRed, .boxHeaderRed, .boxExited, .boxHeaderExited {
-	border: 1px solid #8FABC7;
+	border: 1px solid #1aac9b;
 	width: 99%;
 	padding: 5px 2px 5px 2px;
 	text-align: left;
@@ -480,7 +516,7 @@ table.patientTreatmentPrograms td {
 }
 
 .boxHeader {
-	background-color: #8FABC7;
+	background-color: #1aac9b;
 	color: white;
 	display: block;
 	padding: 2px;
@@ -573,7 +609,6 @@ table.patientTreatmentPrograms td {
 	border: 1px solid lightgrey;
 	background-color: whitesmoke;
 	cursor: pointer;
-	width: 82px;
 	margin: 1px;
 }
 .closeButton {
@@ -614,8 +649,7 @@ tr.searchHighlight {
 
 .popupSearchForm {
 	width: 500px;
-	height: 390px;
-	padding: 2px;
+	padding: 0.4em;
 	background-color: whitesmoke;
 	border: 1px solid gray;
 	position: absolute;
@@ -1050,7 +1084,7 @@ th.smallHeader {
 	font-size: 1.0em; 
 }
 
-.highlighted {
+.highlighted, .highlight {
 	background-color: yellow;
 }
 
@@ -1207,4 +1241,17 @@ table td#summaryHeaderPatientGender {
 }
 .forgotPasswordLink {
 	font-size: small;
+}
+.required {
+	color: red;
+	font-weight: bold;
+}
+.user .personName {
+	font-size: 0.8em;
+}
+.autocompleteresult {
+	white-space: nowrap;
+}
+.autocompleteresult .preferredname {
+	color: gray;
 }

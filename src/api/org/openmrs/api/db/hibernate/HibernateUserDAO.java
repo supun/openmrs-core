@@ -14,9 +14,6 @@
 package org.openmrs.api.db.hibernate;
 
 import java.math.BigInteger;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
@@ -33,8 +30,6 @@ import org.hibernate.SessionFactory;
 import org.hibernate.criterion.Expression;
 import org.hibernate.criterion.Order;
 import org.hibernate.criterion.Restrictions;
-import org.hibernate.dialect.Dialect;
-import org.hibernate.dialect.HSQLDialect;
 import org.openmrs.Person;
 import org.openmrs.Privilege;
 import org.openmrs.Role;
@@ -76,8 +71,12 @@ public class HibernateUserDAO implements UserDAO {
 	 */
 	public User saveUser(User user, String password) {
 		
+		// only change the user's password when creating a new user
+		boolean isNewUser = user.getUserId() == null;
+		
 		sessionFactory.getCurrentSession().saveOrUpdate(user);
-		if (password != null) {
+		
+		if (isNewUser && password != null) {
 			//update the new user with the password
 			String salt = Security.getRandomToken();
 			String hashedPassword = Security.encodeString(password + salt);
@@ -85,6 +84,7 @@ public class HibernateUserDAO implements UserDAO {
 			updateUserPassword(hashedPassword, salt, Context.getAuthenticatedUser().getUserId(), new Date(), user
 			        .getUserId());
 		}
+		
 		return user;
 	}
 	
@@ -140,10 +140,7 @@ public class HibernateUserDAO implements UserDAO {
 		Long count = (Long) query.uniqueResult();
 		
 		log.debug("# users found: " + count);
-		if (count == null || count == 0)
-			return false;
-		else
-			return true;
+		return (count != null && count != 0);
 	}
 	
 	/**
@@ -324,52 +321,22 @@ public class HibernateUserDAO implements UserDAO {
 			throw new DAOException("Passwords don't match");
 		}
 		
-		log.info("Updating secret question and answer for " + u.getUsername());
-		credentials.setSecretQuestion(question);
-		credentials.setSecretAnswer(answer);
-		updateLoginCredential(credentials);
+		changeQuestionAnswer(u, question, answer);
 	}
 	
 	/**
 	 * @see org.openmrs.api.UserService#changeQuestionAnswer(User, String, String)
 	 */
 	public void changeQuestionAnswer(User u, String question, String answer) throws DAOException {
-		Connection connection = sessionFactory.getCurrentSession().connection();
-		PreparedStatement ps = null;
-		try {
-			
-			String sql = "UPDATE `users` SET secret_question = ?, secret_answer = ?, date_changed = ?, changed_by = ? WHERE user_id = ?";
-			
-			// if we're in a junit test, we're probably using hsql...and hsql 
-			// does not like the backtick.  Replace the backtick with the hsql 
-			// escape character: the double quote (or nothing). 
-			Dialect dialect = HibernateUtil.getDialect(sessionFactory);
-			if (HSQLDialect.class.getName().equals(dialect.getClass().getName()))
-				sql = sql.replace("`", "");
-			
-			ps = connection.prepareStatement(sql);
-			
-			ps.setString(1, question);
-			ps.setString(2, answer);
-			ps.setDate(3, new java.sql.Date(new Date().getTime()));
-			ps.setInt(4, Context.getAuthenticatedUser().getUserId());
-			ps.setInt(5, u.getUserId());
-			
-			ps.executeUpdate();
-		}
-		catch (SQLException e) {
-			throw new DAOException("SQL Exception while trying to update a user's secret question", e);
-		}
-		finally {
-			if (ps != null) {
-				try {
-					ps.close();
-				}
-				catch (SQLException e) {
-					log.error("Error generated while closing statement", e);
-				}
-			}
-		}
+		log.info("Updating secret question and answer for " + u.getUsername());
+		
+		LoginCredential credentials = getLoginCredential(u);
+		credentials.setSecretQuestion(question);
+		credentials.setSecretAnswer(answer);
+		credentials.setDateChanged(new Date());
+		credentials.setChangedBy(u);
+		
+		updateLoginCredential(credentials);
 	}
 	
 	/**
@@ -389,7 +356,10 @@ public class HibernateUserDAO implements UserDAO {
 	 */
 	@SuppressWarnings("unchecked")
 	public List<User> getUsers(String name, List<Role> roles, boolean includeRetired) {
+		
 		log.debug("name: " + name);
+		
+		name = HibernateUtil.escapeSqlWildcards(name, sessionFactory);
 		
 		// Create an HQL query like this:
 		// select distinct user
@@ -412,18 +382,20 @@ public class HibernateUserDAO implements UserDAO {
 					String key = "name" + ++counter;
 					String value = n + "%";
 					namesMap.put(key, value);
-					criteria.add("(user.username like :" + key + " or user.systemId like :" + key + " or name.givenName like :" + key + " or name.middleName like :" + key + " or name.familyName like :" + key + " or name.familyName2 like :" + key + ")");
+					criteria.add("(user.username like :" + key + " or user.systemId like :" + key
+					        + " or name.givenName like :" + key + " or name.middleName like :" + key
+					        + " or name.familyName like :" + key + " or name.familyName2 like :" + key + ")");
 				}
 			}
 		}
 		if (includeRetired == false)
 			criteria.add("user.retired = false");
-
+		
 		// build the hql query
 		String hql = "select distinct user from User as user inner join user.person.names as name ";
 		if (criteria.size() > 0)
 			hql += "where ";
-		for (Iterator<String> i = criteria.iterator(); i.hasNext(); ) {
+		for (Iterator<String> i = criteria.iterator(); i.hasNext();) {
 			hql += i.next() + " ";
 			if (i.hasNext())
 				hql += "and ";
@@ -557,18 +529,18 @@ public class HibernateUserDAO implements UserDAO {
 	public void updateLoginCredential(LoginCredential credential) {
 		sessionFactory.getCurrentSession().update(credential);
 	}
-
+	
 	/**
-     * @see org.openmrs.api.db.UserDAO#getUsersByPerson(org.openmrs.Person, boolean)
-     */
-    @SuppressWarnings("unchecked")
-    public List<User> getUsersByPerson(Person person, boolean includeRetired) {
-	    Criteria crit = sessionFactory.getCurrentSession().createCriteria(User.class);
-	    if (person != null)
-	    	crit.add(Restrictions.eq("person", person));
-	    if (!includeRetired)
-	    	crit.add(Restrictions.eq("retired", false));
-	    return (List<User>) crit.list();
-    }
+	 * @see org.openmrs.api.db.UserDAO#getUsersByPerson(org.openmrs.Person, boolean)
+	 */
+	@SuppressWarnings("unchecked")
+	public List<User> getUsersByPerson(Person person, boolean includeRetired) {
+		Criteria crit = sessionFactory.getCurrentSession().createCriteria(User.class);
+		if (person != null)
+			crit.add(Restrictions.eq("person", person));
+		if (!includeRetired)
+			crit.add(Restrictions.eq("retired", false));
+		return (List<User>) crit.list();
+	}
 	
 }

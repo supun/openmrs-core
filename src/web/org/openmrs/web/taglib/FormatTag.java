@@ -24,17 +24,19 @@ import org.openmrs.Concept;
 import org.openmrs.Encounter;
 import org.openmrs.EncounterType;
 import org.openmrs.Location;
+import org.openmrs.LocationTag;
 import org.openmrs.Obs;
+import org.openmrs.OpenmrsMetadata;
 import org.openmrs.Person;
 import org.openmrs.User;
 import org.openmrs.api.context.Context;
 import org.springframework.util.StringUtils;
+import org.springframework.web.util.JavaScriptUtils;
 
 /**
  * <pre>
  * Prints out a pretty-formatted versions of an OpenMRS object
  * TODO: add the other openmrs domain objects
- * TODO: allow this to be written to a pageContext variable instead of just the jsp
  * TODO: add a size=compact|NORMAL|full|? option
  * </pre>
  */
@@ -72,6 +74,13 @@ public class FormatTag extends TagSupport {
 	
 	private Location location;
 	
+	private Integer locationTagId;
+	
+	private LocationTag locationTag;
+	
+	private Boolean javaScriptEscape = Boolean.FALSE;
+	
+	@Override
 	public int doStartTag() {
 		StringBuilder sb = new StringBuilder();
 		if (conceptId != null)
@@ -97,9 +106,9 @@ public class FormatTag extends TagSupport {
 		if (encounterId != null)
 			encounter = Context.getEncounterService().getEncounter(encounterId);
 		if (encounter != null) {
-			printEncounterType(sb, encounter.getEncounterType());
+			printMetadata(sb, encounter.getEncounterType());
 			sb.append(" @");
-			printLocation(sb, encounter.getLocation());
+			printMetadata(sb, encounter.getLocation());
 			sb.append(" | ");
 			printDate(sb, encounter.getEncounterDatetime());
 			sb.append(" | ");
@@ -109,21 +118,34 @@ public class FormatTag extends TagSupport {
 		if (encounterTypeId != null)
 			encounterType = Context.getEncounterService().getEncounterType(encounterTypeId);
 		if (encounterType != null) {
-			printEncounterType(sb, encounterType);
+			printMetadata(sb, encounterType);
 		}
 		
 		if (locationId != null)
 			location = Context.getLocationService().getLocation(locationId);
 		if (location != null) {
-			printLocation(sb, location);
+			printMetadata(sb, location);
+		}
+		
+		if (locationTagId != null)
+			locationTag = Context.getLocationService().getLocationTag(locationTagId);
+		if (locationTag != null) {
+			printMetadata(sb, locationTag);
 		}
 		
 		if (StringUtils.hasText(var)) {
-			pageContext.setAttribute(var, sb.toString());
+			if (javaScriptEscape)
+				pageContext.setAttribute(var, JavaScriptUtils.javaScriptEscape(sb.toString()));
+			else
+				pageContext.setAttribute(var, sb.toString());
 		} else {
 			try {
-				pageContext.getOut().write(sb.toString());
-			} catch (IOException e) {
+				if (javaScriptEscape)
+					pageContext.getOut().write(JavaScriptUtils.javaScriptEscape(sb.toString()));
+				else
+					pageContext.getOut().write(sb.toString());
+			}
+			catch (IOException e) {
 				log.error("Failed to write to pageContext.getOut()", e);
 			}
 		}
@@ -131,58 +153,56 @@ public class FormatTag extends TagSupport {
 	}
 	
 	/**
-     * formats a date and prints it to sb
-     * 
-     * @param sb
-     * @param date
-     */
-    private void printDate(StringBuilder sb, Date date) {
-	    sb.append(Context.getDateFormat().format(date));
-    }
-
+	 * formats a date and prints it to sb
+	 * 
+	 * @param sb
+	 * @param date
+	 */
+	private void printDate(StringBuilder sb, Date date) {
+		sb.append(Context.getDateFormat().format(date));
+	}
+	
 	/**
-     * formats a location and prints it to sb
-     * 
-     * @param sb
-     * @param location
-     */
-    private void printLocation(StringBuilder sb, Location location) {
-	    sb.append(location.getName());
-    }
-
+	 * formats any OpenmrsMetadata and prints it to sb
+	 * 
+	 * @param sb
+	 * @param metadata
+	 */
+	private void printMetadata(StringBuilder sb, OpenmrsMetadata metadata) {
+		if (metadata != null)
+			sb.append(metadata.getName());
+	}
+	
 	/**
-     * formats an encounter type and prints it to sb
-     * 
-     * @param sb
-     * @param encounterType
-     */
-    private void printEncounterType(StringBuilder sb, EncounterType encounterType) {
-    	if (encounterType != null)
-    		sb.append(encounterType.getName());
-    }
-
+	 * formats a user and prints it to sb
+	 * 
+	 * @param sb
+	 * @param u
+	 */
+	private void printUser(StringBuilder sb, User u) {
+		sb.append("<span class=\"user\">");
+		sb.append("<span class=\"username\">");
+		sb.append(u.getUsername());
+		sb.append("</span>");
+		if (u.getPerson() != null) {
+			sb.append("<span class=\"personName\">");
+			sb.append(" (").append(u.getPersonName()).append(")");
+			sb.append("</span>");
+		}
+		sb.append("</span>");
+	}
+	
 	/**
-     * formats a user and prints it to sb
-     * 
-     * @param sb
-     * @param u
-     */
-    private void printUser(StringBuilder sb, User u) {
-    	sb.append(u.getUsername());
-    	if (u.getPerson() != null)
-    		sb.append(" (").append(u.getPersonName()).append(")");
-    }
-    
-    /**
-     * formats a person and prints it to sb
-     * 
-     * @param sb
-     * @param p
-     */
-    private void printPerson(StringBuilder sb, Person p) {
-    	sb.append(p.getPersonName());
-    }
-
+	 * formats a person and prints it to sb
+	 * 
+	 * @param sb
+	 * @param p
+	 */
+	private void printPerson(StringBuilder sb, Person p) {
+		sb.append(p.getPersonName());
+	}
+	
+	@Override
 	public int doEndTag() {
 		reset();
 		return EVAL_PAGE;
@@ -202,7 +222,9 @@ public class FormatTag extends TagSupport {
 		encounterTypeId = null;
 		encounterType = null;
 		locationId = null;
-		location = null;		
+		location = null;
+		locationTagId = null;
+		locationTag = null;
 	}
 	
 	public Integer getConceptId() {
@@ -244,61 +266,106 @@ public class FormatTag extends TagSupport {
 	public void setUser(User user) {
 		this.user = user;
 	}
-
-    public Integer getEncounterId() {
-    	return encounterId;
-    }
-
-    public void setEncounterId(Integer encounterId) {
-    	this.encounterId = encounterId;
-    }
-
-    public Encounter getEncounter() {
-    	return encounter;
-    }
-
-    public void setEncounter(Encounter encounter) {
-    	this.encounter = encounter;
-    }
 	
-    public Integer getEncounterTypeId() {
-    	return encounterTypeId;
-    }
+	public Integer getEncounterId() {
+		return encounterId;
+	}
 	
-    public void setEncounterTypeId(Integer encounterTypeId) {
-    	this.encounterTypeId = encounterTypeId;
-    }
+	public void setEncounterId(Integer encounterId) {
+		this.encounterId = encounterId;
+	}
 	
-    public EncounterType getEncounterType() {
-    	return encounterType;
-    }
-
-    public void setEncounterType(EncounterType encounterType) {
-    	this.encounterType = encounterType;
-    }
+	public Encounter getEncounter() {
+		return encounter;
+	}
 	
-    public Integer getLocationId() {
-    	return locationId;
-    }
-
-    public void setLocationId(Integer locationId) {
-    	this.locationId = locationId;
-    }
-    
-    public Location getLocation() {
-    	return location;
-    }
-
-    public void setLocation(Location location) {
-    	this.location = location;
-    }
+	public void setEncounter(Encounter encounter) {
+		this.encounter = encounter;
+	}
 	
-    public String getVar() {
-    	return var;
-    }
+	public Integer getEncounterTypeId() {
+		return encounterTypeId;
+	}
 	
-    public void setVar(String var) {
-    	this.var = var;
-    }
+	public void setEncounterTypeId(Integer encounterTypeId) {
+		this.encounterTypeId = encounterTypeId;
+	}
 	
+	public EncounterType getEncounterType() {
+		return encounterType;
+	}
+	
+	public void setEncounterType(EncounterType encounterType) {
+		this.encounterType = encounterType;
+	}
+	
+	public Integer getLocationId() {
+		return locationId;
+	}
+	
+	public void setLocationId(Integer locationId) {
+		this.locationId = locationId;
+	}
+	
+	public Location getLocation() {
+		return location;
+	}
+	
+	public void setLocation(Location location) {
+		this.location = location;
+	}
+	
+	public Integer getLocationTagId() {
+		return locationTagId;
+	}
+	
+	public void setLocationTagId(Integer locationTagId) {
+		this.locationTagId = locationTagId;
+	}
+	
+	public LocationTag getLocationTag() {
+		return locationTag;
+	}
+	
+	public void setLocationTag(LocationTag locationTag) {
+		this.locationTag = locationTag;
+	}
+	
+	public String getVar() {
+		return var;
+	}
+	
+	public void setVar(String var) {
+		this.var = var;
+	}
+	
+	public Integer getPersonId() {
+		return personId;
+	}
+	
+	public void setPersonId(Integer personId) {
+		this.personId = personId;
+	}
+	
+	public Person getPerson() {
+		return person;
+	}
+	
+	public void setPerson(Person person) {
+		this.person = person;
+	}
+	
+	/**
+	 * @return the javaScriptEscape
+	 */
+	public Boolean getJavaScriptEscape() {
+		return javaScriptEscape;
+	}
+	
+	/**
+	 * @param javaScriptEscape the javaScriptEscape to set
+	 */
+	public void setJavaScriptEscape(Boolean javaScriptEscape) {
+		this.javaScriptEscape = javaScriptEscape;
+	}
 }

@@ -36,6 +36,8 @@ public class HL7InArchive extends BaseOpenmrsObject {
 	private Integer messageState;
 	
 	private Date dateCreated;
+
+	private boolean loaded = false;
 	
 	/**
 	 * Default constructor
@@ -52,7 +54,7 @@ public class HL7InArchive extends BaseOpenmrsObject {
 		setHL7Source(hl7InQueue.getHL7Source());
 		setHL7SourceKey(hl7InQueue.getHL7SourceKey());
 		setHL7Data(hl7InQueue.getHL7Data());
-		setMessageState(HL7Constants.HL7_STATUS_PROCESSING);
+		setMessageState(HL7Constants.HL7_STATUS_PROCESSED);
 	}
 	
 	/**
@@ -156,5 +158,25 @@ public class HL7InArchive extends BaseOpenmrsObject {
 	public void setId(Integer id) {
 		setHL7InArchiveId(id);
 	}
-	
+
+	/**
+	 * describes whether hl7 data has been loaded from the filesystem
+	 * 
+	 * @since 1.7
+	 * @return the loaded status (true or false)
+	 */
+	public boolean isLoaded() {
+		return loaded;
+	}
+
+	/**
+	 * sets the flag for hl7 data having been loaded from the filesystem
+	 * 
+	 * @since 1.7
+	 * @param the status to set 
+	 */
+	public void setLoaded(boolean loaded) {
+		this.loaded = loaded;
+	}
+
 }

@@ -54,6 +54,7 @@ public class ConceptFormControllerTest extends BaseWebContextSensitiveTest {
 	 */
 	@Test
 	public void shouldGetConcept() throws Exception {
+		
 		MockHttpServletRequest request = new MockHttpServletRequest("GET", "");
 		request.setParameter("conceptId", "3");
 		
@@ -137,7 +138,7 @@ public class ConceptFormControllerTest extends BaseWebContextSensitiveTest {
 		
 		Concept actualConcept = cs.getConceptByName(EXPECTED_PREFERRED_NAME);
 		assertNotNull(actualConcept);
-		assertEquals(EXPECTED_PREFERRED_NAME, actualConcept.getPreferredName(Locale.ENGLISH).getName());
+		assertEquals(EXPECTED_PREFERRED_NAME, actualConcept.getFullySpecifiedName(Locale.ENGLISH).getName());
 		Collection<ConceptName> actualNames = actualConcept.getNames();
 		assertEquals(1, actualNames.size());
 		assertNull(actualConcept.getShortNameInLocale(Locale.ENGLISH));
@@ -178,7 +179,7 @@ public class ConceptFormControllerTest extends BaseWebContextSensitiveTest {
 		assertNotNull(actualConcept);
 		Collection<ConceptName> actualNames = actualConcept.getNames();
 		assertEquals(2, actualNames.size());
-		assertEquals(EXPECTED_PREFERRED_NAME, actualConcept.getPreferredName(Locale.ENGLISH).getName());
+		assertEquals(EXPECTED_PREFERRED_NAME, actualConcept.getFullySpecifiedName(Locale.ENGLISH).getName());
 		assertNotNull(actualConcept.getShortNameInLocale(Locale.ENGLISH));
 		assertEquals(EXPECTED_SHORT_NAME, actualConcept.getShortNameInLocale(Locale.ENGLISH).getName());
 		assertNull(actualConcept.getDescription(Locale.ENGLISH));
@@ -221,7 +222,7 @@ public class ConceptFormControllerTest extends BaseWebContextSensitiveTest {
 		assertNotNull(actualConcept);
 		Collection<ConceptName> actualNames = actualConcept.getNames();
 		assertEquals(2, actualNames.size());
-		assertEquals(EXPECTED_PREFERRED_NAME, actualConcept.getPreferredName(Locale.ENGLISH).getName());
+		assertEquals(EXPECTED_PREFERRED_NAME, actualConcept.getFullySpecifiedName(Locale.ENGLISH).getName());
 		assertNotNull(actualConcept.getShortNameInLocale(Locale.ENGLISH));
 		assertEquals(EXPECTED_SHORT_NAME, actualConcept.getShortNameInLocale(Locale.ENGLISH).getName());
 		
@@ -266,7 +267,7 @@ public class ConceptFormControllerTest extends BaseWebContextSensitiveTest {
 		assertNotNull(actualConcept);
 		Collection<ConceptName> actualNames = actualConcept.getNames();
 		assertEquals(2, actualNames.size());
-		assertEquals(EXPECTED_PREFERRED_NAME, actualConcept.getPreferredName(Locale.ENGLISH).getName());
+		assertEquals(EXPECTED_PREFERRED_NAME, actualConcept.getFullySpecifiedName(Locale.ENGLISH).getName());
 		assertNotNull(actualConcept.getShortNameInLocale(Locale.ENGLISH));
 		assertEquals(EXPECTED_SHORT_NAME, actualConcept.getShortNameInLocale(Locale.ENGLISH).getName());
 		
@@ -317,7 +318,7 @@ public class ConceptFormControllerTest extends BaseWebContextSensitiveTest {
 		assertNotNull(actualConcept);
 		Collection<ConceptName> actualNames = actualConcept.getNames();
 		assertEquals(5, actualNames.size());
-		assertEquals(EXPECTED_PREFERRED_NAME, actualConcept.getPreferredName(Locale.ENGLISH).getName());
+		assertEquals(EXPECTED_PREFERRED_NAME, actualConcept.getFullySpecifiedName(Locale.ENGLISH).getName());
 		assertNotNull(actualConcept.getShortNameInLocale(Locale.ENGLISH));
 		assertEquals(EXPECTED_SHORT_NAME, actualConcept.getShortNameInLocale(Locale.ENGLISH).getName());
 		
@@ -369,7 +370,7 @@ public class ConceptFormControllerTest extends BaseWebContextSensitiveTest {
 		assertNotNull(actualConcept);
 		Collection<ConceptName> actualNames = actualConcept.getNames();
 		assertEquals(4, actualNames.size());
-		assertEquals(EXPECTED_PREFERRED_NAME, actualConcept.getPreferredName(Locale.ENGLISH).getName());
+		assertEquals(EXPECTED_PREFERRED_NAME, actualConcept.getFullySpecifiedName(Locale.ENGLISH).getName());
 		assertNotNull(actualConcept.getShortNameInLocale(Locale.ENGLISH));
 		assertEquals(EXPECTED_SHORT_NAME, actualConcept.getShortNameInLocale(Locale.ENGLISH).getName());
 		
@@ -418,7 +419,7 @@ public class ConceptFormControllerTest extends BaseWebContextSensitiveTest {
 		assertNotNull(actualConcept);
 		Collection<ConceptName> actualNames = actualConcept.getNames();
 		assertEquals(4, actualNames.size());
-		assertEquals(EXPECTED_PREFERRED_NAME, actualConcept.getPreferredName(Locale.ENGLISH).getName());
+		assertEquals(EXPECTED_PREFERRED_NAME, actualConcept.getFullySpecifiedName(Locale.ENGLISH).getName());
 		assertNotNull(actualConcept.getShortNameInLocale(Locale.ENGLISH));
 		assertEquals(EXPECTED_SHORT_NAME, actualConcept.getShortNameInLocale(Locale.ENGLISH).getName());
 		
@@ -443,6 +444,7 @@ public class ConceptFormControllerTest extends BaseWebContextSensitiveTest {
 		
 		// first, add the concept with an original description
 		Concept conceptToUpdate = new Concept();
+		conceptToUpdate.addName(new ConceptName("demo name", Context.getLocale()));
 		ConceptDescription originalConceptDescription = new ConceptDescription();
 		originalConceptDescription.setLocale(Locale.ENGLISH);
 		originalConceptDescription.setDescription(ORIGINAL_DESCRIPTION);
@@ -625,17 +627,17 @@ public class ConceptFormControllerTest extends BaseWebContextSensitiveTest {
 		
 		mockRequest.setMethod("POST");
 		mockRequest.setParameter("action", "");
-		mockRequest.setParameter("conceptId", "21");
-		mockRequest.setParameter("namesByLocale[en].name", "FOOD ASSISTANCE FOR ENTIRE FAMILY");
+		mockRequest.setParameter("conceptId", "4"); // this must be a concept id that is not used in an observation in order to be changed
+		mockRequest.setParameter("namesByLocale[en].name", "CIVIL STATUS");
 		mockRequest.setParameter("concept.datatype", "1"); // set it to something other than "Coded"
-		mockRequest.setParameter("concept.class", "7");
-		mockRequest.setParameter("concept.answers", "7 8 22");
+		mockRequest.setParameter("concept.class", "10");
+		mockRequest.setParameter("concept.answers", "5 6");
 		
 		ModelAndView mav = conceptFormController.handleRequest(mockRequest, new MockHttpServletResponse());
 		assertNotNull(mav);
 		assertTrue(mav.getModel().isEmpty());
 		
-		Concept concept = cs.getConcept(21);
+		Concept concept = cs.getConcept(4);
 		assertNotNull(concept);
 		assertEquals(0, concept.getAnswers().size());
 	}
@@ -670,6 +672,80 @@ public class ConceptFormControllerTest extends BaseWebContextSensitiveTest {
 		assertEquals(ConceptComplex.class, concept.getClass());
 		ConceptComplex complex = (ConceptComplex) concept;
 		assertEquals("TextHandler", complex.getHandler());
+	}
+	
+	/**
+	 * @see {@link ConceptFormController#onSubmit(HttpServletRequest,HttpServletResponse,Object,BindException)}
+	 */
+	@Test
+	@Verifies(value = "should return a concept with a null id if no match is found", method = "onSubmit(HttpServletRequest,HttpServletResponse,Object,BindException)")
+	public void onSubmit_shouldReturnAConceptWithANullIdIfNoMatchIsFound() throws Exception {
+		
+		ConceptFormController conceptFormController = (ConceptFormController) applicationContext.getBean("conceptForm");
+		MockHttpServletRequest mockRequest = new MockHttpServletRequest();
+		mockRequest.setMethod("GET");
+		mockRequest.setParameter("conceptId", "57432223");
+		ModelAndView mav = conceptFormController.handleRequest(mockRequest, new MockHttpServletResponse());
+		assertNotNull(mav);
+		ConceptFormBackingObject formBackingObject = (ConceptFormBackingObject) mav.getModel().get("command");
+		assertNotNull(formBackingObject.getConcept());
+		assertNull(formBackingObject.getConcept().getConceptId());
+	}
+
+	/**
+	 * @see {@link ConceptFormController#onSubmit(HttpServletRequest,HttpServletResponse,Object,BindException)}
+	 */
+	@Test
+	@Verifies(value = "should set the local preferred name", method = "onSubmit(HttpServletRequest,HttpServletResponse,Object,BindException)")
+	public void onSubmit_shouldSetTheLocalPreferredName() throws Exception {
+		ConceptService cs = Context.getConceptService();
+		Concept concept = cs.getConcept(5497);
+		//sanity check, the current preferred Name should be different from what will get set in the form
+		Assert.assertNotSame("CD3+CD4+ABS CNT", concept.getPreferredName(Locale.ENGLISH).getName());
+		
+		ConceptFormController conceptFormController = (ConceptFormController) applicationContext.getBean("conceptForm");
+		MockHttpServletRequest mockRequest = new MockHttpServletRequest();
+		mockRequest.setMethod("POST");
+		mockRequest.setParameter("action", "");
+		mockRequest.setParameter("conceptId", "5497");
+		mockRequest.setParameter("preferredNamesByLocale[en]", "CD3+CD4+ABS CNT");
+		
+		ModelAndView mav = conceptFormController.handleRequest(mockRequest, new MockHttpServletResponse());
+		assertNotNull(mav);
+		assertTrue(mav.getModel().isEmpty());
+		
+		Assert.assertEquals("CD3+CD4+ABS CNT", concept.getPreferredName(Locale.ENGLISH).getName());
+		//preferred name should be the new one that has been set from the form
+		Assert.assertEquals(true, concept.getPreferredName(Locale.ENGLISH).isLocalePreferred());
+	}
+
+	/**
+	 * @see {@link ConceptFormController#onSubmit(HttpServletRequest,HttpServletResponse,Object,BindException)}
+	 */
+	@Test
+	@Verifies(value = "should void a synonym marked as preferred when it is removed", method = "onSubmit(HttpServletRequest,HttpServletResponse,Object,BindException)")
+	public void onSubmit_shouldVoidASynonymMarkedAsPreferredWhenItIsRemoved() throws Exception {
+		ConceptService cs = Context.getConceptService();
+		Concept concept = cs.getConcept(5497);
+		//mark one of the synonyms as preferred
+		ConceptName preferredName = new ConceptName("pref name", Locale.ENGLISH);
+		preferredName.setLocalePreferred(true);
+		concept.addName(preferredName);
+		cs.saveConcept(concept);
+		
+		ConceptFormController conceptFormController = (ConceptFormController) applicationContext.getBean("conceptForm");
+		MockHttpServletRequest mockRequest = new MockHttpServletRequest();
+		mockRequest.setMethod("POST");
+		mockRequest.setParameter("action", "");
+		mockRequest.setParameter("conceptId", "5497");
+		//remove the synonym that is marked as preferred
+		mockRequest.setParameter("synonymsByLocale[en][0].voided", "true");
+		
+		ModelAndView mav = conceptFormController.handleRequest(mockRequest, new MockHttpServletResponse());
+		assertNotNull(mav);
+		assertTrue(mav.getModel().isEmpty());
+		
+		Assert.assertEquals(true, preferredName.isVoided());
 	}
 	
 }

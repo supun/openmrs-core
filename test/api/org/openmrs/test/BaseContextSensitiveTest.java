@@ -52,6 +52,7 @@ import org.dbunit.dataset.DefaultTable;
 import org.dbunit.dataset.IDataSet;
 import org.dbunit.dataset.ReplacementDataSet;
 import org.dbunit.dataset.xml.FlatXmlDataSet;
+import org.dbunit.dataset.xml.XmlDataSet;
 import org.dbunit.ext.hsqldb.HsqldbDataTypeFactory;
 import org.dbunit.operation.DatabaseOperation;
 import org.hibernate.SessionFactory;
@@ -144,6 +145,21 @@ public abstract class BaseContextSensitiveTest extends AbstractJUnit4SpringConte
 	}
 	
 	/**
+	 * Modules should extend {@link BaseModuleContextSensitiveTest}, not this class. If they extend
+	 * this class, then they won't work right when run in batches.
+	 * 
+	 * @throws Exception
+	 */
+	@Before
+	public void checkNotModule() throws Exception {
+		if (this.getClass().getPackage().toString().contains("org.openmrs.module.")
+		        && !(this instanceof BaseModuleContextSensitiveTest)) {
+			throw new RuntimeException(
+			        "Module unit test classes should extend BaseModuleContextSensitiveTest, not just BaseContextSensitiveTest");
+		}
+	}
+	
+	/**
 	 * Get the number of times this class has been loaded. This is a rough approx of how many tests
 	 * have been run so far. This can be used to determine if the test is being run in a standalone
 	 * context or if other tests have been run before.
@@ -177,7 +193,7 @@ public abstract class BaseContextSensitiveTest extends AbstractJUnit4SpringConte
 		if (runtimeProperties == null)
 			runtimeProperties = TestUtil.getRuntimeProperties(getWebappName());
 		
-		// if we're using the in-memory hypersonic database, add those 
+		// if we're using the in-memory hypersonic database, add those
 		// connection properties here to override what is in the runtime
 		// properties
 		if (useInMemoryDatabase() == true) {
@@ -219,7 +235,7 @@ public abstract class BaseContextSensitiveTest extends AbstractJUnit4SpringConte
 		}
 		catch (ContextAuthenticationException wrongCredentialsError) {
 			if (useInMemoryDatabase()) {
-				// if we get here the user is using some database other than the standard 
+				// if we get here the user is using some database other than the standard
 				// in-memory database, prompt the user for input
 				log.error("For some reason we couldn't auth as admin:test ?!", wrongCredentialsError);
 			}
@@ -277,7 +293,7 @@ public abstract class BaseContextSensitiveTest extends AbstractJUnit4SpringConte
 	 * Utility method for obtaining username and password through Swing interface for tests. Any
 	 * tests extending the org.openmrs.BaseTest class may simply invoke this method by name.
 	 * Username and password are returned in a two-member String array. If the user aborts, null is
-	 * returned. <b> <em>Do not call for non-interactive tests, since this method will try to 
+	 * returned. <b> <em>Do not call for non-interactive tests, since this method will try to
 	 * render an interactive dialog box for authentication!</em></b>
 	 * 
 	 * @param message string to display above username field
@@ -323,7 +339,8 @@ public abstract class BaseContextSensitiveTest extends AbstractJUnit4SpringConte
 		// JOptionPane for model dialog
 		TimerTask later = new TimerTask() {
 			
-			public void run() {
+			@Override
+            public void run() {
 				if (frame != null) {
 					// bring the dialog's window to the front
 					frame.toFront();
@@ -337,7 +354,8 @@ public abstract class BaseContextSensitiveTest extends AbstractJUnit4SpringConte
 		// attention grabber for those people that aren't as observant
 		TimerTask laterStill = new TimerTask() {
 			
-			public void run() {
+			@Override
+            public void run() {
 				if (frame != null) {
 					frame.toFront(); // bring the dialog's window to the
 					// front
@@ -451,10 +469,62 @@ public abstract class BaseContextSensitiveTest extends AbstractJUnit4SpringConte
 				if (reader != null)
 					reader.close();
 			}
+			
+			// cache the xmldataset for future runs of this file
+			cachedDatasets.put(datasetFilename, xmlDataSetToRun);
 		}
 		
-		// cache the xmldataset for future runs of this file
-		cachedDatasets.put(datasetFilename, xmlDataSetToRun);
+		executeDataSet(xmlDataSetToRun);
+	}
+	
+	/**
+	 * Runs the xml data file at the classpath location specified by <code>datasetFilename</code>
+	 * using XmlDataSet. It simply creates an {@link IDataSet} and calls
+	 * {@link #executeDataSet(IDataSet)}. <br/>
+	 * <br/>
+	 * This method is different than {@link #executeDataSet(String)} in that this one does not
+	 * expect a flat file xml but instead a true XmlDataSet. <br/>
+	 * <br/>
+	 * In addition, there is no replacing of [NULL] values in strings.
+	 * 
+	 * @param datasetFilename String path/filename on the classpath of the xml data set to clean
+	 *            insert into the current database
+	 * @see #getConnection()
+	 * @see #executeDataSet(IDataSet)
+	 */
+	public void executeXmlDataSet(String datasetFilename) throws Exception {
+		
+		// try to get the given filename from the cache
+		IDataSet xmlDataSetToRun = cachedDatasets.get(datasetFilename);
+		
+		// if we didn't find it in the cache, load it
+		if (xmlDataSetToRun == null) {
+			File file = new File(datasetFilename);
+			
+			InputStream fileInInputStreamFormat = null;
+			
+			// try to load the file if its a straight up path to the file or
+			// if its a classpath path to the file
+			if (file.exists())
+				fileInInputStreamFormat = new FileInputStream(datasetFilename);
+			else {
+				fileInInputStreamFormat = getClass().getClassLoader().getResourceAsStream(datasetFilename);
+				if (fileInInputStreamFormat == null)
+					throw new FileNotFoundException("Unable to find '" + datasetFilename + "' in the classpath");
+			}
+			
+			XmlDataSet xmlDataSet = null;
+			try {
+				xmlDataSet = new XmlDataSet(fileInInputStreamFormat);
+				xmlDataSetToRun = xmlDataSet;
+			}
+			finally {
+				fileInInputStreamFormat.close();
+			}
+			
+			// cache the xmldataset for future runs of this file
+			cachedDatasets.put(datasetFilename, xmlDataSetToRun);
+		}
 		
 		executeDataSet(xmlDataSetToRun);
 	}
@@ -477,7 +547,7 @@ public abstract class BaseContextSensitiveTest extends AbstractJUnit4SpringConte
 			DatabaseConfig config = dbUnitConn.getConfig();
 			config.setProperty(DatabaseConfig.PROPERTY_DATATYPE_FACTORY, new HsqldbDataTypeFactory());
 			
-			// for the hsql database 
+			// for the hsql database
 			String sql = "SET REFERENTIAL_INTEGRITY FALSE";
 			PreparedStatement ps = connection.prepareStatement(sql);
 			ps.execute();
@@ -552,8 +622,8 @@ public abstract class BaseContextSensitiveTest extends AbstractJUnit4SpringConte
 		// clear the (hibernate) session to make sure nothing is cached, etc
 		Context.clearSession();
 		
-		// needed because the authenticatedUser is the only object that sticks 
-		// around after tests and the clearSession call 
+		// needed because the authenticatedUser is the only object that sticks
+		// around after tests and the clearSession call
 		Context.refreshAuthenticatedUser();
 		
 	}

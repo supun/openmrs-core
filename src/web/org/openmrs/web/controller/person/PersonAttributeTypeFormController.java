@@ -18,6 +18,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeSet;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
@@ -59,7 +60,8 @@ public class PersonAttributeTypeFormController extends SimpleFormController {
 	 * @see org.springframework.web.servlet.mvc.BaseCommandController#initBinder(javax.servlet.http.HttpServletRequest,
 	 *      org.springframework.web.bind.ServletRequestDataBinder)
 	 */
-	protected void initBinder(HttpServletRequest request, ServletRequestDataBinder binder) throws Exception {
+	@Override
+    protected void initBinder(HttpServletRequest request, ServletRequestDataBinder binder) throws Exception {
 		super.initBinder(request, binder);
 		//NumberFormat nf = NumberFormat.getInstance(new Locale("en_US"));
 		binder.registerCustomEditor(java.lang.Integer.class, new CustomNumberEditor(java.lang.Integer.class, true));
@@ -74,7 +76,8 @@ public class PersonAttributeTypeFormController extends SimpleFormController {
 	 *      javax.servlet.http.HttpServletResponse, java.lang.Object,
 	 *      org.springframework.validation.BindException)
 	 */
-	protected ModelAndView onSubmit(HttpServletRequest request, HttpServletResponse response, Object obj,
+	@Override
+    protected ModelAndView onSubmit(HttpServletRequest request, HttpServletResponse response, Object obj,
 	                                BindException errors) throws Exception {
 		
 		HttpSession httpSession = request.getSession();
@@ -84,13 +87,13 @@ public class PersonAttributeTypeFormController extends SimpleFormController {
 		if (Context.isAuthenticated()) {
 			PersonAttributeType attrType = (PersonAttributeType) obj;
 			PersonService ps = Context.getPersonService();
-				
+			
 			if (request.getParameter("save") != null) {
 				ps.savePersonAttributeType(attrType);
 				view = getSuccessView();
 				httpSession.setAttribute(WebConstants.OPENMRS_MSG_ATTR, "PersonAttributeType.saved");
 			}
-			
+
 			// if the user is retiring out the personAttributeType
 			else if (request.getParameter("retire") != null) {
 				String retireReason = request.getParameter("retireReason");
@@ -104,7 +107,7 @@ public class PersonAttributeTypeFormController extends SimpleFormController {
 				
 				view = getSuccessView();
 			}
-			
+
 			// if the user is purging the personAttributeType
 			else if (request.getParameter("purge") != null) {
 				try {
@@ -133,7 +136,8 @@ public class PersonAttributeTypeFormController extends SimpleFormController {
 	 * 
 	 * @see org.springframework.web.servlet.mvc.AbstractFormController#formBackingObject(javax.servlet.http.HttpServletRequest)
 	 */
-	protected Object formBackingObject(HttpServletRequest request) throws ServletException {
+	@Override
+    protected Object formBackingObject(HttpServletRequest request) throws ServletException {
 		
 		PersonAttributeType attrType = null;
 		
@@ -154,7 +158,8 @@ public class PersonAttributeTypeFormController extends SimpleFormController {
 	 * @see org.springframework.web.servlet.mvc.SimpleFormController#referenceData(javax.servlet.http.HttpServletRequest,
 	 *      java.lang.Object, org.springframework.validation.Errors)
 	 */
-	protected Map<String, Object> referenceData(HttpServletRequest request, Object obj, Errors errors) throws Exception {
+	@Override
+    protected Map<String, Object> referenceData(HttpServletRequest request, Object obj, Errors errors) throws Exception {
 		
 		Map<String, Object> map = new HashMap<String, Object>();
 		
@@ -164,8 +169,18 @@ public class PersonAttributeTypeFormController extends SimpleFormController {
 			privileges = Context.getUserService().getAllPrivileges();
 		}
 		
-		Set<String> formats = FieldGenHandlerFactory.getSingletonInstance().getHandlers().keySet();
+		Set<String> formats = new TreeSet<String>(FieldGenHandlerFactory.getSingletonInstance().getHandlers().keySet());
 		
+		// these formats are handled directly by the FieldGenTag.java class and so aren't in the
+		// "handlers" list in openmrs-servlet.xml
+		formats.add("java.lang.Character");
+		formats.add("java.lang.Integer");
+		formats.add("java.lang.Float");
+		formats.add("java.lang.Boolean");
+		
+		// java.util.Date doesn't work as a PersonAttributeType since it gets saved in a user-date-format-specific way
+		formats.remove("java.util.Date");
+
 		map.put("privileges", privileges);
 		map.put("formats", formats);
 		

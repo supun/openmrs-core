@@ -198,7 +198,7 @@
 					</tr>
 					<tr>
 						<td><spring:message code="User.secretAnswer" /></td>
-						<td><input type="password" autocomplete="off" name="secretAnswer" size="50" value="<c:if test="${isNewUser == false}">XXXXXXXXXXXXXXX</c:if>"/> <i><spring:message code="general.optional"/></i></td>
+						<td><input type="password" autocomplete="off" name="secretAnswer" size="50" value=""/> <i><spring:message code="general.optional"/></i></td>
 					</tr>
 				</c:if>
 			
@@ -219,7 +219,7 @@
 								</thead>
 								<tbody id="userPropsList">
 								<c:forEach var="userProp" items="${user.userProperties}" varStatus="status">
-									<tr class="<c:choose><c:when test="${status.index % 2 == 0}">evenRow</c:when><c:otherwise>oddRow</c:otherwise></c:choose>">
+									<tr class='${status.index % 2 == 0 ? "evenRow" : "oddRow"}'>
 										<td valign="top">
 											<input type="hidden" name="property"
 												value="${userProp.key}" maxlength="250" />
@@ -255,11 +255,12 @@
 	<input type="submit" id="saveButton" name="action" value="<spring:message code="User.save"/>" />
 	
 	<c:if test="${user.userId != null}">
+		<c:if test="${!user.retired}">
 		<openmrs:hasPrivilege privilege="Become User (Actually you need to be a superuser)">
 			&nbsp;&nbsp;&nbsp;&nbsp;
 			<input type="submit" name="action" value="<spring:message code="User.assumeIdentity" />" onClick="return confirm('<spring:message code="User.assumeIdentity.confirm"/>');" />
 		</openmrs:hasPrivilege>
-		
+		</c:if>
 		<openmrs:hasPrivilege privilege="Delete User">
 			&nbsp;&nbsp;&nbsp;&nbsp;
 			<input type="submit" name="action" value="<spring:message code="User.delete" />" onClick="return confirm('<spring:message code="User.delete.confirm"/>');" />

@@ -16,10 +16,10 @@ package org.openmrs.web.controller;
 import java.text.NumberFormat;
 import java.text.SimpleDateFormat;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.TreeMap;
 import java.util.Vector;
 
 import javax.servlet.ServletException;
@@ -37,13 +37,14 @@ import org.openmrs.ConceptComplex;
 import org.openmrs.ConceptDescription;
 import org.openmrs.ConceptMap;
 import org.openmrs.ConceptName;
-import org.openmrs.ConceptNameTag;
 import org.openmrs.ConceptNumeric;
 import org.openmrs.ConceptSet;
 import org.openmrs.Form;
 import org.openmrs.api.APIException;
+import org.openmrs.api.ConceptNameType;
 import org.openmrs.api.ConceptService;
 import org.openmrs.api.ConceptsLockedException;
+import org.openmrs.api.DuplicateConceptNameException;
 import org.openmrs.api.context.Context;
 import org.openmrs.propertyeditor.ConceptAnswersEditor;
 import org.openmrs.propertyeditor.ConceptClassEditor;
@@ -51,6 +52,7 @@ import org.openmrs.propertyeditor.ConceptDatatypeEditor;
 import org.openmrs.propertyeditor.ConceptSetsEditor;
 import org.openmrs.propertyeditor.ConceptSourceEditor;
 import org.openmrs.util.OpenmrsConstants;
+import org.openmrs.validator.ConceptValidator;
 import org.openmrs.web.WebConstants;
 import org.springframework.beans.propertyeditors.CustomDateEditor;
 import org.springframework.beans.propertyeditors.CustomNumberEditor;
@@ -73,7 +75,7 @@ import org.springframework.web.servlet.view.RedirectView;
 public class ConceptFormController extends SimpleFormController {
 	
 	/** Logger for this class and subclasses */
-	protected final Log log = LogFactory.getLog(getClass());
+	private static final Log log = LogFactory.getLog(ConceptFormController.class);
 	
 	/**
 	 * Allows for other Objects to be used as values in input tags. Normally, only strings and lists
@@ -82,6 +84,7 @@ public class ConceptFormController extends SimpleFormController {
 	 * @see org.springframework.web.servlet.mvc.BaseCommandController#initBinder(javax.servlet.http.HttpServletRequest,
 	 *      org.springframework.web.bind.ServletRequestDataBinder)
 	 */
+	@Override
 	protected void initBinder(HttpServletRequest request, ServletRequestDataBinder binder) throws Exception {
 		super.initBinder(request, binder);
 		
@@ -94,8 +97,10 @@ public class ConceptFormController extends SimpleFormController {
 		    SimpleDateFormat.SHORT, Context.getLocale()), true));
 		binder.registerCustomEditor(org.openmrs.ConceptClass.class, new ConceptClassEditor());
 		binder.registerCustomEditor(org.openmrs.ConceptDatatype.class, new ConceptDatatypeEditor());
-		binder.registerCustomEditor(java.util.Collection.class, "concept.conceptSets", new ConceptSetsEditor(commandObject.getConcept().getConceptSets()));
-		binder.registerCustomEditor(java.util.Collection.class, "concept.answers", new ConceptAnswersEditor(commandObject.getConcept().getAnswers(true)));
+		binder.registerCustomEditor(java.util.Collection.class, "concept.conceptSets", new ConceptSetsEditor(commandObject
+		        .getConcept().getConceptSets()));
+		binder.registerCustomEditor(java.util.Collection.class, "concept.answers", new ConceptAnswersEditor(commandObject
+		        .getConcept().getAnswers(true)));
 		binder.registerCustomEditor(org.openmrs.ConceptSource.class, new ConceptSourceEditor());
 	}
 	
@@ -104,6 +109,7 @@ public class ConceptFormController extends SimpleFormController {
 	 *      javax.servlet.http.HttpServletResponse, java.lang.Object,
 	 *      org.springframework.validation.BindException)
 	 */
+	@Override
 	protected ModelAndView processFormSubmission(HttpServletRequest request, HttpServletResponse response, Object object,
 	                                             BindException errors) throws Exception {
 		
@@ -136,7 +142,11 @@ public class ConceptFormController extends SimpleFormController {
 	 *      org.springframework.validation.BindException)
 	 * @should display numeric values from table
 	 * @should copy numeric values into numeric concepts
+	 * @should return a concept with a null id if no match is found
+	 * @should void a synonym marked as preferred when it is removed
+	 * @should set the local preferred name
 	 */
+	@Override
 	protected ModelAndView onSubmit(HttpServletRequest request, HttpServletResponse response, Object obj,
 	                                BindException errors) throws Exception {
 		
@@ -173,15 +183,30 @@ public class ConceptFormController extends SimpleFormController {
 			} else {
 				Concept concept = conceptBackingObject.getConceptFromFormData();
 				
+				//if the user is editing a concept, initialise the associated creator property
+				//this is aimed at avoiding a lazy initialisation exception when rendering
+				//the jsp after validation has failed
+				if (concept.getConceptId() != null)
+					concept.getCreator().getPersonName();
+				
 				try {
-					cs.saveConcept(concept);
-					httpSession.setAttribute(WebConstants.OPENMRS_MSG_ATTR, "Concept.saved");
-					return new ModelAndView(new RedirectView(getSuccessView() + "?conceptId=" + concept.getConceptId()));
+					new ConceptValidator().validate(concept, errors);
+					if (!errors.hasErrors()) {
+						cs.saveConcept(concept);
+						httpSession.setAttribute(WebConstants.OPENMRS_MSG_ATTR, "Concept.saved");
+						return new ModelAndView(new RedirectView(getSuccessView() + "?conceptId=" + concept.getConceptId()));
+					}
+					httpSession.setAttribute(WebConstants.OPENMRS_ERROR_ATTR, "Concept.cannot.save");
 				}
 				catch (ConceptsLockedException cle) {
 					log.error("Tried to save concept while concepts were locked", cle);
 					httpSession.setAttribute(WebConstants.OPENMRS_ERROR_ATTR, "Concept.concepts.locked");
 					errors.reject("concept", "Concept.concepts.locked");
+				}
+				catch (DuplicateConceptNameException e) {
+					log.error("Tried to save concept with a duplicate name", e);
+					httpSession.setAttribute(WebConstants.OPENMRS_ERROR_ATTR, "Concept.cannot.save");
+					errors.rejectValue("concept", "Concept.name.duplicate");
 				}
 				catch (APIException e) {
 					log.error("Error while trying to save concept", e);
@@ -202,17 +227,21 @@ public class ConceptFormController extends SimpleFormController {
 	 * 
 	 * @see org.springframework.web.servlet.mvc.AbstractFormController#formBackingObject(javax.servlet.http.HttpServletRequest)
 	 */
+	@Override
 	protected ConceptFormBackingObject formBackingObject(HttpServletRequest request) throws ServletException {
-		
 		String conceptId = request.getParameter("conceptId");
-		if (conceptId == null) {
-			return new ConceptFormBackingObject(new Concept());
-		} else {
+		try {
 			ConceptService cs = Context.getConceptService();
 			Concept concept = cs.getConcept(Integer.valueOf(conceptId));
-			return new ConceptFormBackingObject(concept);
+			if (concept == null) {
+				return new ConceptFormBackingObject(new Concept());
+			} else {
+				return new ConceptFormBackingObject(concept);
+			}
 		}
-		
+		catch (NumberFormatException ex) {
+			return new ConceptFormBackingObject(new Concept());
+		}
 	}
 	
 	/**
@@ -220,6 +249,7 @@ public class ConceptFormController extends SimpleFormController {
 	 * 
 	 * @see org.springframework.web.servlet.mvc.SimpleFormController#referenceData(javax.servlet.http.HttpServletRequest)
 	 */
+	@Override
 	protected Map<String, Object> referenceData(HttpServletRequest request) throws Exception {
 		
 		Map<String, Object> map = new HashMap<String, Object>();
@@ -227,15 +257,29 @@ public class ConceptFormController extends SimpleFormController {
 		ConceptService cs = Context.getConceptService();
 		
 		String defaultVerbose = "false";
+		
 		if (Context.isAuthenticated())
 			defaultVerbose = Context.getAuthenticatedUser().getUserProperty(OpenmrsConstants.USER_PROPERTY_SHOW_VERBOSE);
 		map.put("defaultVerbose", defaultVerbose.equals("true") ? true : false);
 		
 		map.put("tags", cs.getAllConceptNameTags());
 		
-		//get complete class and datatype lists 
+		//get complete class and datatype lists
 		map.put("classes", cs.getAllConceptClasses());
 		map.put("datatypes", cs.getAllConceptDatatypes());
+		
+		String conceptId = request.getParameter("conceptId");
+		boolean dataTypeReadOnly = false;
+		try {
+			Concept concept = cs.getConcept(Integer.valueOf(conceptId));
+			dataTypeReadOnly = cs.hasAnyObservation(concept);
+			if (concept != null && concept.getDatatype().isBoolean())
+				map.put("isBoolean", true);
+		}
+		catch (NumberFormatException ex) {
+			// nothing to do
+		}
+		map.put("dataTypeReadOnly", dataTypeReadOnly);
 		
 		//get complex handlers
 		map.put("handlers", Context.getObsService().getHandlers());
@@ -263,6 +307,8 @@ public class ConceptFormController extends SimpleFormController {
 		
 		public Map<Locale, ConceptDescription> descriptionsByLocale = new HashMap<Locale, ConceptDescription>();
 		
+		public Map<Locale, List<ConceptName>> indexTermsByLocale = new HashMap<Locale, List<ConceptName>>();
+		
 		public List<ConceptMap> mappings; // a "lazy list" version of the concept.getMappings() list
 		
 		public Double hiAbsolute;
@@ -283,6 +329,8 @@ public class ConceptFormController extends SimpleFormController {
 		
 		public String handlerKey;
 		
+		public Map<Locale, String> preferredNamesByLocale = new HashMap<Locale, String>();
+		
 		/**
 		 * Default constructor must take in a Concept object to create itself
 		 * 
@@ -293,10 +341,14 @@ public class ConceptFormController extends SimpleFormController {
 			this.concept = concept;
 			this.locales = Context.getAdministrationService().getAllowedLocales();
 			for (Locale locale : locales) {
-				namesByLocale.put(locale, concept.getPreferredName(locale));
+				
+				ConceptName preferredName = concept.getPreferredName(locale);
+				preferredNamesByLocale.put(locale, (preferredName != null ? preferredName.getName() : null));
+				namesByLocale.put(locale, concept.getFullySpecifiedName(locale));
 				shortNamesByLocale.put(locale, concept.getShortNameInLocale(locale));
 				synonymsByLocale.put(locale, (List<ConceptName>) concept.getSynonyms(locale));
 				descriptionsByLocale.put(locale, concept.getDescription(locale, true));
+				indexTermsByLocale.put(locale, (List<ConceptName>) concept.getIndexTermsForLocale(locale));
 				
 				// put in default values so the binding doesn't fail
 				if (namesByLocale.get(locale) == null)
@@ -308,7 +360,8 @@ public class ConceptFormController extends SimpleFormController {
 				
 				synonymsByLocale.put(locale, ListUtils.lazyList(synonymsByLocale.get(locale), FactoryUtils
 				        .instantiateFactory(ConceptName.class)));
-				
+				indexTermsByLocale.put(locale, ListUtils.lazyList(indexTermsByLocale.get(locale), FactoryUtils
+				        .instantiateFactory(ConceptName.class)));
 			}
 			
 			// turn the list objects into lazy lists
@@ -338,32 +391,61 @@ public class ConceptFormController extends SimpleFormController {
 		 * @return the concept to be saved to the database
 		 */
 		public Concept getConceptFromFormData() {
-			ConceptNameTag preferredTag = Context.getConceptService().getConceptNameTagByName(ConceptNameTag.PREFERRED);
-			ConceptNameTag shortTag = Context.getConceptService().getConceptNameTagByName(ConceptNameTag.SHORT);
-			ConceptNameTag synonymTag = Context.getConceptService().getConceptNameTagByName(ConceptNameTag.SYNONYM);
 			
 			// add all the new names/descriptions to the concept
 			for (Locale locale : locales) {
-				ConceptName preferredNameInLocale = namesByLocale.get(locale);
-				if (StringUtils.hasLength(preferredNameInLocale.getName())
-				        && !concept.getNames().contains(preferredNameInLocale)) {
-					preferredNameInLocale.addTag(preferredTag);
-					concept.addName(preferredNameInLocale);
-				}
-				ConceptName shortNameInLocale = shortNamesByLocale.get(locale);
-				if (StringUtils.hasLength(shortNameInLocale.getName()) && !concept.getNames().contains(shortNameInLocale)
-				        && !concept.hasName(shortNameInLocale.getName(), locale)) {
-					shortNameInLocale.addTag(shortTag);
-					concept.addName(shortNameInLocale);
-				}
-				for (ConceptName synonym : synonymsByLocale.get(locale)) {
-					if (synonym != null && synonym.getName() != null && !concept.getNames().contains(synonym)
-					        && !concept.hasName(synonym.getName(), locale)) {
-						synonym.addTag(synonymTag);
-						synonym.setLocale(locale);
-						concept.addName(synonym);
+				ConceptName fullySpecifiedNameInLocale = namesByLocale.get(locale);
+				if (StringUtils.hasText(fullySpecifiedNameInLocale.getName())) {
+					concept.setFullySpecifiedName(fullySpecifiedNameInLocale);
+					if (fullySpecifiedNameInLocale.getName().equalsIgnoreCase(preferredNamesByLocale.get(locale))) {
+						
+						concept.setPreferredName(fullySpecifiedNameInLocale);
 					}
 				}
+				
+				ConceptName shortNameInLocale = shortNamesByLocale.get(locale);
+				if (StringUtils.hasText(shortNameInLocale.getName())) {
+					concept.setShortName(shortNameInLocale);
+				}
+				
+				for (ConceptName synonym : synonymsByLocale.get(locale)) {
+					if (synonym != null && StringUtils.hasText(synonym.getName())) {
+						synonym.setLocale(locale);
+						//donot set voided names otherwise setPreferredname() will throw an exception
+						if (synonym.getName().equalsIgnoreCase(preferredNamesByLocale.get(locale)) && !synonym.isVoided()) {
+							concept.setPreferredName(synonym);
+						} else if (!concept.getNames().contains(synonym) && !concept.hasName(synonym.getName(), locale)) {
+							//we leave systemTag field as null to indicate that it is a synonym
+							concept.addName(synonym);
+						}
+						
+						//if the user removed this synonym with a void reason, returned to the page due validation errors,
+						//then they chose to cancel the removal of the synonym but forgot to clear the void reason text box,
+						//clear the text
+						if (!synonym.isVoided())
+							synonym.setVoidReason(null);
+						else if (synonym.isVoided() && !StringUtils.hasText(synonym.getVoidReason()))
+							synonym.setVoidReason(Context.getMessageSourceService().getMessage(
+							    "Concept.name.default.voidReason"));
+					}
+				}
+				
+				for (ConceptName indexTerm : indexTermsByLocale.get(locale)) {
+					if (indexTerm != null && StringUtils.hasText(indexTerm.getName())) {
+						if (!concept.getNames().contains(indexTerm) && !concept.hasName(indexTerm.getName(), locale)) {
+							indexTerm.setConceptNameType(ConceptNameType.INDEX_TERM);
+							indexTerm.setLocale(locale);
+							concept.addName(indexTerm);
+						}
+						
+						if (!indexTerm.isVoided())
+							indexTerm.setVoidReason(null);
+						else if (indexTerm.isVoided() && !StringUtils.hasText(indexTerm.getVoidReason()))
+							indexTerm.setVoidReason(Context.getMessageSourceService().getMessage(
+							    "Concept.name.default.voidReason"));
+					}
+				}
+				
 				ConceptDescription descInLocale = descriptionsByLocale.get(locale);
 				if (StringUtils.hasLength(descInLocale.getDescription())
 				        && !concept.getDescriptions().contains(descInLocale)) {
@@ -375,7 +457,7 @@ public class ConceptFormController extends SimpleFormController {
 			for (ConceptMap map : mappings) {
 				if (map != null) {
 					if (map.getSourceCode() == null) {
-						// because of the _mappings[x].sourceCode input name in the jsp, the sourceCode will be empty for 
+						// because of the _mappings[x].sourceCode input name in the jsp, the sourceCode will be empty for
 						// deleted mappings.  remove those from the concept object now.
 						concept.removeConceptMapping(map);
 					} else if (!concept.getConceptMappings().contains(map)) {
@@ -657,6 +739,20 @@ public class ConceptFormController extends SimpleFormController {
 		}
 		
 		/**
+		 * @return the indexTermsByLocale
+		 */
+		public Map<Locale, List<ConceptName>> getIndexTermsByLocale() {
+			return indexTermsByLocale;
+		}
+		
+		/**
+		 * @param indexTermsByLocale the indexTermsByLocale to set
+		 */
+		public void setIndexTermsByLocale(Map<Locale, List<ConceptName>> indexTermsByLocale) {
+			this.indexTermsByLocale = indexTermsByLocale;
+		}
+		
+		/**
 		 * Get the forms that this concept is declared to be used in
 		 * 
 		 * @return
@@ -690,7 +786,7 @@ public class ConceptFormController extends SimpleFormController {
 		 * @return
 		 */
 		public Map<String, String> getConceptAnswers() {
-			Map<String, String> conceptAnswers = new TreeMap<String, String>();
+			Map<String, String> conceptAnswers = new LinkedHashMap<String, String>();
 			// get concept answers with locale decoded names
 			for (ConceptAnswer answer : concept.getAnswers(true)) {
 				log.debug("getting answers");
@@ -710,6 +806,20 @@ public class ConceptFormController extends SimpleFormController {
 			}
 			
 			return conceptAnswers;
+		}
+		
+		/**
+		 * @return the preferredNamesByLocale
+		 */
+		public Map<Locale, String> getPreferredNamesByLocale() {
+			return preferredNamesByLocale;
+		}
+		
+		/**
+		 * @param preferredNamesByLocale the preferredNamesByLocale to set
+		 */
+		public void setPreferredNamesByLocale(Map<Locale, String> preferredNamesByLocale) {
+			this.preferredNamesByLocale = preferredNamesByLocale;
 		}
 	}
 	

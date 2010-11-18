@@ -31,6 +31,7 @@ import org.apache.commons.logging.LogFactory;
 import org.hibernate.Criteria;
 import org.hibernate.NonUniqueObjectException;
 import org.hibernate.Query;
+import org.hibernate.SQLQuery;
 import org.hibernate.SessionFactory;
 import org.hibernate.criterion.Conjunction;
 import org.hibernate.criterion.DetachedCriteria;
@@ -115,7 +116,7 @@ public class HibernateConceptDAO implements ConceptDAO {
 		if ((concept.getConceptId() != null) && (concept.getConceptId() > 0)) {
 			// this method checks the concept_numeric, concept_derived, etc tables
 			// to see if a row exists there or not.  This is needed because hibernate
-			// doesn't like to insert into concept_numeric but update concept in the 
+			// doesn't like to insert into concept_numeric but update concept in the
 			// same go.  It assumes that its either in both tables or no tables
 			insertRowIntoSubclassIfNecessary(concept);
 		}
@@ -150,7 +151,7 @@ public class HibernateConceptDAO implements ConceptDAO {
 				// Converting to concept numeric:  A single concept row exists, but concept numeric has not been populated yet.
 				if (ps.getResultSet().next()) {
 					// we have to evict the current concept out of the session because
-					// the user probably had to change the class of this object to get it 
+					// the user probably had to change the class of this object to get it
 					// to now be a numeric
 					// (must be done before the "insert into...")
 					sessionFactory.getCurrentSession().clear();
@@ -158,7 +159,7 @@ public class HibernateConceptDAO implements ConceptDAO {
 					ps2 = connection.prepareStatement("INSERT INTO concept_numeric (concept_id, precise) VALUES (?, false)");
 					ps2.setInt(1, concept.getConceptId());
 					ps2.executeUpdate();
-				} 
+				}
 				// Converting from concept numeric:  The concept and concept numeric rows both exist, so we need to delete concept_numeric.
 				else {
 					//concept is changed from numeric to something else
@@ -167,8 +168,7 @@ public class HibernateConceptDAO implements ConceptDAO {
 						ps2 = connection.prepareStatement("DELETE FROM concept_numeric WHERE concept_id = ?");
 						ps2.setInt(1, concept.getConceptId());
 						ps2.executeUpdate();
-					} 
-					else {
+					} else {
 						// it is indeed numeric now... don't delete
 					}
 				}
@@ -194,7 +194,7 @@ public class HibernateConceptDAO implements ConceptDAO {
 					}
 				}
 			}
-		} 
+		}
 		// check the concept complex table
 		else if (concept instanceof ConceptComplex) {
 			
@@ -208,7 +208,7 @@ public class HibernateConceptDAO implements ConceptDAO {
 				// Converting to concept complex:  A single concept row exists, but concept complex has not been populated yet.
 				if (ps.getResultSet().next()) {
 					// we have to evict the current concept out of the session because
-					// the user probably had to change the class of this object to get it 
+					// the user probably had to change the class of this object to get it
 					// to now be a ConceptComplex
 					// (must be done before the "insert into...")
 					sessionFactory.getCurrentSession().clear();
@@ -217,7 +217,7 @@ public class HibernateConceptDAO implements ConceptDAO {
 					ps2 = connection.prepareStatement("INSERT INTO concept_complex (concept_id) VALUES (?)");
 					ps2.setInt(1, concept.getConceptId());
 					ps2.executeUpdate();
-				} 
+				}
 				// Converting from concept complex:  The concept and concept complex rows both exist, so we need to delete the concept_complex row.
 				// no stub insert is needed because either a concept row doesn't exist OR a concept_complex row does exist
 				else {
@@ -227,8 +227,7 @@ public class HibernateConceptDAO implements ConceptDAO {
 						ps2 = connection.prepareStatement("DELETE FROM concept_complex WHERE concept_id = ?");
 						ps2.setInt(1, concept.getConceptId());
 						ps2.executeUpdate();
-					} 
-					else {
+					} else {
 						// it is indeed numeric now... don't delete
 					}
 					
@@ -255,7 +254,7 @@ public class HibernateConceptDAO implements ConceptDAO {
 					}
 				}
 			}
-		} 		
+		}
 		// check the concept_derived table
 		else if (concept instanceof ConceptDerived) {
 			
@@ -269,7 +268,7 @@ public class HibernateConceptDAO implements ConceptDAO {
 				// Converting to concept derived:  A single concept row exists, but concept derived has not been populated yet.
 				if (ps.getResultSet().next()) {
 					// we have to evict the current concept out of the session because
-					// the user probably had to change the class of this object to get it 
+					// the user probably had to change the class of this object to get it
 					// to now be ConceptDerived
 					// (must be done before the "insert into...")
 					sessionFactory.getCurrentSession().clear();
@@ -278,7 +277,7 @@ public class HibernateConceptDAO implements ConceptDAO {
 					ps2 = connection.prepareStatement("INSERT INTO concept_derived (concept_id) VALUES (?)");
 					ps2.setInt(1, concept.getConceptId());
 					ps2.executeUpdate();
-				} 
+				}
 				// Converting from concept derived:  The concept and concept derived rows both exist, so we need to delete the concept_derived row.
 				// no stub insert is needed because either a concept row doesn't exist OR a concept_derived row does exist
 				else {
@@ -288,8 +287,7 @@ public class HibernateConceptDAO implements ConceptDAO {
 						ps2 = connection.prepareStatement("DELETE FROM concept_derived WHERE concept_id = ?");
 						ps2.setInt(1, concept.getConceptId());
 						ps2.executeUpdate();
-					} 
-					else {
+					} else {
 						// it is indeed derived now... don't delete
 					}
 					
@@ -315,7 +313,7 @@ public class HibernateConceptDAO implements ConceptDAO {
 						log.error("Error generated while closing statement", e);
 					}
 				}
-			}			
+			}
 		}
 	}
 	
@@ -465,7 +463,7 @@ public class HibernateConceptDAO implements ConceptDAO {
 	public List<ConceptClass> getAllConceptClasses(boolean includeRetired) throws DAOException {
 		Criteria crit = sessionFactory.getCurrentSession().createCriteria(ConceptClass.class);
 		
-		// Minor bug - was assigning includeRetired instead of evaluating 
+		// Minor bug - was assigning includeRetired instead of evaluating
 		if (includeRetired == false)
 			crit.add(Expression.eq("retired", false));
 		
@@ -518,6 +516,17 @@ public class HibernateConceptDAO implements ConceptDAO {
 			crit.add(Expression.like("name", name, MatchMode.START));
 		
 		return crit.list();
+	}
+	
+	/**
+	 * @see org.openmrs.api.db.ConceptDAO#getConceptDatatypeByName(String)
+	 */
+	public ConceptDatatype getConceptDatatypeByName(String name) throws DAOException {
+		Criteria criteria = sessionFactory.getCurrentSession().createCriteria(ConceptDatatype.class);
+		if (name != null) {
+			criteria.add(Restrictions.eq("name", name));
+		}
+		return (ConceptDatatype) criteria.uniqueResult();
 	}
 	
 	/**
@@ -577,7 +586,7 @@ public class HibernateConceptDAO implements ConceptDAO {
 			if (searchOnPhrase)
 				matchmode = MatchMode.ANYWHERE;
 			
-			criteria.add(Expression.like("names.name", name, matchmode));
+			criteria.add(Expression.ilike("names.name", name, matchmode));
 			
 			String language = loc.getLanguage();
 			if (language.length() > 2) {
@@ -620,7 +629,7 @@ public class HibernateConceptDAO implements ConceptDAO {
 		
 		locales.addAll(localesToAdd);
 		
-		//String locale = loc.getLanguage().substring(0, 2);		
+		//String locale = loc.getLanguage().substring(0, 2);
 		List<String> words = ConceptWord.getUniqueWords(phrase); //assumes getUniqueWords() removes quote(') characters.  (otherwise we would have a security leak)
 		
 		// these are the answers to restrict on
@@ -680,7 +689,7 @@ public class HibernateConceptDAO implements ConceptDAO {
 			
 			conceptWords = searchCriteria.list();
 			
-			// trim down the list 
+			// trim down the list
 			// TODO: put this in the criteria object?
 			if (start != null && size != null) {
 				List<ConceptWord> subList = conceptWords.subList(start, start + size);
@@ -924,7 +933,7 @@ public class HibernateConceptDAO implements ConceptDAO {
 			// TODO This 'algorithm' only solves three layers of children.  Options for correction:
 			//	1) Add a few more join statements to cover 5 layers (conceivable upper limit of layers)
 			//	2) Find the deepest layer and programmatically create the sql statements
-			//	3) Run the joins on 
+			//	3) Run the joins on
 		}
 		catch (SQLException e) {
 			throw new DAOException(e);
@@ -1123,12 +1132,8 @@ public class HibernateConceptDAO implements ConceptDAO {
 	public ConceptNameTag saveConceptNameTag(ConceptNameTag nameTag) {
 		if (nameTag == null)
 			return null;
-		ConceptNameTag returnedTag = getConceptNameTagByName(nameTag.getTag());
-		if (returnedTag == null) {
-			returnedTag = nameTag;
-			sessionFactory.getCurrentSession().saveOrUpdate(nameTag);
-		}
-		return returnedTag;
+		sessionFactory.getCurrentSession().saveOrUpdate(nameTag);
+		return nameTag;
 	}
 	
 	/**
@@ -1211,7 +1216,8 @@ public class HibernateConceptDAO implements ConceptDAO {
 		
 		// join to conceptSource and match to the hl7Code or name
 		criteria.createAlias("source", "conceptSource");
-		criteria.add(Expression.or(Expression.eq("conceptSource.name", mappingCode), Expression.eq("conceptSource.hl7Code", mappingCode)));
+		criteria.add(Expression.or(Expression.eq("conceptSource.name", mappingCode), Expression.eq("conceptSource.hl7Code",
+		    mappingCode)));
 		
 		return (Concept) criteria.uniqueResult();
 	}
@@ -1333,7 +1339,8 @@ public class HibernateConceptDAO implements ConceptDAO {
 	}
 	
 	/**
-	 * @see org.openmrs.api.db.ConceptDAO#getConceptsByConceptSourceName(java.lang.String, java.lang.String)
+	 * @see org.openmrs.api.db.ConceptDAO#getConceptsByConceptSourceName(java.lang.String,
+	 *      java.lang.String)
 	 */
 	@SuppressWarnings("unchecked")
 	public List<ConceptMap> getConceptsByConceptSource(ConceptSource conceptSource) throws DAOException {
@@ -1345,10 +1352,30 @@ public class HibernateConceptDAO implements ConceptDAO {
 	/**
 	 * @see org.openmrs.api.db.ConceptDAO#getConceptSourceByName(java.lang.String)
 	 */
-	@SuppressWarnings("unchecked")
 	public ConceptSource getConceptSourceByName(String conceptSourceName) throws DAOException {
 		Criteria criteria = sessionFactory.getCurrentSession().createCriteria(ConceptSource.class, "source");
 		criteria.add(Expression.eq("source.name", conceptSourceName));
 		return (ConceptSource) criteria.uniqueResult();
+	}
+	
+	/**
+	 * @see org.openmrs.api.db.ConceptDAO#getSavedConceptDatatype(org.openmrs.Concept)
+	 */
+	public ConceptDatatype getSavedConceptDatatype(Concept concept) {
+		SQLQuery sql = sessionFactory.getCurrentSession().createSQLQuery(
+		    "select datatype.* from " + "concept_datatype datatype, " + "concept concept " + "where "
+		            + "datatype.concept_datatype_id = concept.datatype_id " + "and concept.concept_id=:conceptId")
+		        .addEntity(ConceptDatatype.class);
+		sql.setInteger("conceptId", concept.getConceptId());
+		return (ConceptDatatype) sql.uniqueResult();
+	}
+	
+	/**
+	 * @see org.openmrs.api.db.ConceptDAO#getSavedConceptName(org.openmrs.ConceptName)
+	 */
+	@Override
+	public ConceptName getSavedConceptName(ConceptName conceptName) {
+		sessionFactory.getCurrentSession().refresh(conceptName);
+		return conceptName;
 	}
 }

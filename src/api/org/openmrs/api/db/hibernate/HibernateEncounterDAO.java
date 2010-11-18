@@ -13,6 +13,7 @@
  */
 package org.openmrs.api.db.hibernate;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
 import java.util.List;
@@ -25,11 +26,13 @@ import org.hibernate.SessionFactory;
 import org.hibernate.criterion.Expression;
 import org.hibernate.criterion.MatchMode;
 import org.hibernate.criterion.Order;
+import org.hibernate.criterion.Restrictions;
 import org.openmrs.Encounter;
 import org.openmrs.EncounterType;
 import org.openmrs.Form;
 import org.openmrs.Location;
 import org.openmrs.Patient;
+import org.openmrs.PatientIdentifierType;
 import org.openmrs.User;
 import org.openmrs.api.EncounterService;
 import org.openmrs.api.db.DAOException;
@@ -219,4 +222,26 @@ public class HibernateEncounterDAO implements EncounterDAO {
 		        .setString("uuid", uuid).uniqueResult();
 	}
 	
+	/**
+	 * @see org.openmrs.api.db.EncounterDAO#getEncountersByPatient(String, boolean)
+	 */
+	public List<Encounter> getEncountersByPatient(String query, boolean includedVoided) {
+		Criteria criteria = sessionFactory.getCurrentSession().createCriteria(Encounter.class);
+		if (!includedVoided)
+			criteria.add(Restrictions.eq("voided", false));
+
+		criteria = criteria.createCriteria("patient", "pat");
+		String name = null;
+		String identifier = null;
+		if (query.matches(".*\\d+.*")) {
+			identifier = query;
+		} else {
+			// there is no number in the string, search on name
+			name = query;
+		}
+		criteria = new PatientSearchCriteria(sessionFactory, criteria).prepareCriteria(name, identifier,
+		    new ArrayList<PatientIdentifierType>(), false);
+		return criteria.list();
+	}
+
 }

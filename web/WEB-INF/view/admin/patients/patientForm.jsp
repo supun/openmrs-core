@@ -226,7 +226,7 @@
 	<spring:message code="fix.error"/>
 	<div class="error">
 		<c:forEach items="${errors.allErrors}" var="error">
-			<spring:message code="${error.code}" text="${error.code}"/><br/><!-- ${error} -->
+			<spring:message code="${error.code}" text="${error.code}" arguments="${error.arguments}"/><br/><!-- ${fn:replace(error, '--', '\\-\\-')} -->
 		</c:forEach>
 	</div>
 </spring:hasBindErrors>
@@ -349,7 +349,7 @@
 	<input type="submit" name="action" id="saveButton" value='<spring:message code="Patient.save"/>' />
 	
 	<c:if test="${patient.patientId != null}">
-	<openmrs:hasPrivilege privilege="Delete Patients">
+	<openmrs:hasPrivilege privilege="Purge Patients">
 		&nbsp; &nbsp; &nbsp;
 		<span style="position: relative">
 			<input type="button" id="deletePatientButton" value="<spring:message code="Patient.delete"/>" onClick="showDiv('deletePatientDiv'); hideDiv('deletePatientButton')"/>

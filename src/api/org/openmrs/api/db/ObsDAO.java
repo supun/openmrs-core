@@ -17,11 +17,13 @@ import java.util.Date;
 import java.util.List;
 
 import org.openmrs.Concept;
+import org.openmrs.ConceptName;
 import org.openmrs.Encounter;
 import org.openmrs.Location;
 import org.openmrs.MimeType;
 import org.openmrs.Obs;
 import org.openmrs.Person;
+import org.openmrs.api.ObsService;
 import org.openmrs.util.OpenmrsConstants.PERSON_TYPE;
 
 /**
@@ -50,30 +52,31 @@ public interface ObsDAO {
 	 * @see org.openmrs.api.ObsService#getAllMimeTypes(boolean)
 	 * @deprecated
 	 */
+	@Deprecated
 	public List<MimeType> getAllMimeTypes(boolean includeRetired) throws DAOException;
 	
 	/**
 	 * @see org.openmrs.api.ObsService#getMimeType(java.lang.Integer)
 	 * @deprecated
 	 */
+	@Deprecated
 	public MimeType getMimeType(Integer mimeTypeId) throws DAOException;
 	
 	/**
 	 * @see org.openmrs.api.ObsService#saveMimeType(MimeType)
 	 * @deprecated
 	 */
+	@Deprecated
 	public MimeType saveMimeType(MimeType mimeType) throws DAOException;
 	
 	/**
 	 * @see org.openmrs.api.ObsService#purgeMimeType(MimeType)
 	 * @deprecated
 	 */
+	@Deprecated
 	public void deleteMimeType(MimeType mimeType) throws DAOException;
 	
 	/**
-	 * Assumes that <code>whom</code>, <code>encounters</code>, <code>locations</code>,
-	 * <code>personTypes</code>, <code>questions</code>, and <code>answers</code> are non-null lists
-	 * 
 	 * @see org.openmrs.api.ObsService#getObservations(java.util.List, java.util.List,
 	 *      java.util.List, java.util.List, java.util.List, java.util.List, java.util.List,
 	 *      java.lang.Integer, java.lang.Integer, java.util.Date, java.util.Date, boolean)
@@ -82,6 +85,18 @@ public interface ObsDAO {
 	                                 List<Concept> answers, List<PERSON_TYPE> personTypes, List<Location> locations,
 	                                 List<String> sort, Integer mostRecentN, Integer obsGroupId, Date fromDate, Date toDate,
 	                                 boolean includeVoidedObs) throws DAOException;
+	
+	/**
+	 * @see org.openmrs.api.ObsService#getObservationCount(java.util.List, java.util.List,
+	 *      java.util.List, java.util.List, java.util.List, java.util.List, java.lang.Integer,
+	 *      java.util.Date, java.util.Date, boolean)
+	 * @see ObsService#getObservationCount(org.openmrs.ConceptName, boolean)
+	 */
+	public Integer getObservationCount(List<Person> whom, List<Encounter> encounters, List<Concept> questions,
+	                                   List<Concept> answers, List<PERSON_TYPE> personTypes, List<Location> locations,
+	                                   Integer obsGroupId, Date fromDate, Date toDate,
+	                                   List<ConceptName> valueCodedNameAnswers,
+	                                   boolean includeVoidedObs) throws DAOException;
 	
 	/**
 	 * Auto generated method comment

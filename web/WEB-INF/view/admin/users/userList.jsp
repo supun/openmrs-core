@@ -1,6 +1,7 @@
 <%@ include file="/WEB-INF/template/include.jsp" %>
 
 <openmrs:require privilege="Edit Users" otherwise="/login.htm" redirect="/admin/users/user.list" />
+<spring:message var="pageTitle" code="User.manage.titlebar" scope="page"/>
 
 <%@ include file="/WEB-INF/template/header.jsp" %>
 <%@ include file="localHeader.jsp" %>
@@ -25,7 +26,7 @@
 	var getSystemId = function(u) {
 		if (typeof u == 'string') return u;
 		s = " &nbsp; " + u.systemId;;	
-		if (u.voided)
+		if (u.retired)
 			s = "<span class='retired'>" + s + "</span>";
 		return s;
 	}

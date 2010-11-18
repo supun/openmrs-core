@@ -1,11 +1,12 @@
 <%@ include file="/WEB-INF/template/include.jsp" %>
 
 <openmrs:require privilege="Manage Roles" otherwise="/login.htm" redirect="/admin/users/role.list" />
-	
+<spring:message var="pageTitle" code="Role.manage.titlebar" scope="page"/>
+
 <%@ include file="/WEB-INF/template/header.jsp" %>
 <%@ include file="localHeader.jsp" %>
 
-<h2><spring:message code="Role.manage.title"/></h2>	
+<h2><spring:message code="Role.manage.title"/></h2>
 
 <a href="role.form"><spring:message code="Role.add"/></a>
 <br/><br/>
@@ -21,7 +22,7 @@
 			<th> <spring:message code="Role.privileges"/> </th>
 		</tr>
 	<c:forEach var="map" items="${roleList}" varStatus="rowStatus">
-		<tr class="<c:choose><c:when test="${rowStatus.index % 2 == 0}">evenRow</c:when><c:otherwise>oddRow</c:otherwise></c:choose>">
+		<tr class='${rowStatus.index % 2 == 0 ? "evenRow" : "oddRow" }'>
 			<td style="text-align: center">
 				<c:if test="${map.value == false}">
 					<input type="checkbox" name="roleId" value="<c:out value="${map.key.role}"/>">

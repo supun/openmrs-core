@@ -442,6 +442,7 @@ public interface AdministrationService extends OpenmrsService {
 	 * @see #getGlobalProperty(String, String)
 	 * @should not fail with null propertyName
 	 * @should get property value given valid property name
+	 * @should get property in case sensitive way
 	 */
 	@Transactional(readOnly = true)
 	public String getGlobalProperty(String propertyName) throws APIException;
@@ -522,6 +523,7 @@ public interface AdministrationService extends OpenmrsService {
 	 * @should not fail with empty list
 	 * @should delete property from database if not in list
 	 * @should assign uuid to all new properties
+	 * @should save properties with case difference only
 	 */
 	@Authorized(OpenmrsConstants.PRIV_MANAGE_GLOBAL_PROPERTIES)
 	public List<GlobalProperty> saveGlobalProperties(List<GlobalProperty> props) throws APIException;
@@ -571,6 +573,7 @@ public interface AdministrationService extends OpenmrsService {
 	 * @throws APIException
 	 * @should create global property in database
 	 * @should overwrite global property if exists
+	 * @should allow different properties to have the same string with different case
 	 */
 	@Authorized(OpenmrsConstants.PRIV_MANAGE_GLOBAL_PROPERTIES)
 	public GlobalProperty saveGlobalProperty(GlobalProperty gp) throws APIException;
@@ -671,5 +674,16 @@ public interface AdministrationService extends OpenmrsService {
 	 */
 	@Transactional(readOnly = true)
 	public Set<Locale> getPresentationLocales();
-	
+
+	/**
+	 * Returns a global property according to the type specified
+	 * 
+	 * @param <T>
+	 * @param propertyName
+	 * @should get property value in the proper type specified
+	 * @should return default value if property name does not exist	 
+	 * @return property value in the type of the default value
+	 * @since 1.7
+	 */
+	public <T> T getGlobalPropertyValue(String propertyName, T defaultValue) throws APIException;
 }

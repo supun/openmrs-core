@@ -769,6 +769,11 @@
 	<name>datePattern</name>
 	<tag-class>org.openmrs.web.taglib.DatePatternTag</tag-class>
 	<body-content>empty</body-content>
+	<attribute>
+		<name>localize</name>
+		<required>false</required>
+		<rtexprvalue>true</rtexprvalue>
+	</attribute>
 </tag>
 
 <tag>
@@ -1153,6 +1158,22 @@
 		<required>false</required>
 		<rtexprvalue>true</rtexprvalue>
 	</attribute>
+	<attribute>
+		<name>locationTagId</name>
+		<required>false</required>
+		<rtexprvalue>true</rtexprvalue>
+	</attribute>
+	<attribute>
+		<name>locationTag</name>
+		<required>false</required>
+		<rtexprvalue>true</rtexprvalue>
+	</attribute>
+	<attribute>
+		<description>Specifies whether JavaScript special characters (if any present) should be escaped in the output text</description>
+		<name>javaScriptEscape</name>
+		<required>false</required>
+		<rtexprvalue>false</rtexprvalue>		
+	</attribute>
 </tag>
 <tag>
 	<description>
@@ -1225,6 +1246,12 @@
 	<name>filterEncountersByType</name>
 	<function-class>org.openmrs.web.taglib.functions.Filter</function-class>
 	<function-signature>java.util.Set filterEncountersByType(java.util.Collection, java.lang.Integer)</function-signature>
-</function>	
+</function>
+
+<function>
+	<name>collectionContains</name>
+	<function-class>org.openmrs.web.taglib.functions.CollectionContains</function-class>
+	<function-signature>java.lang.Boolean collectionContains(java.util.Collection, java.lang.Object)</function-signature>
+</function>
 	
 </taglib>

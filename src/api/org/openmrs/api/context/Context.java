@@ -35,6 +35,7 @@ import org.openmrs.Privilege;
 import org.openmrs.Role;
 import org.openmrs.User;
 import org.openmrs.api.APIException;
+import org.openmrs.api.ActiveListService;
 import org.openmrs.api.AdministrationService;
 import org.openmrs.api.CohortService;
 import org.openmrs.api.ConceptService;
@@ -129,7 +130,7 @@ public class Context {
 	
 	private static final Log log = LogFactory.getLog(Context.class);
 	
-	// Global resources 
+	// Global resources
 	private static ContextDAO contextDAO;
 	
 	private static Session mailSession;
@@ -275,6 +276,12 @@ public class Context {
 		if (log.isDebugEnabled())
 			log.debug("Authenticating with username: " + username);
 		
+		if (Daemon.isDaemonThread()) {
+			log.error("Authentication attempted while operating on a "
+			        + "daemon thread, authenticating is not necessary or allowed");
+			return;
+		}
+
 		getUserContext().authenticate(username, password, getContextDAO());
 	}
 	
@@ -287,6 +294,9 @@ public class Context {
 	 * @should get fresh values from the database
 	 */
 	public static void refreshAuthenticatedUser() {
+		if (Daemon.isDaemonThread())
+			return;
+
 		if (log.isDebugEnabled())
 			log.debug("Refreshing authenticated user");
 		
@@ -518,6 +528,13 @@ public class Context {
 	}
 	
 	/**
+	 * @return active list service
+	 */
+	public static ActiveListService getActiveListService() {
+		return getServiceContext().getActiveListService();
+	}
+	
+	/**
 	 * Gets the mail session required by the mail message service. This function forces
 	 * authentication via the getAdministrationService() method call
 	 * 
@@ -525,7 +542,6 @@ public class Context {
 	 */
 	private static javax.mail.Session getMailSession() {
 		if (mailSession == null) {
-			
 			AdministrationService adminService = getAdministrationService();
 			
 			Properties props = new Properties();
@@ -538,6 +554,7 @@ public class Context {
 			
 			Authenticator auth = new Authenticator() {
 				
+				@Override
 				public PasswordAuthentication getPasswordAuthentication() {
 					return new PasswordAuthentication(getAdministrationService().getGlobalProperty("mail.user"),
 					        getAdministrationService().getGlobalProperty("mail.password"));
@@ -573,6 +590,9 @@ public class Context {
 	 * @return "active" user who has been authenticated, otherwise <code>null</code>
 	 */
 	public static User getAuthenticatedUser() {
+		if (Daemon.isDaemonThread())
+			return contextDAO.getUserByUuid(Daemon.DAEMON_USER_UUID);
+
 		return getUserContext().getAuthenticatedUser();
 	}
 	
@@ -592,7 +612,7 @@ public class Context {
 	public static void logout() {
 		if (!isSessionOpen())
 			return; // fail early if there isn't even a session open
-			
+
 		if (log.isDebugEnabled())
 			log.debug("Logging out : " + getAuthenticatedUser());
 		
@@ -611,8 +631,16 @@ public class Context {
 	
 	/**
 	 * Convenience method. Passes through to userContext.hasPrivilege(String)
+	 * 
+	 * @should give daemon user full privileges
 	 */
 	public static boolean hasPrivilege(String privilege) {
+		
+		// the daemon threads have access to all things
+		if (Daemon.isDaemonThread()) {
+			return true;
+		}
+
 		return getUserContext().hasPrivilege(privilege);
 	}
 	
@@ -683,7 +711,9 @@ public class Context {
 	}
 	
 	/**
-	 * Clears cached changes made so far during this unit of work without writing them to the database
+	 * Clears cached changes made so far during this unit of work without writing them to the
+	 * database. If you call this method, and later call closeSession() or flushSession() your
+	 * changes are still lost.
 	 */
 	public static void clearSession() {
 		log.trace("clearing session");
@@ -692,6 +722,8 @@ public class Context {
 	
 	/**
 	 * Forces any changes made so far in this unit of work to be written to the database
+	 * 
+	 * @since 1.6
 	 */
 	public static void flushSession() {
 		log.trace("flushing session");
@@ -732,7 +764,8 @@ public class Context {
 	 * @param props Runtime properties to use for startup
 	 * @throws InputRequiredException if the {@link DatabaseUpdater} has determined that updates
 	 *             cannot continue without input from the user
-	 * @throws DatabaseUpdateException if database updates are required, see {@link DatabaseUpdater#executeChangelog()}
+	 * @throws DatabaseUpdateException if database updates are required, see
+	 *             {@link DatabaseUpdater#executeChangelog()}
 	 * @throws ModuleMustStartException if a module that should be started is not able to
 	 * @see InputRequiredException#getRequiredInput() InputRequiredException#getRequiredInput() for
 	 *      the required question/datatypes
@@ -753,7 +786,7 @@ public class Context {
 		ModuleUtil.startup(props);
 		
 		// add any privileges/roles that /must/ exist for openmrs to work correctly.
-		// TODO: Should this be one of the first things executed at startup? 
+		// TODO: Should this be one of the first things executed at startup?
 		checkCoreDataset();
 	}
 	
@@ -774,7 +807,7 @@ public class Context {
 	 * @param properties Other startup properties
 	 * @throws InputRequiredException if the {@link DatabaseUpdater} has determined that updates
 	 *             cannot continue without input from the user
-	 * @throws DatabaseUpdateException if the database must be updated.  See {@link DatabaseUpdater}
+	 * @throws DatabaseUpdateException if the database must be updated. See {@link DatabaseUpdater}
 	 * @throws ModuleMustStartException if a module that should start is not able to
 	 * @see #startup(Properties)
 	 * @see InputRequiredException#getRequiredInput() InputRequiredException#getRequiredInput() for
@@ -810,7 +843,6 @@ public class Context {
 	 * closing
 	 */
 	public static void shutdown() {
-		
 		log.debug("Shutting down the scheduler");
 		try {
 			// Needs to be shutdown before Hibernate
@@ -850,6 +882,7 @@ public class Context {
 	 * 
 	 * @param cls The Class of the service to get
 	 * @return The requested Service
+	 * @should return the same object when called multiple times for the same class
 	 */
 	public static <T extends Object> T getService(Class<? extends T> cls) {
 		return getServiceContext().getService(cls);
@@ -1008,7 +1041,6 @@ public class Context {
 	 *      the required question/datatypes
 	 */
 	private static void checkForDatabaseUpdates(Properties props) throws DatabaseUpdateException, InputRequiredException {
-		
 		boolean updatesRequired = true;
 		try {
 			updatesRequired = DatabaseUpdater.updatesRequired();

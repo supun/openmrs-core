@@ -41,11 +41,12 @@ import org.apache.velocity.VelocityContext;
 import org.apache.velocity.app.VelocityEngine;
 import org.apache.velocity.runtime.RuntimeConstants;
 import org.apache.velocity.runtime.log.CommonsLogLogChute;
-import org.directwebremoting.util.JavascriptUtil;
 import org.openmrs.util.OpenmrsUtil;
 import org.openmrs.web.WebConstants;
+import org.openmrs.web.WebUtil;
 import org.openmrs.web.filter.initialization.InitializationFilter;
 import org.openmrs.web.filter.update.UpdateFilter;
+import org.springframework.web.util.JavaScriptUtils;
 
 /**
  * Abstract class used when a small wizard is needed before Spring, jsp, etc has been started up.
@@ -105,13 +106,12 @@ public abstract class StartupFilter implements Filter {
 					log.error("Unable to find file: " + file.getAbsolutePath());
 				}
 			} else if (servletPath.startsWith("/scripts")) {
-				log
-				        .error("Calling /scripts during the initializationfilter pages will cause the openmrs_static_context-servlet.xml to initialize too early and cause errors after startup.  Use '/initfilter"
-				                + servletPath + "' instead.");
+				log.error("Calling /scripts during the initializationfilter pages will cause the openmrs_static_context-servlet.xml to initialize too early and cause errors after startup.  Use '/initfilter"
+				        + servletPath + "' instead.");
 			}
 			// for anything but /initialsetup
 			else if (!httpRequest.getServletPath().equals("/" + WebConstants.SETUP_PAGE_URL)) {
-				// send the user to the setup page 
+				// send the user to the setup page
 				httpResponse.sendRedirect("/" + WebConstants.WEBAPP_NAME + "/" + WebConstants.SETUP_PAGE_URL);
 			} else {
 				
@@ -126,7 +126,7 @@ public abstract class StartupFilter implements Filter {
 			// Don't continue down the filter chain otherwise Spring complains
 			// that it hasn't been set up yet.
 			// The jsp and servlet filter are also on this chain, so writing to
-			// the response directly here is the only option 
+			// the response directly here is the only option
 		}
 	}
 	
@@ -139,9 +139,9 @@ public abstract class StartupFilter implements Filter {
 			
 			Properties props = new Properties();
 			props.setProperty(RuntimeConstants.RUNTIME_LOG, "startup_wizard_vel.log");
-            // Linux requires setting logging properties to initialize Velocity Context.            
-            props.setProperty( RuntimeConstants.RUNTIME_LOG_LOGSYSTEM_CLASS,
-                "org.apache.velocity.runtime.log.CommonsLogLogChute" );
+			// Linux requires setting logging properties to initialize Velocity Context.
+			props.setProperty(RuntimeConstants.RUNTIME_LOG_LOGSYSTEM_CLASS,
+			    "org.apache.velocity.runtime.log.CommonsLogLogChute");
 			props.setProperty(CommonsLogLogChute.LOGCHUTE_COMMONS_LOG_NAME, "initial_wizard_velocity");
 			
 			// so the vm pages can import the header/footer
@@ -277,9 +277,10 @@ public abstract class StartupFilter implements Filter {
 	 * Convert a map of strings to objects to json
 	 * 
 	 * @param map object to convert
+	 * @param escapeJavascript specifies if javascript special characters should be escaped
 	 * @param sb StringBuffer to append to
 	 */
-	private void toJSONString(Map<String, Object> map, StringBuffer sb) {
+	private void toJSONString(Map<String, Object> map, StringBuffer sb, boolean escapeJavascript) {
 		boolean first = true;
 		
 		sb.append('{');
@@ -292,11 +293,15 @@ public abstract class StartupFilter implements Filter {
 			sb.append('"');
 			if (entry.getKey() == null)
 				sb.append("null");
-			else
-				sb.append(JavascriptUtil.escapeJavaScript(entry.getKey()));
+			else {
+				if (escapeJavascript)
+					sb.append(JavaScriptUtils.javaScriptEscape(entry.getKey()));
+				else
+					sb.append(WebUtil.escapeQuotesAndNewlines(entry.getKey()));
+			}
 			sb.append('"').append(':');
 			
-			sb.append(toJSONString(entry.getValue()));
+			sb.append(toJSONString(entry.getValue(), escapeJavascript));
 			
 		}
 		sb.append('}');
@@ -306,9 +311,10 @@ public abstract class StartupFilter implements Filter {
 	 * Convert a list of objects to json
 	 * 
 	 * @param list object to convert
+	 * @param escapeJavascript specifies if javascript special characters should be escaped
 	 * @param sb StringBuffer to append to
 	 */
-	private void toJSONString(List<Object> list, StringBuffer sb) {
+	private void toJSONString(List<Object> list, StringBuffer sb, boolean escapeJavascript) {
 		boolean first = true;
 		
 		sb.append('[');
@@ -318,7 +324,7 @@ public abstract class StartupFilter implements Filter {
 			else
 				sb.append(',');
 			
-			sb.append(toJSONString(listItem));
+			sb.append(toJSONString(listItem, escapeJavascript));
 		}
 		sb.append(']');
 	}
@@ -328,12 +334,17 @@ public abstract class StartupFilter implements Filter {
 	 * 
 	 * @param object object to convert
 	 * @param sb StringBuffer to append to
+	 * @param escapeJavascript specifies if javascript special characters should be escaped
 	 */
-	private void toJSONString(Object object, StringBuffer sb) {
+	private void toJSONString(Object object, StringBuffer sb, boolean escapeJavascript) {
 		if (object == null)
 			sb.append("null");
-		else
-			sb.append('"').append(JavascriptUtil.escapeJavaScript(object.toString())).append('"');
+		else {
+			if (escapeJavascript)
+				sb.append('"').append(JavaScriptUtils.javaScriptEscape(object.toString())).append('"');
+			else
+				sb.append('"').append(WebUtil.escapeQuotesAndNewlines(object.toString())).append('"');
+		}
 	}
 	
 	/**
@@ -341,19 +352,20 @@ public abstract class StartupFilter implements Filter {
 	 * Strings, Boolean, Double
 	 * 
 	 * @param object object to convert to json
+	 * @param escapeJavascript specifies if javascript special characters should be escaped
 	 * @return JSON string to be eval'd in javascript
 	 */
-	protected String toJSONString(Object object) {
+	protected String toJSONString(Object object, boolean escapeJavascript) {
 		StringBuffer sb = new StringBuffer();
 		
 		if (object instanceof Map)
-			toJSONString((Map<String, Object>) object, sb);
+			toJSONString((Map<String, Object>) object, sb, escapeJavascript);
 		else if (object instanceof List)
-			toJSONString((List) object, sb);
+			toJSONString((List) object, sb, escapeJavascript);
 		else if (object instanceof Boolean)
 			sb.append(object.toString());
 		else
-			toJSONString(object, sb);
+			toJSONString(object, sb, escapeJavascript);
 		
 		return sb.toString();
 	}

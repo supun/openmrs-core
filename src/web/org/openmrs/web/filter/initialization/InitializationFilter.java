@@ -17,7 +17,9 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.sql.Connection;
+import java.sql.DatabaseMetaData;
 import java.sql.DriverManager;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
@@ -47,15 +49,15 @@ import org.openmrs.api.context.Context;
 import org.openmrs.module.MandatoryModuleException;
 import org.openmrs.module.OpenmrsCoreModuleException;
 import org.openmrs.module.web.WebModuleUtil;
-import org.openmrs.scheduler.SchedulerConstants;
 import org.openmrs.scheduler.SchedulerUtil;
 import org.openmrs.util.DatabaseUpdateException;
 import org.openmrs.util.DatabaseUpdater;
+import org.openmrs.util.DatabaseUpdater.ChangeSetExecutorCallback;
+import org.openmrs.util.DatabaseUtil;
 import org.openmrs.util.InputRequiredException;
 import org.openmrs.util.MemoryAppender;
 import org.openmrs.util.OpenmrsConstants;
 import org.openmrs.util.OpenmrsUtil;
-import org.openmrs.util.DatabaseUpdater.ChangeSetExecutorCallback;
 import org.openmrs.web.Listener;
 import org.openmrs.web.WebConstants;
 import org.openmrs.web.filter.StartupFilter;
@@ -147,7 +149,8 @@ public class InitializationFilter extends StartupFilter {
 	 * @param httpRequest
 	 * @param httpResponse
 	 */
-	protected void doGet(HttpServletRequest httpRequest, HttpServletResponse httpResponse) throws IOException,
+	@Override
+    protected void doGet(HttpServletRequest httpRequest, HttpServletResponse httpResponse) throws IOException,
 	                                                                                      ServletException {
 		
 		Map<String, Object> referenceMap = new HashMap<String, Object>();
@@ -191,7 +194,8 @@ public class InitializationFilter extends StartupFilter {
 	 * @param httpRequest
 	 * @param httpResponse
 	 */
-	protected void doPost(HttpServletRequest httpRequest, HttpServletResponse httpResponse) throws IOException,
+	@Override
+    protected void doPost(HttpServletRequest httpRequest, HttpServletResponse httpResponse) throws IOException,
 	                                                                                       ServletException {
 		
 		String page = httpRequest.getParameter("page");
@@ -262,7 +266,7 @@ public class InitializationFilter extends StartupFilter {
 			} else {
 				wizardModel.hasCurrentDatabaseUser = false;
 				wizardModel.createDatabaseUser = true;
-				// asked for the root mysql username/password 
+				// asked for the root mysql username/password
 				wizardModel.createUserUsername = httpRequest.getParameter("create_user_username");
 				checkForEmptyValue(wizardModel.createUserUsername, errors, "A user that has 'CREATE USER' privileges");
 				wizardModel.createUserPassword = httpRequest.getParameter("create_user_password");
@@ -335,7 +339,7 @@ public class InitializationFilter extends StartupFilter {
 			
 			renderTemplate(page, referenceMap, httpResponse);
 			
-		} // optional step five 
+		} // optional step five
 		else if (IMPLEMENTATION_ID_SETUP.equals(page)) {
 			
 			if ("Back".equals(httpRequest.getParameter("back"))) {
@@ -392,13 +396,17 @@ public class InitializationFilter extends StartupFilter {
 				Appender appender = Logger.getRootLogger().getAppender("MEMORY_APPENDER");
 				if (appender instanceof MemoryAppender) {
 					MemoryAppender memoryAppender = (MemoryAppender) appender;
-					result.put("logLines", memoryAppender.getLogLines());
+					List<String> logLines = memoryAppender.getLogLines();
+					// truncate the list to the last five so we don't overwhelm jquery
+					if (logLines.size() > 5)
+						logLines = logLines.subList(logLines.size() - 5, logLines.size());
+					result.put("logLines", logLines);
 				} else {
 					result.put("logLines", new ArrayList<String>());
 				}
 			}
 			
-			httpResponse.getWriter().write(toJSONString(result));
+			httpResponse.getWriter().write(toJSONString(result, true));
 		}
 	}
 	
@@ -445,21 +453,24 @@ public class InitializationFilter extends StartupFilter {
 	/**
 	 * @see org.openmrs.web.filter.StartupFilter#getTemplatePrefix()
 	 */
-	protected String getTemplatePrefix() {
+	@Override
+    protected String getTemplatePrefix() {
 		return "org/openmrs/web/filter/initialization/";
 	}
 	
 	/**
 	 * @see org.openmrs.web.filter.StartupFilter#getModel()
 	 */
-	protected Object getModel() {
+	@Override
+    protected Object getModel() {
 		return wizardModel;
 	}
 	
 	/**
 	 * @see org.openmrs.web.filter.StartupFilter#skipFilter()
 	 */
-	public boolean skipFilter(HttpServletRequest httpRequest) {
+	@Override
+    public boolean skipFilter(HttpServletRequest httpRequest) {
 		// If progress.vm makes an ajax request even immediately after initialization has completed
 		// let the request pass in order to let progress.vm load the start page of OpenMRS
 		// (otherwise progress.vm is displayed "forever")
@@ -472,15 +483,25 @@ public class InitializationFilter extends StartupFilter {
 	 * @return true if this initialization wizard needs to run
 	 */
 	public static boolean initializationRequired() {
-		return isInitializationComplete() == false && Listener.runtimePropertiesFound() == false;
+		return !isInitializationComplete();
 	}
 	
 	/**
 	 * @see javax.servlet.Filter#init(javax.servlet.FilterConfig)
 	 */
-	public void init(FilterConfig filterConfig) throws ServletException {
+	@Override
+    public void init(FilterConfig filterConfig) throws ServletException {
 		super.init(filterConfig);
 		wizardModel = new InitializationWizardModel();
+		//set whether need to do initialization work
+		if (Listener.runtimePropertiesFound()) {
+			boolean dbEmpty = isDatabaseEmpty(Listener.getRuntimeProperties());
+			//if database is not empty, then let UpdaterFilter to judge whether need database update
+			setInitializationComplete(!dbEmpty);
+		} else {
+			//if runtime-properties file doesn't exist, have to do initialization work
+			setInitializationComplete(false);
+		}
 	}
 	
 	/**
@@ -671,7 +692,7 @@ public class InitializationFilter extends StartupFilter {
 						if (!wizardModel.hasCurrentOpenmrsDatabase) {
 							setMessage("Create database");
 							// connect via jdbc and create a database
-							String sql = "create database `?` default character set utf8";
+							String sql = "create database if not exists `?` default character set utf8";
 							int result = executeStatement(false, wizardModel.createDatabaseUsername,
 							    wizardModel.createDatabasePassword, sql, wizardModel.databaseName);
 							// throw the user back to the main screen if this error occurs
@@ -749,8 +770,6 @@ public class InitializationFilter extends StartupFilter {
 						runtimeProperties.put("connection.password", connectionPassword);
 						runtimeProperties.put("module.allow_web_admin", wizardModel.moduleWebAdmin.toString());
 						runtimeProperties.put("auto_update_database", wizardModel.autoUpdateDatabase.toString());
-						runtimeProperties.put(SchedulerConstants.SCHEDULER_USERNAME_PROPERTY, "admin");
-						runtimeProperties.put(SchedulerConstants.SCHEDULER_PASSWORD_PROPERTY, wizardModel.adminUserPassword);
 						
 						Context.setRuntimeProperties(runtimeProperties);
 						
@@ -847,8 +866,8 @@ public class InitializationFilter extends StartupFilter {
 							return;
 						}
 						catch (InputRequiredException inputRequiredEx) {
-							// TODO display a page looping over the required input and ask the user for each.  
-							// 		When done and the user and put in their say, call DatabaseUpdater.update(Map); 
+							// TODO display a page looping over the required input and ask the user for each.
+							// 		When done and the user and put in their say, call DatabaseUpdater.update(Map);
 							//		with the user's question/answer pairs
 							log
 							        .warn("Unable to continue because user input is required for the db updates and we cannot do anything about that right now");
@@ -952,6 +971,7 @@ public class InitializationFilter extends StartupFilter {
 					}
 					finally {
 						if (!hasErrors()) {
+							// set this so that the wizard isn't run again on next page load
 							setInitializationComplete(true);
 						}
 					}
@@ -960,5 +980,66 @@ public class InitializationFilter extends StartupFilter {
 			
 			thread = new Thread(r);
 		}
+	}
+	
+	/**
+	 * Check whether openmrs database is empty.  Having just one non-liquibase table
+	 * in the given database qualifies this as a non-empty database.
+	 * 
+	 * @param props the runtime properties
+	 * @return true/false whether openmrs database is empty or doesn't exist yet
+	 */
+	private static boolean isDatabaseEmpty(Properties props) {
+		if (props != null) {
+			String databaseConnectionFinalUrl = props.getProperty("connection.url");
+			if (databaseConnectionFinalUrl == null)
+				return true;
+			
+			String connectionUsername = props.getProperty("connection.username");
+			if (connectionUsername == null)
+				return true;
+			
+			String connectionPassword = props.getProperty("connection.password");
+			if (connectionPassword == null)
+				return true;
+			
+			Connection connection = null;
+			try {
+				DatabaseUtil.loadDatabaseDriver(databaseConnectionFinalUrl);
+				connection = DriverManager.getConnection(databaseConnectionFinalUrl, connectionUsername, connectionPassword);
+				
+				DatabaseMetaData dbMetaData = (DatabaseMetaData) connection.getMetaData();
+				
+				String[] types = { "TABLE" };
+				
+				//get all tables
+				ResultSet tbls = dbMetaData.getTables(null, null, null, types);
+				
+				while(tbls.next()){
+					String tableName = tbls.getString("TABLE_NAME");
+					//if any table exist besides "liquibasechangelog" or "liquibasechangeloglock", return false
+					if(!("liquibasechangelog".equals(tableName)) && !("liquibasechangeloglock".equals(tableName)))
+						return false;
+				}
+				return true;
+			}
+			catch (Exception e) {
+				//pass
+			}
+			finally {
+				try {
+					if (connection != null) {
+						connection.close();
+					}
+				}
+				catch (Throwable t) {
+					//pass
+				}
+			}
+			//if catch an exception while query database, then consider as database is empty.
+			return true;
+		}
+		else
+			return true;
 	}
 }

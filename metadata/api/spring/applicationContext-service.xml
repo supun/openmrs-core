@@ -2,16 +2,25 @@
 
 <!-- Application context definition for OpenMRS business services. -->
 <beans xmlns="http://www.springframework.org/schema/beans"
-       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-       xmlns:context="http://www.springframework.org/schema/context"
+	   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	   xmlns:p="http://www.springframework.org/schema/p"
+	   xmlns:context="http://www.springframework.org/schema/context"
+	   xmlns:jee="http://www.springframework.org/schema/jee"
+       xmlns:tx="http://www.springframework.org/schema/tx"
+       xmlns:aop="http://www.springframework.org/schema/aop"
        xmlns:util="http://www.springframework.org/schema/util"
-       xsi:schemaLocation="http://www.springframework.org/schema/beans 
-           http://www.springframework.org/schema/beans/spring-beans-2.5.xsd
-           http://www.springframework.org/schema/context
-           http://www.springframework.org/schema/context/spring-context-2.5.xsd
-           http://www.springframework.org/schema/util
-           http://www.springframework.org/schema/util/spring-util-2.0.xsd">
-
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+       		http://www.springframework.org/schema/beans/spring-beans-3.0.xsd
+			http://www.springframework.org/schema/context
+			http://www.springframework.org/schema/context/spring-context-3.0.xsd
+			http://www.springframework.org/schema/jee
+			http://www.springframework.org/schema/jee/spring-jee-3.0.xsd
+			http://www.springframework.org/schema/tx
+			http://www.springframework.org/schema/tx/spring-tx-3.0.xsd
+			http://www.springframework.org/schema/aop
+           	http://www.springframework.org/schema/aop/spring-aop-3.0.xsd
+            http://www.springframework.org/schema/util
+            http://www.springframework.org/schema/util/spring-util-3.0.xsd">
 	<!--  **************************  Transactional Intercepter  *************************  -->
 	<!--  	
 		Looks for advisors (TransactionAttributeSourceAdvisor) in the context, and automatically 
@@ -50,7 +59,7 @@
 	<!--  **************************  SERVICE CONTEXT CONFIGURATION  *************************  -->
 
 	<!-- Single application context (our own context, not Spring's ApplicationContext -->
-	<bean id="serviceContext" class="org.openmrs.api.context.ServiceContext" factory-method="getInstance">
+	<bean id="serviceContext" class="org.openmrs.api.context.ServiceContext" factory-method="getInstance" destroy-method="destroyInstance">
         <property name="patientService"><ref bean="patientService"/></property>
         <property name="personService"><ref bean="personService"/></property>
         <property name="conceptService"><ref bean="conceptService"/></property>
@@ -74,6 +83,7 @@
         <property name="hl7Service"><ref bean="hL7Service"/></property>
         <property name="ardenService"><ref bean="ardenService"/></property>
         <property name="messageSourceService"><ref bean="messageSourceService"/></property>
+        <property name="activeListService"><ref bean="activeListService"/></property>
 	</bean>	
 	
 	<bean id="context" class="org.openmrs.api.context.Context">
@@ -153,6 +163,9 @@
 	<bean id="hL7DAO" class="org.openmrs.hl7.db.hibernate.HibernateHL7DAO">
 		<property name="sessionFactory"><ref bean="sessionFactory"/></property>	
 	</bean>
+	<bean id="activeListDAO" class="org.openmrs.api.db.hibernate.HibernateActiveListDAO">
+		<property name="sessionFactory"><ref bean="sessionFactory"/></property>	
+	</bean>
 
 	<!--  **************************  SCHEDULER SERVICE  *************************  -->
 	<!-- 
@@ -219,6 +232,9 @@
 	</bean>
 	<bean id="patientSetServiceTarget" class="org.openmrs.api.impl.PatientSetServiceImpl">
 		<property name="patientSetDAO"><ref bean="patientSetDAO"/></property>	
+	</bean>
+	<bean id="activeListServiceTarget" class="org.openmrs.api.impl.ActiveListServiceImpl">
+		<property name="activeListDAO"><ref bean="activeListDAO"/></property>	
 	</bean>
 	
 	
@@ -443,8 +459,6 @@
 		</property>
 		<property name="transactionAttributeSource"><ref local="transactionAttributeSource" /></property>
 	</bean>
-	
-	
 	<bean id="schedulerService" class="org.springframework.transaction.interceptor.TransactionProxyFactoryBean">
 		<property name="transactionManager"><ref local="transactionManager"/></property>
 		<property name="target"><ref local="schedulerServiceTarget"/></property>
@@ -511,10 +525,17 @@
 		</property>
 		<property name="transactionAttributeSource"><ref local="transactionAttributeSource" /></property>
 	</bean>
-	
 	<bean id="messageSourceService" class="org.springframework.transaction.interceptor.TransactionProxyFactoryBean">
 		<property name="transactionManager"><ref local="transactionManager"/></property>
 		<property name="target"><ref local="messageSourceServiceTarget"/></property>
+		<property name="preInterceptors">
+			<ref local="serviceInterceptors" />
+		</property>
+		<property name="transactionAttributeSource"><ref local="transactionAttributeSource" /></property>
+	</bean>
+	<bean id="activeListService" class="org.springframework.transaction.interceptor.TransactionProxyFactoryBean">
+		<property name="transactionManager"><ref local="transactionManager"/></property>
+		<property name="target"><ref local="activeListServiceTarget"/></property>
 		<property name="preInterceptors">
 			<ref local="serviceInterceptors" />
 		</property>
@@ -565,7 +586,7 @@
 		</property>
 	</bean>
 	
-	<bean id="sessionFactory" class="org.openmrs.api.db.hibernate.HibernateSessionFactoryBean" autowire="byType">
+	<bean id="sessionFactory" class="org.openmrs.api.db.hibernate.HibernateSessionFactoryBean">
 		<property name="configLocations">
 			<list>
 				<value>classpath:hibernate.cfg.xml</value>
@@ -637,15 +658,33 @@
 		<property name="validatorClass"><value>org.openmrs.reporting.ShortDescriptionProducerValidator</value></property>
 	</bean>
 
-	<bean class="org.openmrs.validator.ValidateUtil">
-		<property name="validators">
-			<list>
-				<bean class="org.openmrs.validator.DrugOrderValidator"/>
-				<bean class="org.openmrs.validator.OrderValidator"/>
-			</list>
-		</property>
-	</bean>
+	<!--  **************************  VALIDATOR CONFIGURATION  *************************  -->
+	<!--  Configuration for all openmrs validators                                        -->
+	
+	<bean id="patientValidator" class="org.openmrs.validator.PatientValidator" />
+	<bean id="locationValidator" class="org.openmrs.validator.LocationValidator"/>
+	<bean id="personNameValidator" class="org.openmrs.validator.PersonNameValidator" />
+	<bean id="patientIdentifierValidator" class="org.openmrs.validator.PatientIdentifierValidator" />
+	<bean id="patientIdentifierTypeValidator" class="org.openmrs.validator.PatientIdentifierTypeValidator" />
+	<bean id="personAttributeTypeValidator" class="org.openmrs.validator.PersonAttributeTypeValidator" />
+	<bean id="userValidator" class="org.openmrs.validator.UserValidator" />
+	<bean id="roleValidator" class="org.openmrs.validator.RoleValidator" />
+	<bean id="privilegeValidator" class="org.openmrs.validator.PrivilegeValidator" />
+	<bean id="encounterTypeValidator" class="org.openmrs.validator.EncounterTypeValidator" />
+	<bean id="conceptClassValidator" class="org.openmrs.validator.ConceptClassValidator" />
+	<bean id="conceptDatatypeValidator" class="org.openmrs.validator.ConceptDatatypeValidator" />
+	<bean id="formEditValidator" class="org.openmrs.validator.FormValidator" />
+	<bean id="fieldTypeValidator" class="org.openmrs.validator.FieldTypeValidator" />
+	<bean id="programValidator" class="org.openmrs.validator.ProgramValidator" />
+	<bean id="stateConversionValidator" class="org.openmrs.validator.StateConversionValidator" />
+	<bean id="taskValidator" class="org.openmrs.validator.SchedulerFormValidator" />
+	<bean id="obsValidator" class="org.openmrs.validator.ObsValidator" />
+	<bean id="orderTypeValidator" class="org.openmrs.validator.OrderTypeValidator" />
+	<bean id="orderValidator" class="org.openmrs.validator.OrderValidator" />
+	<bean id="drugOrderValidator" class="org.openmrs.validator.DrugOrderValidator" />
 	<bean id="requireNameValidator" class="org.openmrs.validator.RequireNameValidator"/>
+
+	<!--  ************************ END VALIDATOR CONFIGURATION  ************************  -->
 	
 	<context:component-scan base-package="org.openmrs">
 		<context:include-filter type="annotation" expression="org.openmrs.annotation.Handler"/>

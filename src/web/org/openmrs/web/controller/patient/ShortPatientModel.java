@@ -59,7 +59,23 @@ public class ShortPatientModel {
 	// private Location healthCenter = null;
 	// private String mothersName;
 	
+	/**
+	* Indicates whether or not patient is dead.
+	*
+	* @return true if patient is dead, otherwise false.
+	* @deprecated
+	*/
+	@Deprecated	
 	public Boolean getDead() {
+		return dead;
+	}
+	
+	/**
+	* Indicates whether or not patient is dead.
+	*
+	* @return true if patient is dead, otherwise false
+	*/
+	public Boolean isDead() {
 		return dead;
 	}
 	
@@ -82,7 +98,7 @@ public class ShortPatientModel {
 					identifier = pi.getIdentifier();
 					first = false;
 				} else {
-					if (otherIdentifiers != "")
+					if (!"".equals(otherIdentifiers))
 						otherIdentifiers += ",";
 					otherIdentifiers += " " + pi.getIdentifier();
 				}
@@ -95,7 +111,7 @@ public class ShortPatientModel {
 					setName(pn);
 					first = false;
 				} else {
-					if (otherNames != "")
+					if (!"".equals(otherNames))
 						otherNames += ",";
 					otherNames += " " + pn.getGivenName() + " " + pn.getMiddleName() + " " + pn.getFamilyName();
 				}

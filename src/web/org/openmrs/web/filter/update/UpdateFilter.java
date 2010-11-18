@@ -21,9 +21,9 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Properties;
 
 import javax.servlet.FilterChain;
 import javax.servlet.FilterConfig;
@@ -36,20 +36,23 @@ import javax.servlet.http.HttpServletResponse;
 
 import liquibase.ChangeSet;
 
+import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.log4j.Appender;
 import org.apache.log4j.Logger;
-import org.openmrs.api.context.Context;
 import org.openmrs.util.DatabaseUpdateException;
 import org.openmrs.util.DatabaseUpdater;
+import org.openmrs.util.DatabaseUpdater.ChangeSetExecutorCallback;
 import org.openmrs.util.InputRequiredException;
 import org.openmrs.util.MemoryAppender;
 import org.openmrs.util.OpenmrsConstants;
+import org.openmrs.util.OpenmrsUtil;
 import org.openmrs.util.Security;
-import org.openmrs.util.DatabaseUpdater.ChangeSetExecutorCallback;
 import org.openmrs.web.Listener;
 import org.openmrs.web.filter.StartupFilter;
+import org.openmrs.web.filter.initialization.InitializationFilter;
 import org.springframework.web.context.ContextLoader;
 
 /**
@@ -93,6 +96,12 @@ public class UpdateFilter extends StartupFilter {
 	private UpdateFilterCompletion updateJob;
 	
 	/**
+	 * Variable set to true as soon as the update begins and set to false when the process ends This
+	 * thread should only be accesses thorugh the sychronized method.
+	 */
+	private static boolean isDatabaseUpdateInProgress = false;
+	
+	/**
 	 * Called by {@link #doFilter(ServletRequest, ServletResponse, FilterChain)} on GET requests
 	 * 
 	 * @param httpRequest
@@ -132,6 +141,8 @@ public class UpdateFilter extends StartupFilter {
 				log.debug("Authentication successful.  Redirecting to 'reviewupdates' page.");
 				// set a variable so we know that the user started here
 				authenticatedSuccessfully = true;
+				//Set variable to tell us whether updates are already in progress
+				referenceMap.put("isDatabaseUpdateInProgress", isDatabaseUpdateInProgress);
 				renderTemplate(REVIEW_CHANGES, referenceMap, httpResponse);
 			} else {
 				// if not authenticated, show main page again
@@ -156,10 +167,18 @@ public class UpdateFilter extends StartupFilter {
 				return;
 			}
 			
-			updateJob = new UpdateFilterCompletion();
-			updateJob.start();
+			//if no one has run any required updates
+			if (!isDatabaseUpdateInProgress) {
+				isDatabaseUpdateInProgress = true;
+				updateJob = new UpdateFilterCompletion();
+				updateJob.start();
+				
+				referenceMap.put("updateJobStarted", true);
+			} else {
+				referenceMap.put("isDatabaseUpdateInProgress", true);
+				referenceMap.put("updateJobStarted", false);
+			}
 			
-			referenceMap.put("updateJobStarted", true);
 			renderTemplate(REVIEW_CHANGES, referenceMap, httpResponse);
 			
 		} else if (PROGRESS_VM_AJAXREQUEST.equals(page)) {
@@ -173,6 +192,21 @@ public class UpdateFilter extends StartupFilter {
 					errors.addAll(updateJob.getErrors());
 				}
 				
+				if (updateJob.hasWarnings() && updateJob.getExecutingChangesetId() == null) {
+					result.put("hasWarnings", updateJob.hasWarnings());
+					StringBuilder sb = new StringBuilder("<ul>");
+					
+					for (String warning : updateJob.getUpdateWarnings())
+						sb.append("<li>" + warning + "</li>");
+					
+					sb.append("</ul>");
+					result.put("updateWarnings", sb.toString());
+					result.put("updateLogFile", StringUtils.replace(OpenmrsUtil.getApplicationDataDirectory()
+					        + DatabaseUpdater.DATABASE_UPDATES_LOG_FILE, "\\", "\\\\"));
+					updateJob.hasUpdateWarnings = false;
+					updateJob.getUpdateWarnings().clear();
+				}
+				
 				result.put("updatesRequired", updatesRequired());
 				result.put("message", updateJob.getMessage());
 				result.put("changesetIds", updateJob.getChangesetIds());
@@ -180,13 +214,17 @@ public class UpdateFilter extends StartupFilter {
 				Appender appender = Logger.getRootLogger().getAppender("MEMORY_APPENDER");
 				if (appender instanceof MemoryAppender) {
 					MemoryAppender memoryAppender = (MemoryAppender) appender;
-					result.put("logLines", memoryAppender.getLogLines());
+					List<String> logLines = memoryAppender.getLogLines();
+					// truncate the list to the last five so we don't overwhelm jquery
+					if (logLines.size() > 5)
+						logLines = logLines.subList(logLines.size() - 5, logLines.size());
+					result.put("logLines", logLines);
 				} else {
 					result.put("logLines", new ArrayList<String>());
 				}
 			}
 			
-			String jsonText = toJSONString(result);
+			String jsonText = toJSONString(result, true);
 			httpResponse.getWriter().write(jsonText);
 		}
 	}
@@ -214,11 +252,12 @@ public class UpdateFilter extends StartupFilter {
 			PreparedStatement statement = connection.prepareStatement(select);
 			statement.setString(1, usernameOrSystemId);
 			statement.setString(2, usernameOrSystemId);
-
+			
 			if (statement.execute()) {
 				ResultSet results = statement.getResultSet();
 				if (results.next()) {
 					Integer userId = results.getInt(1);
+					DatabaseUpdater.setAuthenticatedUserId(userId);
 					String storedPassword = results.getString(2);
 					String salt = results.getString(3);
 					String passwordToHash = password + salt;
@@ -227,7 +266,10 @@ public class UpdateFilter extends StartupFilter {
 			}
 		}
 		catch (Throwable t) {
-			log.error("Error while trying to authenticate as super user. Ignore this if you are upgrading from OpenMRS 1.5 to 1.6", t);
+			log
+			        .error(
+			            "Error while trying to authenticate as super user. Ignore this if you are upgrading from OpenMRS 1.5 to 1.6",
+			            t);
 			
 			// we may not have upgraded User to have retired instead of voided yet, so if the query above fails, we try
 			// again the old way
@@ -236,18 +278,20 @@ public class UpdateFilter extends StartupFilter {
 				PreparedStatement statement = connection.prepareStatement(select);
 				statement.setString(1, usernameOrSystemId);
 				statement.setString(2, usernameOrSystemId);
-	
+				
 				if (statement.execute()) {
 					ResultSet results = statement.getResultSet();
 					if (results.next()) {
 						Integer userId = results.getInt(1);
+						DatabaseUpdater.setAuthenticatedUserId(userId);
 						String storedPassword = results.getString(2);
 						String salt = results.getString(3);
 						String passwordToHash = password + salt;
 						return Security.hashMatches(storedPassword, passwordToHash) && isSuperUser(connection, userId);
 					}
 				}
-			} catch (Throwable t2) {
+			}
+			catch (Throwable t2) {
 				log.error("Error while trying to authenticate as super user (voided version)", t);
 			}
 		}
@@ -323,11 +367,12 @@ public class UpdateFilter extends StartupFilter {
 		
 		log.debug("Initializing the UpdateFilter");
 		
-		Properties properties = Listener.getRuntimeProperties();
-		
-		if (properties != null) {
+		if (!InitializationFilter.initializationRequired()) {
 			model = new UpdateFilterModel();
-			Context.setRuntimeProperties(properties);
+			/*
+			 * In this case, Listener#runtimePropertiesFound == true and InitializationFilter Wizard is skipped,
+			 * so no need to reset Context's RuntimeProperties again, because of Listener.contextInitialized has set it.
+			 */
 			try {
 				if (model.changes == null)
 					updatesRequired = false;
@@ -341,8 +386,12 @@ public class UpdateFilter extends StartupFilter {
 				throw new ServletException("Unable to determine if updates are required", e);
 			}
 		} else {
-			// the wizard runs the updates, so they will not need any updates.
-			log.debug("Setting updates required to false because the user doesn't have any runtime properties yet");
+			/*
+			 * The initialization wizard will update the database to the latest version, so the user will not need any updates here.
+			 * See end of InitializationFilter#InitializationCompletion
+			 */
+			log
+			        .debug("Setting updates required to false because the user doesn't have any runtime properties yet or database is empty");
 			setUpdatesRequired(false);
 		}
 	}
@@ -392,9 +441,7 @@ public class UpdateFilter extends StartupFilter {
 	
 	/**
 	 * This class controls the final steps and is used by the ajax calls to know what updates have
-	 * been executed.
-	 * 
-	 * TODO: Break this out into a separate (non-inner) class
+	 * been executed. TODO: Break this out into a separate (non-inner) class
 	 */
 	private class UpdateFilterCompletion {
 		
@@ -409,6 +456,10 @@ public class UpdateFilter extends StartupFilter {
 		private String message = null;
 		
 		private boolean erroneous = false;
+		
+		private boolean hasUpdateWarnings = false;
+		
+		private List<String> updateWarnings = new LinkedList<String>();
 		
 		synchronized public void reportError(String error) {
 			List<String> errors = new ArrayList<String>();
@@ -469,6 +520,22 @@ public class UpdateFilter extends StartupFilter {
 		}
 		
 		/**
+		 * @return the database updater Warnings
+		 */
+		public synchronized List<String> getUpdateWarnings() {
+			return updateWarnings;
+		}
+		
+		synchronized public boolean hasWarnings() {
+			return hasUpdateWarnings;
+		}
+		
+		synchronized public void reportWarnings(List<String> warnings) {
+			updateWarnings.addAll(warnings);
+			hasUpdateWarnings = true;
+		}
+		
+		/**
 		 * This class does all the work of creating the desired database, user, updates, etc
 		 */
 		public UpdateFilterCompletion() {
@@ -505,9 +572,14 @@ public class UpdateFilter extends StartupFilter {
 						
 						try {
 							setMessage("Updating the database to the latest version");
-							DatabaseUpdater.executeChangelog(null, null, new PrintingChangeSetExecutorCallback(
-							        "Updating database tables to latest version "));
+							List<String> warnings = DatabaseUpdater.executeChangelog(null, null,
+							    new PrintingChangeSetExecutorCallback("Updating database tables to latest version "));
 							executingChangesetId = null; // clear out the last changeset
+							
+							if (CollectionUtils.isNotEmpty(warnings)) {
+								reportWarnings(warnings);
+								warnings = null;
+							}
 						}
 						catch (InputRequiredException inputRequired) {
 							// the user would be stepped through the questions returned here.
@@ -545,6 +617,8 @@ public class UpdateFilter extends StartupFilter {
 						if (!hasErrors()) {
 							setUpdatesRequired(false);
 						}
+						//reset to let other user's make requests after updates are run
+						isDatabaseUpdateInProgress = false;
 					}
 				}
 			};

@@ -6,6 +6,9 @@
     // We replace this with "return false;" until all errors are fixed
     var origOnSubmit = null;
 
+    // to know if we have overwritten the onsubmit method already
+    var overwrittenOnSubmit = false;
+
     /**
      * Validate the input format according to the regular expression.
      * If not valid, the background is highlighted and a formatting Hint is displayed.
@@ -23,11 +26,12 @@
             for (var i=0; i<tips.length; i++) {
                 tips[i].style.display = "none";
             }
-            if (origOnSubmit != null) {
+            if (overwrittenOnSubmit) {
             	// replace the parent form's onsubmit with the one
             	// we saved because we put in a temporary "return false" in the onsubmit
             	obj.form.onsubmit = origOnSubmit;
             	origOnSubmit = null;
+        		overwrittenOnSubmit = false;
             }
         }
         else {
@@ -35,12 +39,13 @@
             for (var i=0; i<tips.length; i++) {
                 tips[i].style.display = "";
             }
-            
-            if (origOnSubmit == null) {
+
+            if (!overwrittenOnSubmit) {
         		// this is the first time there was an error, save the current
-        		// onSubmit for the form and replace it with a 
+        		// onSubmit for the form and replace it with a popup error msg
         		origOnSubmit = obj.form.onsubmit;
-        		obj.form.onsubmit = function() { alert('<spring:message code="fix.error" javaScriptEscape="true"/>'); return false; };
+        		obj.form.onsubmit = function() { alert('<spring:message code="fix.error.plain" javaScriptEscape="true"/>'); return false; };
+        		overwrittenOnSubmit = true;
         	}
         }
         
@@ -78,7 +83,7 @@
 						<c:if test="${token.isToken == model.layoutTemplate.layoutToken}">
 							<td>
 								<spring:bind path="${token.codeName}">
-									${status.value}
+									<c:out value="${status.value}"/>
 								</spring:bind>
 							</td>
 						</c:if>
@@ -95,7 +100,7 @@
 								<c:forEach items="${line}" var="token">
 									<c:if test="${token.isToken == model.layoutTemplate.layoutToken}">
 										<spring:bind path="${token.codeName}">
-											${status.value}
+											<c:out value="${status.value}"/>
 										</spring:bind>
 									</c:if>
 									<c:if test="${token.isToken == model.layoutTemplate.nonLayoutToken}">
@@ -120,7 +125,7 @@
 											<c:if test="${token.isToken == model.layoutTemplate.layoutToken}">
 												<spring:message code="${token.displayText}" />:
 												<spring:bind path="${token.codeName}">
-													${status.value}
+													<c:out value="${status.value}"/>
 												</spring:bind>
 											</c:if>
 											<c:if test="${token.isToken == model.layoutTemplate.nonLayoutToken}">
@@ -157,7 +162,7 @@
 									<td><spring:message code="${token.displayText}" /></td>
 									<td <c:if test="${tokenStatus.last && tokenStatus.index < model.layoutTemplate.maxTokens}">colspan="${model.layoutTemplate.maxTokens - tokenStatus.index}"</c:if>>
 										<spring:bind path="${token.codeName}">
-                                            <input type="text"   name="${status.expression}"  value="${status.value}" size="${token.displaySize}"
+                                            <input type="text" name="${status.expression}"  value="<c:out value="${status.value}"/>" size="${token.displaySize}"
                                                 onkeyup="<c:if test='${model.layoutTemplate.elementRegex[token.codeName] !="" }'>validateFormat(this, '${model.layoutTemplate.elementRegex[token.codeName]}','${token.codeName}' )</c:if>"
                                             />
                                             <i name="formatMsg_${token.codeName}" style="font-weight: normal; font-size: xx-small; color: red; display: none">

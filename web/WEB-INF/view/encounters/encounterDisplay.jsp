@@ -23,6 +23,20 @@
 
 </script>
 
+
+<openmrs:extensionPoint pointId="org.openmrs.encounters.encounterListTop" type="html" parameters="encounterId=${model.encounter.encounterId}">
+	<openmrs:hasPrivilege privilege="${extension.requiredPrivilege}">
+		<div class="boxHeader" style="font-weight: bold;"><spring:message code="${extension.title}" /></div>
+		<div class="box" style="padding: 0px 0px 5px;"><spring:message code="${extension.content}" />
+			<c:if test="${extension.portletUrl != null}">
+				<openmrs:portlet url="${extension.portletUrl}" moduleId="${extension.moduleId}" id="${extension.portletUrl}" encounterId="${model.encounter.encounterId}" parameters="allowEdits=true"/>
+			</c:if>
+		</div>
+		<br />
+	</openmrs:hasPrivilege>
+</openmrs:extensionPoint>
+
+
 <div style="float: right">
 	<openmrs:hasPrivilege privilege="Edit Encounters">
 		<a href="javascript:void(0)" onClick="window.parent.location = '${pageContext.request.contextPath}/admin/encounters/encounter.form?encounterId=${model.encounter.encounterId}'; return false;">[ <spring:message code="Encounter.edit"/> ]</a>
@@ -44,7 +58,7 @@
 		<%-- Loop over the rows on this page --%>
 		<c:forEach var="fieldHolder" items="${thisPage}" varStatus="varStatus">
 			<c:if test="${ showEmptyFields || not empty fieldHolder.obs }">
-				<tr valign="top" class='<c:choose><c:when test="${rowStatus == true}">evenRow<c:set var="rowStatus" value="false"/></c:when><c:otherwise>oddRow<c:set var="rowStatus" value="true"/></c:otherwise></c:choose>'>
+				<tr valign="top" class='${rowStatus == true ? "evenRow" : "oddRow" }'>
 					<th class="encounterViewLabel">${fieldHolder.label}</th>
 					<td>
 						<c:choose>
@@ -83,19 +97,18 @@
 								<table class="encounterFormInnerTable" cellspacing="0" cellpadding="4">
 								<c:forEach var="obs" items="${fieldHolder.obs}" varStatus="varStatusInner">
 									<c:if test="${varStatusInner.first}">
-										<tr <c:if test="${varStatusInner.count > 1}">class='<c:choose><c:when test="${rowStatus == true}">evenRow<c:set var="rowStatus" value="false"/></c:when><c:otherwise>oddRow<c:set var="rowStatus" value="true"/></c:otherwise></c:choose>'</c:if>>
-										<td class="encounterViewObsConcept"><openmrs_tag:concept conceptId="${obs.concept.conceptId}"/>:</td>
-										<td class="encounterViewObsAnswer">
-									</c:if>
-											<span class="encounterViewObsValue"><openmrs:format obsValue="${obs}" /></span>
-											<c:if test="${not empty obs.obsDatetime && obs.obsDatetime != model.encounter.encounterDatetime}">
-												<span class="encounterViewObsDatetime">
-													<spring:message code="general.onDate"/>
-													<openmrs:formatDate date="${obs.obsDatetime}"/>
-												</span>
-											</c:if>
-											<br/>
-									<c:if test="${varStatusInner.last}">
+										<tr <c:if test="${varStatusInner.count > 1}"> class='${rowStatus == true ? "evenRow" : "oddRow" }' </c:if>>
+											<td class="encounterViewObsConcept"><openmrs_tag:concept conceptId="${obs.concept.conceptId}"/>:</td>
+											<td class="encounterViewObsAnswer">
+										<span class="encounterViewObsValue"><openmrs:format obsValue="${obs}" /></span>
+										<c:if test="${not empty obs.obsDatetime && obs.obsDatetime != model.encounter.encounterDatetime}">
+											<span class="encounterViewObsDatetime">
+												<spring:message code="general.onDate"/>
+												<openmrs:formatDate date="${obs.obsDatetime}"/>
+											</span>
+										</c:if>
+										<br/>
+										<c:if test="${varStatusInner.last}" />
 										</td>
 										</tr>
 									</c:if>

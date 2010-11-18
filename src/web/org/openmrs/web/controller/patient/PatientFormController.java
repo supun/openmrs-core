@@ -16,6 +16,7 @@ package org.openmrs.web.controller.patient;
 import java.text.NumberFormat;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Vector;
@@ -51,9 +52,10 @@ import org.openmrs.propertyeditor.ConceptEditor;
 import org.openmrs.propertyeditor.LocationEditor;
 import org.openmrs.propertyeditor.PatientIdentifierTypeEditor;
 import org.openmrs.util.OpenmrsConstants;
-import org.openmrs.util.OpenmrsUtil;
+import org.openmrs.validator.PatientValidator;
 import org.openmrs.web.WebConstants;
 import org.openmrs.web.controller.person.PersonFormController;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.propertyeditors.CustomDateEditor;
 import org.springframework.beans.propertyeditors.CustomNumberEditor;
 import org.springframework.context.support.MessageSourceAccessor;
@@ -75,6 +77,11 @@ public class PatientFormController extends PersonFormController {
 	/** Logger for this class and subclasses */
 	protected final Log log = LogFactory.getLog(getClass());
 	
+	@Autowired
+	public void setPatientValidator(PatientValidator patientValidator) {
+		super.setValidator(patientValidator);
+	}
+	
 	/**
 	 * Allows for other Objects to be used as values in input tags. Normally, only strings and lists
 	 * are expected
@@ -82,7 +89,8 @@ public class PatientFormController extends PersonFormController {
 	 * @see org.springframework.web.servlet.mvc.BaseCommandController#initBinder(javax.servlet.http.HttpServletRequest,
 	 *      org.springframework.web.bind.ServletRequestDataBinder)
 	 */
-	protected void initBinder(HttpServletRequest request, ServletRequestDataBinder binder) throws Exception {
+	@Override
+    protected void initBinder(HttpServletRequest request, ServletRequestDataBinder binder) throws Exception {
 		super.initBinder(request, binder);
 		
 		NumberFormat nf = NumberFormat.getInstance(Context.getLocale());
@@ -99,7 +107,8 @@ public class PatientFormController extends PersonFormController {
 	 *      javax.servlet.http.HttpServletResponse, java.lang.Object,
 	 *      org.springframework.validation.BindException)
 	 */
-	protected ModelAndView processFormSubmission(HttpServletRequest request, HttpServletResponse response, Object object,
+	@Override
+    protected ModelAndView processFormSubmission(HttpServletRequest request, HttpServletResponse response, Object object,
 	                                             BindException errors) throws Exception {
 		
 		Patient patient = (Patient) object;
@@ -115,7 +124,7 @@ public class PatientFormController extends PersonFormController {
 			
 			if (!action.equals(msa.getMessage("Patient.delete"))) {
 				
-				// Patient Identifiers 
+				// Patient Identifiers
 				objs = patient.getIdentifiers().toArray();
 				for (int i = 0; i < objs.length; i++) {
 					if (request.getParameter("identifiers[" + i + "].identifier") == null)
@@ -140,6 +149,22 @@ public class PatientFormController extends PersonFormController {
 							patient.addIdentifier(pi);
 						}
 					}
+				}
+				
+				Iterator<PatientIdentifier> identifiers = patient.getIdentifiers().iterator();
+				PatientIdentifier currentId = null;
+				PatientIdentifier preferredId = null;
+				while (identifiers.hasNext()) {
+					currentId = identifiers.next();
+					if (currentId.isPreferred()) {
+						if (preferredId != null) { // if there's a preferred identifier already exists, make it preferred=false
+							preferredId.setPreferred(false);
+						}
+						preferredId = currentId;
+					}
+				}
+				if ((preferredId == null) && (currentId != null)) { // No preferred identifiers. Make the last identifier entry as preferred.
+					currentId.setPreferred(true);
 				}
 				
 				// Patient Address
@@ -195,7 +220,7 @@ public class PatientFormController extends PersonFormController {
 					
 					for (int i = 0; i < maxAddrs; i++) {
 						/*
-													if ( add1s[i] != null || add2s[i] != null || cities[i] != null || states[i] != null 
+													if ( add1s[i] != null || add2s[i] != null || cities[i] != null || states[i] != null
 															|| countries[i] != null || lats[i] != null || longs[i] != null
 															|| pCodes[i] != null || counties[i] != null || cells[i] != null ) {
 						*/
@@ -225,6 +250,21 @@ public class PatientFormController extends PersonFormController {
 						patient.addAddress(pa);
 						//}
 					}
+					Iterator<PersonAddress> addresses = patient.getAddresses().iterator();
+					PersonAddress currentAddress = null;
+					PersonAddress preferredAddress = null;
+					while (addresses.hasNext()) {
+						currentAddress = addresses.next();
+						if (currentAddress.isPreferred()) {
+							if (preferredAddress != null) { // if there's a preferred address already exists, make it preferred=false
+								preferredAddress.setPreferred(false);
+							}
+							preferredAddress = currentAddress;
+						}
+					}
+					if ((preferredAddress == null) && (currentAddress != null)) { // No preferred address. Make the last address entry as preferred.
+						currentAddress.setPreferred(true);
+					}
 				}
 				
 				// Patient Names
@@ -247,7 +287,7 @@ public class PatientFormController extends PersonFormController {
 				
 				if (gNames != null) {
 					for (int i = 0; i < gNames.length; i++) {
-						if (gNames[i] != "") { //skips invalid and blank address data box
+						if (!"".equals(gNames[i])) { //skips invalid and blank address data box
 							PersonName pn = new PersonName();
 							if (namePrefStatus != null && namePrefStatus.length > i)
 								pn.setPreferred(new Boolean(namePrefStatus[i]));
@@ -268,6 +308,22 @@ public class PatientFormController extends PersonFormController {
 							patient.addName(pn);
 						}
 					}
+					Iterator<PersonName> names = patient.getNames().iterator();
+					PersonName currentName = null;
+					PersonName preferredName = null;
+					while (names.hasNext()) {
+						currentName = names.next();
+						if (currentName.isPreferred()) {
+							if (preferredName != null) { // if there's a preferred name already exists, make it preferred=false
+								preferredName.setPreferred(false);
+							}
+							preferredName = currentName;
+						}
+					}
+					if ((preferredName == null) && (currentName != null)) { // No preferred name. Make the last name entry as preferred.
+						currentName.setPreferred(true);
+					}
+					
 				}
 				
 				/*
@@ -340,7 +396,8 @@ public class PatientFormController extends PersonFormController {
 	 *      javax.servlet.http.HttpServletResponse, java.lang.Object,
 	 *      org.springframework.validation.BindException)
 	 */
-	protected ModelAndView onSubmit(HttpServletRequest request, HttpServletResponse response, Object obj,
+	@Override
+    protected ModelAndView onSubmit(HttpServletRequest request, HttpServletResponse response, Object obj,
 	                                BindException errors) throws Exception {
 		
 		HttpSession httpSession = request.getSession();
@@ -404,7 +461,7 @@ public class PatientFormController extends PersonFormController {
 					isError = true;
 				}
 				
-				// If patient is dead 
+				// If patient is dead
 				if (patient.getDead() && !isError) {
 					log.debug("Patient is dead, so let's make sure there's an Obs for it");
 					// need to make sure there is an Obs that represents the patient's cause of death, if applicable
@@ -466,14 +523,18 @@ public class PatientFormController extends PersonFormController {
 									String otherConcept = Context.getAdministrationService().getGlobalProperty(
 									    "concept.otherNonCoded");
 									Concept conceptOther = Context.getConceptService().getConcept(otherConcept);
+									boolean deathReasonChanged = false;
 									if (conceptOther != null) {
+										String otherInfo = ServletRequestUtils.getStringParameter(request,
+										    "causeOfDeath_other", "");
 										if (conceptOther.equals(currCause)) {
 											// seems like this is an other concept - let's try to get the "other" field info
-											String otherInfo = ServletRequestUtils.getStringParameter(request,
-											    "causeOfDeath_other", "");
+											deathReasonChanged = !otherInfo.equals(obsDeath.getValueText());
 											log.debug("Setting value_text as " + otherInfo);
 											obsDeath.setValueText(otherInfo);
 										} else {
+											// non empty text value implies concept changed from OTHER NON CODED to NONE
+											deathReasonChanged = !otherInfo.equals("");
 											log.debug("New concept is NOT the OTHER concept, so setting to blank");
 											obsDeath.setValueText("");
 										}
@@ -481,8 +542,13 @@ public class PatientFormController extends PersonFormController {
 										log.debug("Don't seem to know about an OTHER concept, so deleting value_text");
 										obsDeath.setValueText("");
 									}
-									
-									Context.getObsService().saveObs(obsDeath, obsDeath.getVoidReason());
+									boolean shouldSaveObs = (null == obsDeath.getId()) || deathReasonChanged;
+									if (shouldSaveObs) {
+										if (null == obsDeath.getVoidReason())
+											obsDeath.setVoidReason(Context.getMessageSourceService().getMessage(
+											    "general.default.changeReason"));
+										Context.getObsService().saveObs(obsDeath, obsDeath.getVoidReason());
+									}
 								} else {
 									log.debug("Current cause is still null - aborting mission");
 								}
@@ -516,7 +582,8 @@ public class PatientFormController extends PersonFormController {
 	 * 
 	 * @see org.springframework.web.servlet.mvc.AbstractFormController#formBackingObject(javax.servlet.http.HttpServletRequest)
 	 */
-	protected Object formBackingObject(HttpServletRequest request) throws ServletException {
+	@Override
+    protected Object formBackingObject(HttpServletRequest request) throws ServletException {
 		
 		Patient patient = null;
 		
@@ -573,7 +640,8 @@ public class PatientFormController extends PersonFormController {
 	 * 
 	 * @see org.springframework.web.servlet.mvc.SimpleFormController#referenceData(javax.servlet.http.HttpServletRequest)
 	 */
-	protected Map<String, Object> referenceData(HttpServletRequest request, Object obj, Errors err) throws Exception {
+	@Override
+    protected Map<String, Object> referenceData(HttpServletRequest request, Object obj, Errors err) throws Exception {
 		
 		Patient patient = (Patient) obj;
 		List<Form> forms = new Vector<Form>();

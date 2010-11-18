@@ -14,15 +14,14 @@
 package org.openmrs;
 
 import java.util.Collection;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.TreeSet;
 import java.util.Vector;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.openmrs.api.APIException;
-import org.openmrs.util.OpenmrsUtil;
 
 /**
  * Defines a Patient in the system. A patient is simply an extension of a person and all that that
@@ -34,7 +33,7 @@ public class Patient extends Person implements java.io.Serializable {
 	
 	public static final long serialVersionUID = 93123L;
 	
-	private transient static final Log log = LogFactory.getLog(Patient.class);
+	private static final Log log = LogFactory.getLog(Patient.class);
 	
 	// Fields
 	
@@ -52,9 +51,8 @@ public class Patient extends Person implements java.io.Serializable {
 	/**
 	 * This constructor creates a new Patient object from the given {@link Person} object. All
 	 * attributes are copied over to the new object. NOTE! All child collection objects are copied
-	 * as pointers, each individual element is not copied. <br/>
-	 * <br/>
-	 * TODO Should the patient specific attributes be copied? (like identifiers)
+	 * as pointers, each individual element is not copied. <br/> <br/> TODO Should the patient
+	 * specific attributes be copied? (like identifiers)
 	 * 
 	 * @param person the person object to copy onto a new Patient
 	 * @see Person#Person(Person)
@@ -63,6 +61,8 @@ public class Patient extends Person implements java.io.Serializable {
 		super(person);
 		if (person != null)
 			this.patientId = person.getPersonId();
+		if (person.getUuid() != null)
+			this.setUuid(person.getUuid());
 	}
 	
 	/**
@@ -83,6 +83,7 @@ public class Patient extends Person implements java.io.Serializable {
 	 * @return boolean true/false whether or not they are the same objects
 	 * @see org.openmrs.Person#equals(java.lang.Object)
 	 */
+	@Override
 	public boolean equals(Object obj) {
 		return super.equals(obj);
 	}
@@ -94,6 +95,7 @@ public class Patient extends Person implements java.io.Serializable {
 	 * 
 	 * @see org.openmrs.Person#hashCode()
 	 */
+	@Override
 	public int hashCode() {
 		return super.hashCode();
 	}
@@ -124,6 +126,7 @@ public class Patient extends Person implements java.io.Serializable {
 	 * 
 	 * @see org.openmrs.Person#setPersonId(java.lang.Integer)
 	 */
+	@Override
 	public void setPersonId(Integer personId) {
 		super.setPersonId(personId);
 		this.patientId = personId;
@@ -133,6 +136,7 @@ public class Patient extends Person implements java.io.Serializable {
 	 * @return patient's tribe
 	 * @deprecated Tribe is not long a value on Patient. Install the Tribe module
 	 */
+	@Deprecated
 	public Tribe getTribe() {
 		throw new APIException("The Patient.getTribe method is no longer supported.  Install the Tribe module");
 	}
@@ -141,6 +145,7 @@ public class Patient extends Person implements java.io.Serializable {
 	 * @param tribe patient's tribe
 	 * @deprecated Tribe is not long a value on Patient. Install the Tribe module
 	 */
+	@Deprecated
 	public void setTribe(Tribe tribe) {
 		throw new APIException("The Patient.setTribe(Tribe) method is no longer supported.  Install the Tribe module");
 	}
@@ -156,7 +161,7 @@ public class Patient extends Person implements java.io.Serializable {
 	 */
 	public Set<PatientIdentifier> getIdentifiers() {
 		if (identifiers == null)
-			identifiers = new TreeSet<PatientIdentifier>();
+			identifiers = new LinkedHashSet<PatientIdentifier>();
 		return this.identifiers;
 	}
 	
@@ -196,9 +201,17 @@ public class Patient extends Person implements java.io.Serializable {
 	public void addIdentifier(PatientIdentifier patientIdentifier) {
 		patientIdentifier.setPatient(this);
 		if (getIdentifiers() == null)
-			identifiers = new TreeSet<PatientIdentifier>();
-		if (patientIdentifier != null && !OpenmrsUtil.collectionContains(identifiers, patientIdentifier))
-			identifiers.add(patientIdentifier);
+			identifiers = new LinkedHashSet<PatientIdentifier>();
+		if (patientIdentifier != null) {
+			// make sure the set doesn't already contain an identifier with the same
+			// identifier, identifierType
+			for (PatientIdentifier currentId : getIdentifiers()) {
+				if (currentId.equalsContent(patientIdentifier)) {
+					return; // fail silently if someone tries to add a duplicate
+				}
+			}
+		}
+		identifiers.add(patientIdentifier);
 	}
 	
 	/**
@@ -304,8 +317,8 @@ public class Patient extends Person implements java.io.Serializable {
 	}
 	
 	/**
-	 * Returns only the non-voided identifiers for this patient. If you want <u>all</u> identifiers,
-	 * use {@link #getIdentifiers()}
+	 * Returns only the non-voided identifiers for this patient. If you want <u>all</u>
+	 * identifiers, use {@link #getIdentifiers()}
 	 * 
 	 * @return list of non-voided identifiers for this patient
 	 * @see #getIdentifiers()
@@ -322,8 +335,8 @@ public class Patient extends Person implements java.io.Serializable {
 	}
 	
 	/**
-	 * Returns only the non-voided identifiers for this patient. If you want <u>all</u> identifiers,
-	 * use {@link #getIdentifiers()}
+	 * Returns only the non-voided identifiers for this patient. If you want <u>all</u>
+	 * identifiers, use {@link #getIdentifiers()}
 	 * 
 	 * @return list of non-voided identifiers for this patient
 	 * @param pit PatientIdentifierType
@@ -340,6 +353,7 @@ public class Patient extends Person implements java.io.Serializable {
 		return ids;
 	}
 	
+	@Override
 	public String toString() {
 		return "Patient#" + patientId;
 	}
@@ -348,6 +362,7 @@ public class Patient extends Person implements java.io.Serializable {
 	 * @since 1.5
 	 * @see org.openmrs.OpenmrsObject#getId()
 	 */
+	@Override
 	public Integer getId() {
 		return getPatientId();
 	}
@@ -356,6 +371,7 @@ public class Patient extends Person implements java.io.Serializable {
 	 * @since 1.5
 	 * @see org.openmrs.OpenmrsObject#setId(java.lang.Integer)
 	 */
+	@Override
 	public void setId(Integer id) {
 		setPatientId(id);
 		

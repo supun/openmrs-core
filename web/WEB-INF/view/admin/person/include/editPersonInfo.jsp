@@ -92,7 +92,9 @@
 			<c:set var="authorized" value="true" />
 		</c:otherwise>
 	</c:choose>
-
+	<c:choose>
+	<c:when test="${attrType.retired == true}"></c:when>
+	<c:otherwise>
 	<tr>
 		<td><spring:message code="PersonAttributeType.${fn:replace(attrType.name, ' ', '')}" text="${attrType.name}"/></td>
 		<td>
@@ -103,15 +105,17 @@
 							type="${attrType.format}" 
 							formFieldName="${attrType.personAttributeTypeId}" 
 							val="${status.value[attrType.name].hydratedObject}" 
-							parameters="optionHeader=[blank]|showAnswers=${attrType.foreignKey}" />
+							parameters="optionHeader=[blank]|showAnswers=${attrType.foreignKey}|isNullable=false" /> <%-- isNullable=false so booleans don't have 'unknown' radiobox --%>
 					</spring:bind>
 				</c:when>
 				<c:otherwise>
-					<spring:bind path="attributeMap">${status.value[attrType.name].hydratedObject}</spring:bind>
+					<spring:bind path="attributeMap">${status.value[attrType.name]}</spring:bind>
 				</c:otherwise>
 			</c:choose>
 		</td>
 	</tr>
+	</c:otherwise>
+	</c:choose>
 
 </openmrs:forEachDisplayAttributeType>
 

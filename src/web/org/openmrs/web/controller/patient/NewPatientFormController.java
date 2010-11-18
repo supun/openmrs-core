@@ -14,15 +14,14 @@
 package org.openmrs.web.controller.patient;
 
 import java.text.NumberFormat;
-import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.TreeSet;
 import java.util.Vector;
 
 import javax.servlet.ServletException;
@@ -64,13 +63,13 @@ import org.openmrs.util.OpenmrsUtil;
 import org.openmrs.util.OpenmrsConstants.PERSON_TYPE;
 import org.openmrs.web.WebConstants;
 import org.openmrs.web.controller.person.PersonFormController;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.propertyeditors.CustomDateEditor;
 import org.springframework.beans.propertyeditors.CustomNumberEditor;
 import org.springframework.context.support.MessageSourceAccessor;
 import org.springframework.orm.ObjectRetrievalFailureException;
 import org.springframework.util.StringUtils;
 import org.springframework.validation.BindException;
-import org.springframework.validation.ValidationUtils;
 import org.springframework.web.bind.ServletRequestDataBinder;
 import org.springframework.web.bind.ServletRequestUtils;
 import org.springframework.web.servlet.ModelAndView;
@@ -88,6 +87,11 @@ public class NewPatientFormController extends SimpleFormController {
 	/** Logger for this class and subclasses */
 	protected final Log log = LogFactory.getLog(getClass());
 	
+	@Autowired
+	public void setShortPatientValidator(ShortPatientValidator shortPatientValidator) {
+		super.setValidator(shortPatientValidator);
+	}
+	
 	// identifiers submitted with the form.  Stored here so that they can
 	// be redisplayed for the user after an error
 	Set<PatientIdentifier> newIdentifiers = new HashSet<PatientIdentifier>();
@@ -101,6 +105,7 @@ public class NewPatientFormController extends SimpleFormController {
 	 * @see org.springframework.web.servlet.mvc.BaseCommandController#initBinder(javax.servlet.http.HttpServletRequest,
 	 *      org.springframework.web.bind.ServletRequestDataBinder)
 	 */
+	@Override
 	protected void initBinder(HttpServletRequest request, ServletRequestDataBinder binder) throws Exception {
 		super.initBinder(request, binder);
 		
@@ -111,6 +116,7 @@ public class NewPatientFormController extends SimpleFormController {
 		binder.registerCustomEditor(Concept.class, "causeOfDeath", new ConceptEditor());
 	}
 	
+	@Override
 	protected ModelAndView processFormSubmission(HttpServletRequest request, HttpServletResponse response, Object obj,
 	                                             BindException errors) throws Exception {
 		
@@ -126,7 +132,6 @@ public class NewPatientFormController extends SimpleFormController {
 			
 			String action = request.getParameter("action");
 			if (action == null || action.equals(msa.getMessage("general.save"))) {
-				ValidationUtils.rejectIfEmptyOrWhitespace(errors, "name.familyName", "error.name");
 				
 				String[] identifiers = request.getParameterValues("identifier");
 				String[] types = request.getParameterValues("identifierType");
@@ -137,14 +142,23 @@ public class NewPatientFormController extends SimpleFormController {
 				
 				if (log.isDebugEnabled()) {
 					log.debug("identifiers: " + identifiers);
-					for (String s : identifiers)
-						log.debug(s);
+					if (identifiers != null) {
+						for (String s : identifiers)
+							log.debug(s);
+					}
+					
 					log.debug("types: " + types);
-					for (String s : types)
-						log.debug(s);
+					if (types != null) {
+						for (String s : types)
+							log.debug(s);
+					}
+					
 					log.debug("locations: " + locs);
-					for (String s : locs)
-						log.debug(s);
+					if (locs != null) {
+						for (String s : locs)
+							log.debug(s);
+					}
+					
 					log.debug("preferred: " + pref);
 				}
 				
@@ -176,10 +190,6 @@ public class NewPatientFormController extends SimpleFormController {
 							
 							PatientIdentifier pi = new PatientIdentifier(id, pit, loc);
 							pi.setPreferred(pref.equals(id + types[i]));
-							if (newIdentifiers.contains(pi))
-								newIdentifiers.remove(pi);
-							
-//							pi.setUuid(null);
 							newIdentifiers.add(pi);
 							
 							if (log.isDebugEnabled()) {
@@ -189,25 +199,6 @@ public class NewPatientFormController extends SimpleFormController {
 							}
 							
 						}
-					}
-				}
-			}
-			
-			ValidationUtils.rejectIfEmptyOrWhitespace(errors, "gender", "error.null");
-			
-			if (shortPatient.getBirthdate() == null) {
-				Object[] args = { "Birthdate" };
-				errors.rejectValue("birthdate", "error.required", args, "");
-			} else {
-				// check patients birthdate against future dates and really old dates
-				if (shortPatient.getBirthdate().after(new Date()))
-					errors.rejectValue("birthdate", "error.date.future");
-				else {
-					Calendar c = Calendar.getInstance();
-					c.setTime(new Date());
-					c.add(Calendar.YEAR, -120); // patient cannot be older than 120 years old 
-					if (shortPatient.getBirthdate().before(c.getTime())) {
-						errors.rejectValue("birthdate", "error.date.nonsensical");
 					}
 				}
 			}
@@ -228,6 +219,7 @@ public class NewPatientFormController extends SimpleFormController {
 	 *      javax.servlet.http.HttpServletResponse, java.lang.Object,
 	 *      org.springframework.validation.BindException)
 	 */
+	@Override
 	@SuppressWarnings("unchecked")
 	protected ModelAndView onSubmit(HttpServletRequest request, HttpServletResponse response, Object obj,
 	                                BindException errors) throws Exception {
@@ -328,7 +320,7 @@ public class NewPatientFormController extends SimpleFormController {
 			
 			// set or unset the preferred bit for the old identifiers if needed
 			if (patient.getIdentifiers() == null)
-				patient.setIdentifiers(new TreeSet<PatientIdentifier>());
+				patient.setIdentifiers(new LinkedHashSet<PatientIdentifier>());
 			
 			for (PatientIdentifier pi : patient.getIdentifiers()) {
 				pi.setPreferred(pref.equals(pi.getIdentifier() + pi.getIdentifierType().getPatientIdentifierTypeId()));
@@ -371,18 +363,14 @@ public class NewPatientFormController extends SimpleFormController {
 			}
 			
 			// add the new identifiers.  First remove them so that things like
-			// changes to preferred status and location are persisted 
+			// changes to preferred status and location are persisted
 			for (PatientIdentifier identifier : newIdentifiers) {
-				// this loop is used instead of just using removeIdentifier because
-				// the identifier set on patient is a TreeSet which will use .compareTo
 				identifier.setPatient(patient);
 				for (PatientIdentifier currentIdentifier : patient.getActiveIdentifiers()) {
-					if (currentIdentifier.equals(identifier)) {
-						patient.removeIdentifier(currentIdentifier);
-						Context.evictFromSession(currentIdentifier);
-					}
+					patient.removeIdentifier(currentIdentifier);
 				}
 			}
+			
 			patient.addIdentifiers(newIdentifiers);
 			
 			// find which identifiers they removed and void them
@@ -543,7 +531,10 @@ public class NewPatientFormController extends SimpleFormController {
 										obsDeath.setValueText("");
 									}
 									
-									Context.getObsService().saveObs(obsDeath, null);
+									if (!StringUtils.hasText(obsDeath.getVoidReason()))
+										obsDeath.setVoidReason(Context.getMessageSourceService().getMessage(
+										    "general.default.changeReason"));
+									Context.getObsService().saveObs(obsDeath, obsDeath.getVoidReason());
 								} else {
 									log.debug("Current cause is still null - aborting mission");
 								}
@@ -562,7 +553,7 @@ public class NewPatientFormController extends SimpleFormController {
 			if (!isError && !errors.hasErrors()) {
 				Map<String, Relationship> relationships = getRelationshipsMap(patient, request);
 				for (Relationship relationship : relationships.values()) {
-					// if the user added a person to this relationship, save it 
+					// if the user added a person to this relationship, save it
 					if (relationship.getPersonA() != null && relationship.getPersonB() != null)
 						personService.saveRelationship(relationship);
 				}
@@ -595,6 +586,7 @@ public class NewPatientFormController extends SimpleFormController {
 	 * 
 	 * @see org.springframework.web.servlet.mvc.AbstractFormController#formBackingObject(javax.servlet.http.HttpServletRequest)
 	 */
+	@Override
 	protected Object formBackingObject(HttpServletRequest request) throws ServletException {
 		
 		newIdentifiers = new HashSet<PatientIdentifier>();
@@ -658,6 +650,7 @@ public class NewPatientFormController extends SimpleFormController {
 	 * 
 	 * @see org.springframework.web.servlet.mvc.SimpleFormController#referenceData(javax.servlet.http.HttpServletRequest)
 	 */
+	@Override
 	protected Map<String, Object> referenceData(HttpServletRequest request) throws Exception {
 		
 		Map<String, Object> map = new HashMap<String, Object>();
@@ -678,15 +671,16 @@ public class NewPatientFormController extends SimpleFormController {
 				patient = ps.getPatient(Integer.valueOf(patientId));
 				
 				if (patient != null) {
+
 					// only show non-voided identifiers
 					identifiers.addAll(patient.getActiveIdentifiers());
-					
 					// get 'other' cause of death
 					String propCause = Context.getAdministrationService().getGlobalProperty("concept.causeOfDeath");
 					Concept conceptCause = Context.getConceptService().getConcept(propCause);
 					if (conceptCause != null && patient.getPatientId() != null) {
 						List<Obs> obssDeath = Context.getObsService().getObservationsByPersonAndConcept(patient,
 						    conceptCause);
+
 						if (obssDeath.size() == 1) {
 							Obs obsDeath = obssDeath.iterator().next();
 							causeOfDeathOther = obsDeath.getValueText();
@@ -708,7 +702,7 @@ public class NewPatientFormController extends SimpleFormController {
 			
 			// set up the property for the relationships
 			
-			// {'3a':Relationship#234, '7b':Relationship#9488} 
+			// {'3a':Relationship#234, '7b':Relationship#9488}
 			Map<String, Relationship> relationships = getRelationshipsMap(patient, request);
 			map.put("relationships", relationships);
 		}
@@ -719,8 +713,7 @@ public class NewPatientFormController extends SimpleFormController {
 			// that the .equals method works correctly in the next loop
 			identifier.setPatient(patient);
 		}
-		identifiers.addAll(newIdentifiers);
-		
+
 		if (pref.length() > 0)
 			for (PatientIdentifier pi : identifiers)
 				pi.setPreferred(pref.equals(pi.getIdentifier() + pi.getIdentifierType().getPatientIdentifierTypeId()));
@@ -771,7 +764,7 @@ public class NewPatientFormController extends SimpleFormController {
 				RelationshipType relationshipType = Context.getPersonService().getRelationshipType(
 				    Integer.valueOf(showRelationId));
 				
-				// flag to know if we need to create a stub relationship 
+				// flag to know if we need to create a stub relationship
 				boolean relationshipFound = false;
 				
 				if (person != null && person.getPersonId() != null) {

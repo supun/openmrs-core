@@ -1,4 +1,4 @@
-<%@ include file="/WEB-INF/template/include.jsp" %>
+    <%@ include file="/WEB-INF/template/include.jsp" %>
 
 <openmrs:require privilege="Add Patients" otherwise="/login.htm" redirect="/admin/patients/newPatient.form" />
 
@@ -25,7 +25,7 @@
 						inputs[i].parentNode.removeChild(inputs[i]);
 					}
 				}
-			}	
+			}
 		}
 		if (type) {
 			for (var i in selects)
@@ -76,7 +76,7 @@
 		
 		for (var i in inputs)
 			if (inputs[i] && inputs[i].name == "preferred") {
-				inputs[i].checked = (pref == true);
+				inputs[i].checked = (pref == true ? 'checked' : '');
 				inputs[i].value = id + type;
 			}
 		
@@ -273,7 +273,7 @@
 							</select>
 						</td>
 						<td valign="middle" align="center">
-							<input type="radio" name="preferred" value="" onclick="identifierOrTypeChanged(this)" />
+							<input type="radio" name="preferred" value="" onclick="identifierOrTypeChanged(this)" checked="checked" />
 						</td>
 						<td valign="middle" align="center">
 							<input type="button" name="closeButton" onClick="return removeRow(this);" class="closeButton" value='<spring:message code="general.remove"/>'/>
@@ -282,11 +282,13 @@
 				</tbody>
 			</table>
 			<script type="text/javascript">
+				var atLeastOneIdentifierAdded = false;
 				<c:forEach items="${identifiers}" var="id">
-					addIdentifier("${id.identifier}", "${id.identifierType.patientIdentifierTypeId}", "${id.location.locationId}", ${id.preferred}, ${id.dateCreated != null});
+					addIdentifier("<c:out value="${id.identifier}"/>", "${id.identifierType.patientIdentifierTypeId}", "${id.location.locationId}", ${id.preferred}, ${id.dateCreated != null});
+					atLeastOneIdentifierAdded = true;
 				</c:forEach>
 			</script>
-			<input type="button" class="smallButton" onclick="addIdentifier()" value="<spring:message code="PatientIdentifier.add" />" hidefocus />
+			<input type="button" class="smallButton" onclick="addIdentifier(null, null, null, false, null)" value="<spring:message code="PatientIdentifier.add" />" hidefocus />
 		</td>
 	</tr>
 	<tr>
@@ -371,7 +373,7 @@
 						${relationshipMap.value.relationshipType.aIsToB}
 					</th>
 					<td class="inputCell">
-						<openmrs_tag:personField formFieldName="${relationshipMap.key}" searchLabelCode="Person.find" initialValue="${relationshipMap.value.personA.personId}" linkUrl="" callback="" />
+						<openmrs_tag:personField formFieldName="${relationshipMap.key}" searchLabelCode="Person.find" initialValue="${relationshipMap.value.personA.personId}" linkUrl="" callback="" canAddNewPerson="true" />
 					</td>
 				</tr>
 			</c:when>
@@ -381,7 +383,7 @@
 						${relationshipMap.value.relationshipType.bIsToA}
 					</th>
 					<td class="inputCell">
-						<openmrs_tag:personField formFieldName="${relationshipMap.key}" searchLabelCode="Person.find" initialValue="${relationshipMap.value.personB.personId}" linkUrl="" callback="" />
+						<openmrs_tag:personField formFieldName="${relationshipMap.key}" searchLabelCode="Person.find" initialValue="${relationshipMap.value.personB.personId}" linkUrl="" callback="" canAddNewPerson="true"/>
 					</td>
 			</c:otherwise>
 		</c:choose>
@@ -410,10 +412,10 @@
 							type="${attrType.format}" 
 							formFieldName="${attrType.personAttributeTypeId}" 
 							val="${patient.attributeMap[attrType.name].hydratedObject}" 
-							parameters="optionHeader=[blank]|showAnswers=${attrType.foreignKey}" />
+							parameters="optionHeader=[blank]|showAnswers=${attrType.foreignKey}|isNullable=false" /> <%-- isNullable=false so booleans don't have 'unknown' radiobox --%>
 					</c:when>
 					<c:otherwise>
-						${patient.attributeMap[attrType.name].hydratedObject}
+						${patient.attributeMap[attrType.name]}
 					</c:otherwise>
 				</c:choose>
 			</td>
@@ -485,7 +487,7 @@
 <script type="text/javascript">
 	document.forms[0].elements[0].focus();
 	document.getElementById("identifierRow").style.display = "none";
-	addIdentifier();
+	addIdentifier(null, null, null, !atLeastOneIdentifierAdded, null);
 	updateAge();
 </script>
 

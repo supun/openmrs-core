@@ -16,6 +16,7 @@ package org.openmrs;
 import java.io.Serializable;
 
 import org.openmrs.obs.ComplexObsHandler;
+import org.openmrs.util.OpenmrsUtil;
 
 /**
  * Child class of Concept that has a {@link ComplexObsHandler} associated with the Concept.
@@ -80,10 +81,14 @@ public class ConceptComplex extends Concept implements Serializable {
 	/**
 	 * @see org.openmrs.Concept#equals(java.lang.Object)
 	 */
+	@Override
 	public boolean equals(Object obj) {
 		if (obj instanceof ConceptComplex) {
 			ConceptComplex c = (ConceptComplex) obj;
 			return (this.getConceptId().equals(c.getConceptId()));
+		} else if (obj instanceof Concept) {
+			// use the reverse .equals in case we have hibernate proxies - #1511
+			return OpenmrsUtil.nullSafeEquals(((Concept) obj).getConceptId(), this.getConceptId());
 		}
 		
 		// fall back to object equality
@@ -93,6 +98,7 @@ public class ConceptComplex extends Concept implements Serializable {
 	/**
 	 * @see org.openmrs.Concept#hashCode()
 	 */
+	@Override
 	public int hashCode() {
 		if (getConceptId() == null)
 			return super.hashCode();
@@ -107,6 +113,7 @@ public class ConceptComplex extends Concept implements Serializable {
 	 * 
 	 * @see org.openmrs.Concept#isComplex()
 	 */
+	@Override
 	public boolean isComplex() {
 		if (getDatatype() == null || getDatatype().getHl7Abbreviation() == null)
 			return false;

@@ -49,11 +49,13 @@ import org.openmrs.scheduler.SchedulerUtil;
 import org.openmrs.util.DatabaseUpdateException;
 import org.openmrs.util.DatabaseUpdater;
 import org.openmrs.util.InputRequiredException;
+import org.openmrs.util.OpenmrsConstants;
 import org.openmrs.util.OpenmrsClassLoader;
 import org.openmrs.util.OpenmrsUtil;
 import org.openmrs.web.filter.initialization.InitializationFilter;
 import org.openmrs.web.filter.update.UpdateFilter;
 import org.springframework.web.context.ContextLoaderListener;
+import org.springframework.util.StringUtils;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.xml.sax.EntityResolver;
@@ -84,9 +86,8 @@ public final class Listener extends ContextLoaderListener {
 	}
 	
 	/**
-	 * Boolean flag set by the {@link #contextInitialized(ServletContextEvent)} method
-	 * if an error occurred when trying to start up.  The StartupErrorFilter displays
-	 * the error to the admin
+	 * Boolean flag set by the {@link #contextInitialized(ServletContextEvent)} method if an error
+	 * occurred when trying to start up. The StartupErrorFilter displays the error to the admin
 	 * 
 	 * @return true/false if an error occurred when starting up
 	 */
@@ -109,7 +110,8 @@ public final class Listener extends ContextLoaderListener {
 	 * 
 	 * @param event
 	 */
-	public void contextInitialized(ServletContextEvent event) {
+	@Override
+    public void contextInitialized(ServletContextEvent event) {
 		Log log = LogFactory.getLog(Listener.class);
 		
 		log.debug("Starting the OpenMRS webapp");
@@ -123,13 +125,13 @@ public final class Listener extends ContextLoaderListener {
 			// erase things in the dwr file
 			clearDWRFile(servletContext);
 			
-			// Try to get the runtime properties 
+			// Try to get the runtime properties
 			Properties props = getRuntimeProperties();
 			if (props != null) {
 				// the user has defined a runtime properties file
 				runtimePropertiesFound = true;
-				// set props to the context so that they can be 
-				// used during sessionFactory creation 
+				// set props to the context so that they can be
+				// used during sessionFactory creation
 				Context.setRuntimeProperties(props);
 			}
 			
@@ -159,16 +161,11 @@ public final class Listener extends ContextLoaderListener {
 	 * 
 	 * @return true if one of the filters needs to take some action
 	 */
-	private boolean setupNeeded() throws ServletException {
+	private boolean setupNeeded() throws Exception {
 		if (!runtimePropertiesFound)
 			return true;
 		
-		try {
-			return DatabaseUpdater.updatesRequired() && !DatabaseUpdater.allowAutoUpdate();
-		}
-		catch (Throwable t) {
-			throw new ServletException(t);
-		}
+		return DatabaseUpdater.updatesRequired() && !DatabaseUpdater.allowAutoUpdate();
 	}
 	
 	/**
@@ -202,7 +199,6 @@ public final class Listener extends ContextLoaderListener {
 			throw coreModEx;
 		}
 		
-		
 		// TODO catch openmrs errors here and drop the user back out to the setup screen
 		
 		try {
@@ -231,6 +227,13 @@ public final class Listener extends ContextLoaderListener {
 	private void loadConstants(ServletContext servletContext) {
 		WebConstants.BUILD_TIMESTAMP = servletContext.getInitParameter("build.timestamp");
 		WebConstants.WEBAPP_NAME = getContextPath(servletContext);
+		WebConstants.MODULE_REPOSITORY_URL = servletContext.getInitParameter("module.repository.url");
+		// note: the below value will be overridden after reading the runtime properties if the
+		// "application_data_directory" runtime property is set
+		String appDataDir = servletContext.getInitParameter("application.data.directory");
+		if (StringUtils.hasLength(appDataDir)) {
+			OpenmrsConstants.APPLICATION_DATA_DIRECTORY = appDataDir;
+		}
 	}
 	
 	/**
@@ -289,7 +292,7 @@ public final class Listener extends ContextLoaderListener {
 				OpenmrsUtil.saveDocument(doc, dwrFile);
 			}
 			catch (Throwable t) {
-				// got here because the dwr-modules.xml file is empty for some reason.  This might 
+				// got here because the dwr-modules.xml file is empty for some reason.  This might
 				// happen because the servlet container (i.e. tomcat) crashes when first loading this file
 				log.debug("Error clearing dwr-modules.xml", t);
 				dwrFile.delete();
@@ -339,7 +342,7 @@ public final class Listener extends ContextLoaderListener {
 				File file = new File(userOverridePath);
 				
 				// if they got the path correct
-				// also, if file does not start with a "." (hidden files, like SVN files) 
+				// also, if file does not start with a "." (hidden files, like SVN files)
 				if (file.exists() && !userOverridePath.startsWith(".")) {
 					log.debug("Overriding file: " + absolutePath);
 					log.debug("Overriding file with: " + userOverridePath);
@@ -452,7 +455,8 @@ public final class Listener extends ContextLoaderListener {
 	 * 
 	 * @see org.springframework.web.context.ContextLoaderListener#contextDestroyed(javax.servlet.ServletContextEvent)
 	 */
-	public void contextDestroyed(ServletContextEvent event) {
+	@Override
+    public void contextDestroyed(ServletContextEvent event) {
 		
 		try {
 			Context.openSession();
@@ -465,7 +469,7 @@ public final class Listener extends ContextLoaderListener {
 		catch (Throwable t) {
 			// don't print the unhelpful "contextDAO is null" message
 			if (!t.getMessage().equals("contextDAO is null")) {
-				// not using log.error here so it can be garbage collected 
+				// not using log.error here so it can be garbage collected
 				System.out.println("Listener.contextDestroyed: Error while shutting down openmrs: ");
 				t.printStackTrace();
 			}
@@ -575,7 +579,8 @@ public final class Listener extends ContextLoaderListener {
 		}
 		catch (Throwable t) {
 			log.debug("Got an error while attempting to load the runtime properties", t);
-			log.warn("Unable to find a runtime properties file. Initial setup is needed. View the webapp to run the setup wizard.");
+			log
+			        .warn("Unable to find a runtime properties file. Initial setup is needed. View the webapp to run the setup wizard.");
 			return null;
 		}
 		return props;
@@ -588,7 +593,7 @@ public final class Listener extends ContextLoaderListener {
 	 * @throws ModuleMustStartException if the context cannot restart due to a
 	 *             {@link MandatoryModuleException} or {@link OpenmrsCoreModuleException}
 	 */
-	public static void performWebStartOfModules(ServletContext servletContext) throws ModuleMustStartException {
+	public static void performWebStartOfModules(ServletContext servletContext) throws ModuleMustStartException, Throwable {
 		Log log = LogFactory.getLog(Listener.class);
 		
 		List<Module> startedModules = new ArrayList<Module>();
@@ -607,7 +612,7 @@ public final class Listener extends ContextLoaderListener {
 		
 		if (someModuleNeedsARefresh) {
 			try {
-				WebModuleUtil.refreshWAC(servletContext);
+				WebModuleUtil.refreshWAC(servletContext, true, null);
 			}
 			catch (ModuleMustStartException ex) {
 				// pass this up to the calling method so that openmrs loading stops
@@ -618,18 +623,30 @@ public final class Listener extends ContextLoaderListener {
 				try {
 					WebModuleUtil.shutdownModules(servletContext);
 					for (Module mod : ModuleFactory.getLoadedModules()) {// use loadedModules to avoid a concurrentmodificationexception
-						ModuleFactory.stopModule(mod, true, true); // pass in one true value here so that the global properties aren't written to and the second true so core modules can be stopped 
+						if (!mod.isCoreModule() && !mod.isMandatory())
+							ModuleFactory.stopModule(mod, true, true);
 					}
-					WebModuleUtil.refreshWAC(servletContext);
+					WebModuleUtil.refreshWAC(servletContext, true, null);
 				}
-				catch (ModuleMustStartException ex) {
+				catch (MandatoryModuleException ex) {
 					// pass this up to the calling method so that openmrs loading stops
-					throw ex;
+					throw new MandatoryModuleException(ex.getModuleId(), "Got an error while starting a mandatory module: "
+					        + t.getMessage() + ". Check the server logs for more information");
 				}
 				catch (Throwable t2) {
+					// a mandatory or core module is causing spring to fail to start up.  We don't want those
+					// stopped so we must report this error to the higher authorities
 					log.warn("caught another error: ", t2);
+					throw t2;
 				}
 			}
+		}
+		
+		// because we delayed the refresh, we need to load+start all servlets and filters now
+		// (this is to protect servlets/filters that depend on their module's spring xml config being available)
+		for (Module mod : ModuleFactory.getStartedModules()) {
+			WebModuleUtil.loadServlets(mod, servletContext);
+			WebModuleUtil.loadFilters(mod, servletContext);
 		}
 	}
 	

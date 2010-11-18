@@ -1,5 +1,7 @@
 <%@ include file="/WEB-INF/template/include.jsp" %>
 
+<spring:message var="pageTitle" code="dictionary.titlebar" scope="page"/>
+
 <%@ include file="/WEB-INF/template/header.jsp" %>
 
 <openmrs:require privilege="View Concepts" otherwise="/login.htm"
@@ -19,7 +21,9 @@
 		
 		dojo.event.topic.subscribe("cSearch/select", 
 			function(msg) {
-				document.location = "concept.htm?conceptId=" + msg.objs[0].conceptId;
+                if (msg.objs[0].conceptId != undefined) {  
+			        document.location = "concept.htm?conceptId=" + msg.objs[0].conceptId;
+                }
 			}
 		);
 		

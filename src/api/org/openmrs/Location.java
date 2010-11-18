@@ -22,8 +22,12 @@ import org.openmrs.api.APIException;
 import org.openmrs.api.context.Context;
 
 /**
- * A Location object usually represents a physical place care has taken place. A hospital, a room, a
- * clinic, a district, etc are all examples of Locations.
+ * A Location is a physical place, such as a hospital, a room, a clinic, or a district.
+ * 
+ * Locations support a single hierarchy, such that each location may have one parent location.
+ * 
+ * A non-geographical grouping of locations, such as "All Community Health Centers" is not a location, and
+ * should be modeled using {@link LocationTag}s. 
  */
 public class Location extends BaseOpenmrsMetadata implements java.io.Serializable, Attributable<Location> {
 	
@@ -84,28 +88,18 @@ public class Location extends BaseOpenmrsMetadata implements java.io.Serializabl
 	 * @param obj
 	 * @return boolean true/false whether or not they are the same objects
 	 */
-	public boolean equals(Object obj) {
+	@Override
+    public boolean equals(Object obj) {
 		if (obj instanceof Location) {
 			Location loc = (Location) obj;
 			if (this.getLocationId() != null && loc.getLocationId() != null)
 				return (this.getLocationId().equals(loc.getLocationId()));
-			/*
-			 * return (this.getName().equals(loc.getName()) &&
-			 * this.getDescription().equals(loc.getDescription()) &&
-			 * this.getAddress1().equals(loc.getAddress1()) &&
-			 * this.getAddress2().equals(loc.getAddress2()) &&
-			 * this.getCityVillage().equals(loc.getCityVillage()) &&
-			 * this.getStateProvince().equals(loc.getStateProvince()) &&
-			 * this.getPostalCode().equals(loc.getPostalCode()) &&
-			 * this.getCountry().equals(loc.getCountry()) &&
-			 * this.getLatitude().equals(loc.getLatitude()) &&
-			 * this.getLongitude().equals(loc.getLongitude()));
-			 */
 		}
 		return obj == this;
 	}
 	
-	public int hashCode() {
+	@Override
+    public int hashCode() {
 		if (this.getLocationId() == null)
 			return super.hashCode();
 		return this.getLocationId().hashCode();
@@ -239,7 +233,8 @@ public class Location extends BaseOpenmrsMetadata implements java.io.Serializabl
 		this.stateProvince = stateProvince;
 	}
 	
-	public String toString() {
+	@Override
+    public String toString() {
 		return getName();
 	}
 	
@@ -539,7 +534,7 @@ public class Location extends BaseOpenmrsMetadata implements java.io.Serializabl
 	public Boolean hasTag(String tagToFind) {
 		if (tagToFind != null && getTags() != null) {
 			for (LocationTag locTag : getTags()) {
-				if (locTag.getTag().equals(tagToFind)) {
+				if (locTag.getName().equals(tagToFind)) {
 					return true;
 				}
 			}

@@ -23,6 +23,7 @@ import java.util.Vector;
 
 import org.openmrs.Cohort;
 import org.openmrs.Concept;
+import org.openmrs.ConceptName;
 import org.openmrs.Encounter;
 import org.openmrs.Location;
 import org.openmrs.MimeType;
@@ -142,7 +143,7 @@ public class ObsServiceImpl extends BaseOpenmrsService implements ObsService {
 				Context.evictFromSession(obs);
 				obs = getObs(obs.getObsId());
 				
-				// calling this via the service so that AOP hooks are called 
+				// calling this via the service so that AOP hooks are called
 				Context.getObsService().voidObs(obs, reason);
 				
 			}
@@ -295,35 +296,27 @@ public class ObsServiceImpl extends BaseOpenmrsService implements ObsService {
 	                                 List<Concept> answers, List<PERSON_TYPE> personTypes, List<Location> locations,
 	                                 List<String> sort, Integer mostRecentN, Integer obsGroupId, Date fromDate, Date toDate,
 	                                 boolean includeVoidedObs) throws APIException {
-		if (whom == null)
-			whom = new Vector<Person>();
-		
-		if (encounters == null)
-			encounters = new Vector<Encounter>();
-		
-		if (questions == null)
-			questions = new Vector<Concept>();
-		
-		if (answers == null)
-			answers = new Vector<Concept>();
-		
-		if (personTypes == null)
-			personTypes = new Vector<PERSON_TYPE>();
-		
-		if (locations == null)
-			locations = new Vector<Location>();
 		
 		if (sort == null)
 			sort = new Vector<String>();
 		if (sort.isEmpty())
 			sort.add("obsDatetime");
 		
-		// default to returning all observations
-		if (mostRecentN == null)
-			mostRecentN = -1;
-		
 		return dao.getObservations(whom, encounters, questions, answers, personTypes, locations, sort, mostRecentN,
 		    obsGroupId, fromDate, toDate, includeVoidedObs);
+	}
+	
+	/**
+	 * @see org.openmrs.api.ObsService#getObservationCount(java.util.List, java.util.List,
+	 *      java.util.List, java.util.List, java.util.List, java.util.List, java.lang.Integer,
+	 *      java.util.Date, java.util.Date, boolean)
+	 */
+	public Integer getObservationCount(List<Person> whom, List<Encounter> encounters, List<Concept> questions,
+	                                   List<Concept> answers, List<PERSON_TYPE> personTypes, List<Location> locations,
+	                                   Integer obsGroupId, Date fromDate, Date toDate, boolean includeVoidedObs)
+	                                                                                                            throws APIException {
+		return dao.getObservationCount(whom, encounters, questions, answers, personTypes, locations, obsGroupId, fromDate,
+		    toDate, null, includeVoidedObs);
 	}
 	
 	/**
@@ -545,7 +538,8 @@ public class ObsServiceImpl extends BaseOpenmrsService implements ObsService {
 	}
 	
 	/**
-	 * @see org.openmrs.api.ObsService#getObservationsByPersonAndConcept(org.openmrs.Person, org.openmrs.Concept)
+	 * @see org.openmrs.api.ObsService#getObservationsByPersonAndConcept(org.openmrs.Person,
+	 *      org.openmrs.Concept)
 	 */
 	public List<Obs> getObservationsByPersonAndConcept(Person who, Concept question) throws APIException {
 		List<Person> whom = new Vector<Person>();
@@ -811,6 +805,14 @@ public class ObsServiceImpl extends BaseOpenmrsService implements ObsService {
 		catch (Exception e) {
 			throw new APIException("Unable to load and instantiate handler", e);
 		}
+	}
+	
+	/**
+	 * @see org.openmrs.api.ObsService#getObservationCount(java.util.List, boolean)
+	 */
+	@Override
+	public Integer getObservationCount(List<ConceptName> conceptNames, boolean includeVoided) {
+		return dao.getObservationCount(null, null, null, null, null, null, null, null, null, conceptNames, true);
 	}
 	
 	/**

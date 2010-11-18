@@ -15,12 +15,17 @@ package org.openmrs.hl7.handler;
 
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Collection;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
+import java.util.regex.Pattern;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.openmrs.Concept;
+import org.openmrs.ConceptAnswer;
 import org.openmrs.ConceptName;
 import org.openmrs.ConceptProposal;
 import org.openmrs.Drug;
@@ -33,13 +38,15 @@ import org.openmrs.Patient;
 import org.openmrs.Person;
 import org.openmrs.PersonAttribute;
 import org.openmrs.PersonAttributeType;
+import org.openmrs.Relationship;
+import org.openmrs.RelationshipType;
 import org.openmrs.User;
 import org.openmrs.api.context.Context;
-import org.openmrs.hl7.HL7InError;
+import org.openmrs.hl7.HL7Constants;
 import org.openmrs.hl7.HL7InQueueProcessor;
 import org.openmrs.hl7.HL7Service;
-import org.openmrs.util.FormConstants;
 import org.openmrs.util.OpenmrsConstants;
+import org.openmrs.util.OpenmrsUtil;
 
 import ca.uhn.hl7v2.HL7Exception;
 import ca.uhn.hl7v2.app.Application;
@@ -66,6 +73,7 @@ import ca.uhn.hl7v2.model.v25.group.ORU_R01_ORDER_OBSERVATION;
 import ca.uhn.hl7v2.model.v25.group.ORU_R01_PATIENT_RESULT;
 import ca.uhn.hl7v2.model.v25.message.ORU_R01;
 import ca.uhn.hl7v2.model.v25.segment.MSH;
+import ca.uhn.hl7v2.model.v25.segment.NK1;
 import ca.uhn.hl7v2.model.v25.segment.OBR;
 import ca.uhn.hl7v2.model.v25.segment.OBX;
 import ca.uhn.hl7v2.model.v25.segment.ORC;
@@ -106,7 +114,16 @@ public class ORUR01Handler implements Application {
 	 * @should append to an existing encounter
 	 * @should create obs group for OBRs
 	 * @should create obs valueCodedName
-	 * @should send message to error queue for empty concept proposals
+	 * @should fail on empty concept proposals
+	 * @should fail on empty concept answers
+	 * @should set value_Coded matching a boolean concept for obs if the answer is 0 or 1 and
+	 *         Question datatype is coded
+	 * @should set value as boolean for obs if the answer is 0 or 1 and Question datatype is Boolean
+	 * @should set value_Numeric for obs if Question datatype is Numeric and the answer is either 0
+	 *         or 1
+	 * @should set value_Numeric for obs if Question datatype is Numeric
+	 * @should fail if question datatype is coded and a boolean is not a valid answer
+	 * @should fail if question datatype is neither Boolean nor numeric nor coded
 	 */
 	public Message processMessage(Message message) throws ApplicationException {
 		
@@ -140,6 +157,7 @@ public class ORUR01Handler implements Application {
 	 * @param oru the message to process
 	 * @return the processed message
 	 * @throws HL7Exception
+	 * @should process multiple NK1 segments
 	 */
 	@SuppressWarnings("deprecation")
 	private Message processORU_R01(ORU_R01 oru) throws HL7Exception {
@@ -154,6 +172,7 @@ public class ORUR01Handler implements Application {
 		// extract segments for convenient use below
 		MSH msh = getMSH(oru);
 		PID pid = getPID(oru);
+		List<NK1> nk1List = getNK1List(oru);
 		PV1 pv1 = getPV1(oru);
 		ORC orc = getORC(oru); // we're using the ORC assoc with first OBR to
 		// hold data enterer and date entered for now
@@ -180,6 +199,10 @@ public class ORUR01Handler implements Application {
 			log.error("Error while processing Discharge To Location (" + messageControlId + ")", e);
 		}
 		
+		// process NK1 (relationship) segments
+		for (NK1 nk1 : nk1List)
+			processNK1(patient, nk1);
+		
 		// list of concepts proposed in the obs of this encounter.
 		// these proposals need to be created after the encounter
 		// has been created
@@ -188,7 +211,7 @@ public class ORUR01Handler implements Application {
 		// create observations
 		if (log.isDebugEnabled())
 			log.debug("Creating observations for message " + messageControlId + "...");
-		// we ignore all MEDICAL_RECORD_OBSERVATIONS that are OBRs.  We do not 
+		// we ignore all MEDICAL_RECORD_OBSERVATIONS that are OBRs.  We do not
 		// create obs_groups for them
 		List<Concept> ignoredConcepts = new ArrayList<Concept>();
 		
@@ -210,10 +233,10 @@ public class ORUR01Handler implements Application {
 				log.debug("Processing OBR (" + i + " of " + numObr + ")");
 			ORU_R01_ORDER_OBSERVATION orderObs = patientResult.getORDER_OBSERVATION(i);
 			
-			// the parent obr 
+			// the parent obr
 			OBR obr = orderObs.getOBR();
 			
-			// if we're not ignoring this obs group, create an 
+			// if we're not ignoring this obs group, create an
 			// Obs grouper object that the underlying obs objects will use
 			Obs obsGrouper = null;
 			Concept obrConcept = getConcept(obr.getUniversalServiceIdentifier(), messageControlId);
@@ -238,7 +261,7 @@ public class ORUR01Handler implements Application {
 			
 			// loop over the obs and create each object, adding it to the encounter
 			int numObs = orderObs.getOBSERVATIONReps();
-			String errorInHL7Queue = null;
+			HL7Exception errorInHL7Queue = null;
 			for (int j = 0; j < numObs; j++) {
 				if (log.isDebugEnabled())
 					log.debug("Processing OBS (" + j + " of " + numObs + ")");
@@ -249,7 +272,7 @@ public class ORUR01Handler implements Application {
 					Obs obs = parseObs(encounter, obx, obr, messageControlId);
 					if (obs != null) {
 						
-						// if we're backfilling an encounter, don't use 
+						// if we're backfilling an encounter, don't use
 						// the creator/dateCreated from the encounter
 						if (encounter.getEncounterId() != null) {
 							obs.setCreator(getEnterer(orc));
@@ -259,7 +282,7 @@ public class ORUR01Handler implements Application {
 						// set the obsGroup on this obs
 						if (obsGrouper != null)
 							// set the obs to the group.  This assumes the group is already
-							// on the encounter and that when the encounter is saved it will 
+							// on the encounter and that when the encounter is saved it will
 							// propagate to the children obs
 							obsGrouper.addGroupMember(obs);
 						
@@ -279,24 +302,21 @@ public class ORUR01Handler implements Application {
 					if (value != null && !value.equals(""))
 						conceptProposals.add(createConceptProposal(encounter, questionConcept, value));
 					else {
-						errorInHL7Queue = Context.getMessageSourceService().getMessage("Hl7.proposed.concept.name.empty");
+						errorInHL7Queue = new HL7Exception(Context.getMessageSourceService().getMessage(
+						    "Hl7.proposed.concept.name.empty"), proposingException);
 						break;//stop any further processing of current message
 					}
 					
 				}
 				catch (HL7Exception e) {
-					errorInHL7Queue = e.getMessage();
+					errorInHL7Queue = e;
 				}
 				finally {
 					// Handle obs-level exceptions
 					if (errorInHL7Queue != null) {
-						log.warn("HL7Exception: " + errorInHL7Queue);
-						HL7InError hl7InError = new HL7InError();
-						hl7InError.setError(errorInHL7Queue);
-						hl7InError.setErrorDetails(PipeParser.encode(obx, new EncodingCharacters('|', "^~\\&")));
-						hl7InError.setHL7SourceKey(messageControlId);
-						hl7InError.setHL7Data(PipeParser.encode(oru, new EncodingCharacters('|', "^~\\&")));
-						hl7Service.saveHL7InError(hl7InError);
+						throw new HL7Exception("Improperly formatted OBX: "
+						        + PipeParser.encode(obx, new EncodingCharacters('|', "^~\\&")),
+						        HL7Exception.DATA_TYPE_ERROR, errorInHL7Queue);
 					}
 				}
 			}
@@ -318,9 +338,9 @@ public class ORUR01Handler implements Application {
 		// requires that one obs be created (in the database) before others can
 		// be linked to it, forcing us to save the encounter prematurely."
 		//
-		// NOTE: The above referenced fix is now done.  This method is 
-		// deprecated and will be removed in the next release.  All modules 
-		// should modify their AOP methods to hook around 
+		// NOTE: The above referenced fix is now done.  This method is
+		// deprecated and will be removed in the next release.  All modules
+		// should modify their AOP methods to hook around
 		// EncounterService.createEncounter(Encounter).
 		hl7Service.encounterCreated(encounter);
 		
@@ -334,9 +354,87 @@ public class ORUR01Handler implements Application {
 		
 	}
 	
-	// private String getSendingApplication(ORU_R01 oru) {
-	// return oru.getMSH().getSendingApplication().getUniversalID().getValue();
-	// }
+	/**
+	 * process an NK1 segment and add relationships if needed
+	 * 
+	 * @param patient
+	 * @param nk1
+	 * @throws HL7Exception
+	 * @should create a relationship from a NK1 segment
+	 * @should not create a relationship if one exists
+	 * @should create a person if the relative is not found
+	 * @should fail if the coding system is not 99REL
+	 * @should fail if the relationship identifier is formatted improperly
+	 * @should fail if the relationship type is not found
+	 */
+	protected void processNK1(Patient patient, NK1 nk1) throws HL7Exception {
+		// guarantee we are working with our custom coding system
+		String relCodingSystem = nk1.getRelationship().getNameOfCodingSystem().getValue();
+		if (!relCodingSystem.equals(HL7Constants.HL7_LOCAL_RELATIONSHIP))
+			throw new HL7Exception("Relationship coding system '" + relCodingSystem + "' unknown in NK1 segment.");
+		
+		// get the relationship type identifier
+		String relIdentifier = nk1.getRelationship().getIdentifier().getValue();
+		
+		// validate the format of the relationship identifier
+		if (!Pattern.matches("[0-9]+[AB]", relIdentifier))
+			throw new HL7Exception("Relationship type '" + relIdentifier + "' improperly formed in NK1 segment.");
+		
+		// get the type ID
+		Integer relTypeId = 0;
+		try {
+			relTypeId = Integer.parseInt(relIdentifier.substring(0, relIdentifier.length() - 1));
+		}
+		catch (NumberFormatException e) {
+			throw new HL7Exception("Relationship type '" + relIdentifier + "' improperly formed in NK1 segment.");
+		}
+		
+		// find the relationship type
+		RelationshipType relType = Context.getPersonService().getRelationshipType(relTypeId);
+		if (relType == null)
+			throw new HL7Exception("Relationship type '" + relTypeId + "' in NK1 segment not found");
+		
+		// find the relative
+		Person relative = getRelative(nk1);
+		
+		// determine if the patient is person A or B; the relIdentifier indicates
+		// the relative's side of the relationship, so the patient is the inverse
+		boolean patientIsPersonA = relIdentifier.endsWith("B");
+		boolean patientCanBeEitherPerson = relType.getbIsToA().equals(relType.getaIsToB());
+		
+		// look at existing relationships to determine if a new one is needed
+		Set<Relationship> rels = new HashSet<Relationship>();
+		if (relative != null) {
+			if (patientCanBeEitherPerson || patientIsPersonA)
+				rels.addAll(Context.getPersonService().getRelationships(patient, relative, relType));
+			if (patientCanBeEitherPerson || !patientIsPersonA)
+				rels.addAll(Context.getPersonService().getRelationships(relative, patient, relType));
+		}
+		
+		// create a relationship if none is found
+		if (rels.isEmpty()) {
+			
+			// check the relative's existence
+			if (relative == null) {
+				// create one based on NK1 information
+				relative = Context.getHL7Service().createPersonFromNK1(nk1);
+				if (relative == null)
+					throw new HL7Exception("could not create a new relative from NK1 segment");
+			}
+			
+			// create the relationship
+			Relationship relation = new Relationship();
+			if (patientCanBeEitherPerson || patientIsPersonA) {
+				relation.setPersonA(patient);
+				relation.setPersonB(relative);
+			} else {
+				relation.setPersonA(relative);
+				relation.setPersonB(patient);
+			}
+			relation.setRelationshipType(relType);
+			Context.getPersonService().saveRelationship(relation);
+		}
+	}
 	
 	/**
 	 * Not used
@@ -354,6 +452,25 @@ public class ORUR01Handler implements Application {
 	
 	private PID getPID(ORU_R01 oru) {
 		return oru.getPATIENT_RESULT().getPATIENT().getPID();
+	}
+	
+	/**
+	 * finds NK1 segments in an ORU_R01 message. all HAPI-rendered Messages have at least one NK1
+	 * segment but if the original message truly does not contain an NK1, the setID will be null on
+	 * the generated NK1
+	 * 
+	 * @param oru ORU_R01 message to be parsed for NK1 segments
+	 * @return list of not-null NK1 segments
+	 * @throws HL7Exception
+	 */
+	public List<NK1> getNK1List(ORU_R01 oru) throws HL7Exception {
+		List<NK1> res = new ArrayList<NK1>();
+		// there will always be at least one NK1, even if the original message does not contain one
+		for (int i = 0; i < oru.getPATIENT_RESULT().getPATIENT().getNK1Reps(); i++)
+			// if the setIDNK1 value is null, this NK1 is blank
+			if (oru.getPATIENT_RESULT().getPATIENT().getNK1(i).getSetIDNK1().getValue() != null)
+				res.add(oru.getPATIENT_RESULT().getPATIENT().getNK1(i));
+		return res;
 	}
 	
 	private PV1 getPV1(ORU_R01 oru) {
@@ -472,8 +589,50 @@ public class ORUR01Handler implements Application {
 			if (value == null || value.length() == 0) {
 				log.warn("Not creating null valued obs for concept " + concept);
 				return null;
+			} else if (value.equals("0") || value.equals("1")) {
+				concept = concept.hydrate(concept.getConceptId().toString());
+				obs.setConcept(concept);
+				if (concept.getDatatype().isBoolean())
+					obs.setValueBoolean(value.equals("1"));
+				else if (concept.getDatatype().isNumeric())
+					try {
+						obs.setValueNumeric(Double.valueOf(value));
+					}
+					catch (NumberFormatException e) {
+						throw new HL7Exception("numeric (NM) value '" + value + "' is not numeric for concept #"
+						        + concept.getConceptId() + " (" + conceptName.getName() + ") in message " + uid, e);
+					}
+				else if (concept.getDatatype().isCoded()) {
+					Concept answer = value.equals("1") ? Context.getConceptService().getTrueConcept() : Context
+					        .getConceptService().getFalseConcept();
+					boolean isValidAnswer = false;
+					Collection<ConceptAnswer> conceptAnswers = concept.getAnswers();
+					if (conceptAnswers != null && conceptAnswers.size() > 0) {
+						for (ConceptAnswer conceptAnswer : conceptAnswers) {
+							if (conceptAnswer.getAnswerConcept().equals(answer)) {
+								obs.setValueCoded(answer);
+								isValidAnswer = true;
+								break;
+							}
+						}
+					}
+					//answer the boolean answer concept was't found
+					if (!isValidAnswer)
+						throw new HL7Exception(answer.toString() + " is not a valid answer for obs with uuid " + uid);
+				} else {
+					//throw this exception to make sure that the handler doesn't silently ignore bad hl7 message
+					throw new HL7Exception("Can't set boolean concept answer for concept with id "
+					        + obs.getConcept().getConceptId());
+				}
+			} else {
+				try {
+					obs.setValueNumeric(Double.valueOf(value));
+				}
+				catch (NumberFormatException e) {
+					throw new HL7Exception("numeric (NM) value '" + value + "' is not numeric for concept #"
+					        + concept.getConceptId() + " (" + conceptName.getName() + ") in message " + uid, e);
+				}
 			}
-			obs.setValueNumeric(Double.valueOf(value));
 		} else if ("CWE".equals(hl7Datatype)) {
 			log.debug("  CWE observation");
 			CWE value = (CWE) obx5;
@@ -490,7 +649,7 @@ public class ORUR01Handler implements Application {
 				try {
 					Concept valueConcept = getConcept(value, uid);
 					obs.setValueCoded(valueConcept);
-					if (FormConstants.HL7_LOCAL_DRUG.equals(value.getNameOfAlternateCodingSystem().getValue())) {
+					if (HL7Constants.HL7_LOCAL_DRUG.equals(value.getNameOfAlternateCodingSystem().getValue())) {
 						Drug valueDrug = new Drug();
 						valueDrug.setDrugId(new Integer(value.getAlternateIdentifier().getValue()));
 						obs.setValueDrug(valueDrug);
@@ -605,7 +764,7 @@ public class ORUR01Handler implements Application {
 	 */
 	private ConceptName getConceptName(ST altIdentifier, ID altCodingSystem) throws HL7Exception {
 		if (altIdentifier != null) {
-			if (FormConstants.HL7_LOCAL_CONCEPT_NAME.equals(altCodingSystem.getValue())) {
+			if (HL7Constants.HL7_LOCAL_CONCEPT_NAME.equals(altCodingSystem.getValue())) {
 				String hl7ConceptNameId = altIdentifier.getValue();
 				return getConceptName(hl7ConceptNameId);
 			}
@@ -642,7 +801,7 @@ public class ORUR01Handler implements Application {
 	}
 	
 	private boolean isConceptProposal(String identifier) {
-		return identifier.equals(OpenmrsConstants.PROPOSED_CONCEPT_IDENTIFIER);
+		return OpenmrsUtil.nullSafeEquals(identifier, OpenmrsConstants.PROPOSED_CONCEPT_IDENTIFIER);
 	}
 	
 	private Date getDate(int year, int month, int day, int hour, int minute, int second) {
@@ -697,7 +856,7 @@ public class ORUR01Handler implements Application {
 	 * @should return a mapped Concept if given a valid mapping
 	 */
 	protected Concept getConcept(String hl7ConceptId, String codingSystem, String uid) throws HL7Exception {
-		if (FormConstants.HL7_LOCAL_CONCEPT.equals(codingSystem)) {
+		if (HL7Constants.HL7_LOCAL_CONCEPT.equals(codingSystem)) {
 			// the concept is local
 			try {
 				Integer conceptId = new Integer(hl7ConceptId);
@@ -788,6 +947,21 @@ public class ORUR01Handler implements Application {
 		Patient patient = new Patient();
 		patient.setPatientId(patientId);
 		return patient;
+	}
+	
+	/**
+	 * gets a relative based on an NK1 segment
+	 * 
+	 * @param nk1 an NK1 segment from the HL7 request
+	 * @return a matching Person or null if not found
+	 * @throws HL7Exception
+	 */
+	private Person getRelative(NK1 nk1) throws HL7Exception {
+		// if there are no associated party identifiers, the person will not exist
+		if (nk1.getNextOfKinAssociatedPartySIdentifiers().length < 1)
+			return null;
+		// find the related person via given IDs
+		return Context.getHL7Service().resolvePersonFromIdentifiers(nk1.getNextOfKinAssociatedPartySIdentifiers());
 	}
 	
 	private Location getLocation(PV1 pv1) throws HL7Exception {

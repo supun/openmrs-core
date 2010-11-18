@@ -23,6 +23,7 @@ import org.openmrs.Form;
 import org.openmrs.Location;
 import org.openmrs.Patient;
 import org.openmrs.User;
+import org.openmrs.api.EncounterService;
 
 /**
  * Encounter-related database functions
@@ -132,19 +133,28 @@ public interface EncounterDAO {
 	public Date getSavedEncounterDatetime(Encounter encounter);
 	
 	/**
-	 * Auto generated method comment
+	 * Find {@link Encounter} matching a uuid
 	 * 
 	 * @param uuid
-	 * @return
+	 * @return {@link Encounter}
 	 */
 	public Encounter getEncounterByUuid(String uuid);
 	
 	/**
-	 * Auto generated method comment
+	 * Find {@link EncounterType} matching a uuid
 	 * 
 	 * @param uuid
-	 * @return
+	 * @return {@link EncounterType}
 	 */
 	public EncounterType getEncounterTypeByUuid(String uuid);
 	
+	/**
+	 * Get a list of {@link Encounter} by Patient name or identifier
+	 * 
+	 * @param query patient name or identifier
+	 * @param includeVoided Specifies whether voided encounters should be included
+	 * @return list of {@link Encounter}
+	 * @see EncounterService#getEncountersByPatient(String, boolean)
+	 */
+	List<Encounter> getEncountersByPatient(String query, boolean includeVoided);
 }

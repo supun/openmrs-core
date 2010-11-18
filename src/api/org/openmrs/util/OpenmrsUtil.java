@@ -21,6 +21,7 @@ import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.Closeable;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -141,6 +142,7 @@ public class OpenmrsUtil {
 	 * @deprecated Use {@link PatientService#getIdentifierValidator(String)}
 	 * @should get valid check digits
 	 */
+	@Deprecated
 	public static int getCheckDigit(String idWithoutCheckdigit) throws Exception {
 		PatientService ps = Context.getPatientService();
 		IdentifierValidator piv = ps.getDefaultIdentifierValidator();
@@ -198,6 +200,7 @@ public class OpenmrsUtil {
 	 * @should not validate invalid check digits
 	 * @should throw error if given an invalid character in id
 	 */
+	@Deprecated
 	public static boolean isValidCheckDigit(String id) throws Exception {
 		PatientService ps = Context.getPatientService();
 		IdentifierValidator piv = ps.getDefaultIdentifierValidator();
@@ -422,7 +425,7 @@ public class OpenmrsUtil {
 		// Override the default "openmrs" database name
 		val = p.getProperty("connection.database_name", null);
 		if (val == null) {
-			// the database name wasn't supplied explicitly, guess it 
+			// the database name wasn't supplied explicitly, guess it
 			//   from the connection string
 			val = p.getProperty("connection.url", null);
 			
@@ -612,6 +615,7 @@ public class OpenmrsUtil {
 	 * @deprecated this method is not currently used within OpenMRS and is a duplicate of
 	 *             {@link Person#getAge(Date)}
 	 */
+	@Deprecated
 	public static Integer ageFromBirthdate(Date birthdate) {
 		if (birthdate == null)
 			return null;
@@ -976,7 +980,7 @@ public class OpenmrsUtil {
 		//  try to load the repository folder straight away.
 		File folder = new File(folderName);
 		
-		// if the property wasn't a full path already, assume it was intended to be a folder in the 
+		// if the property wasn't a full path already, assume it was intended to be a folder in the
 		// application directory
 		if (!folder.isAbsolute()) {
 			folder = new File(OpenmrsUtil.getApplicationDataDirectory(), folderName);
@@ -1022,7 +1026,7 @@ public class OpenmrsUtil {
 			throw new ModuleException("Error while saving dwrmodulexml back to dwr-modules.xml", e);
 		}
 		catch (FileNotFoundException e) {
-			throw new ModuleException("/WEB-INF/dwr-modules.xml file doesn't exist.", e);
+			throw new ModuleException(outFile.getAbsolutePath() + " file doesn't exist.", e);
 		}
 		finally {
 			try {
@@ -1141,6 +1145,7 @@ public class OpenmrsUtil {
 	 * @deprecated use {@link Context#getDateFormat()} or {@link
 	 *             #getDateFormat(Context#getLocale())} instead
 	 */
+	@Deprecated
 	public static SimpleDateFormat getDateFormat() {
 		return Context.getDateFormat();
 	}
@@ -1200,7 +1205,7 @@ public class OpenmrsUtil {
 	@SuppressWarnings("unchecked")
 	public static Object parse(String string, Class clazz) {
 		try {
-			// If there's a valueOf(String) method, just use that (will cover at least String, Integer, Double, Boolean) 
+			// If there's a valueOf(String) method, just use that (will cover at least String, Integer, Double, Boolean)
 			Method valueOfMethod = null;
 			try {
 				valueOfMethod = clazz.getMethod("valueOf", String.class);
@@ -1260,7 +1265,7 @@ public class OpenmrsUtil {
 				ed.setAsText(string);
 				return ed.getValue();
 			} else if (Date.class.equals(clazz)) {
-				// TODO: this uses the date format from the current session, which could cause problems if the user changes it after searching. 
+				// TODO: this uses the date format from the current session, which could cause problems if the user changes it after searching.
 				CustomDateEditor ed = new CustomDateEditor(Context.getDateFormat(), true, 10);
 				ed.setAsText(string);
 				return ed.getValue();
@@ -1351,7 +1356,7 @@ public class OpenmrsUtil {
 					Object value = null;
 					Class<?> valueClass = sa.getPropertyClass();
 					try {
-						// If there's a valueOf(String) method, just use that (will cover at least String, Integer, Double, Boolean) 
+						// If there's a valueOf(String) method, just use that (will cover at least String, Integer, Double, Boolean)
 						Method valueOfMethod = null;
 						try {
 							valueOfMethod = valueClass.getMethod("valueOf", stringSingleton);
@@ -1408,7 +1413,7 @@ public class OpenmrsUtil {
 							ed.setAsText(valueAsString);
 							value = ed.getValue();
 						} else if (Date.class.equals(valueClass)) {
-							// TODO: this uses the date format from the current session, which could cause problems if the user changes it after searching. 
+							// TODO: this uses the date format from the current session, which could cause problems if the user changes it after searching.
 							DateFormat df = Context.getDateFormat(); // new SimpleDateFormat(OpenmrsConstants.OPENMRS_LOCALE_DATE_PATTERNS().get(Context.getLocale().toString().toLowerCase()), Context.getLocale());
 							CustomDateEditor ed = new CustomDateEditor(df, true, 10);
 							ed.setAsText(valueAsString);
@@ -1786,16 +1791,15 @@ public class OpenmrsUtil {
 		}
 	}
 	
-	
 	/**
-	 * Convenience method used to load properties from the given file.  
+	 * Convenience method used to load properties from the given file.
 	 * 
-	 * @param props	the properties object to be loaded into
+	 * @param props the properties object to be loaded into
 	 * @param propertyFile the properties file to read
 	 */
-	public static void loadProperties(Properties props, File propertyFile) { 
+	public static void loadProperties(Properties props, File propertyFile) {
 		InputStream inputStream = null;
-		try { 
+		try {
 			inputStream = new FileInputStream(propertyFile);
 			InputStreamReader reader = new InputStreamReader(inputStream, "UTF-8");
 			props.load(reader);
@@ -1807,20 +1811,18 @@ public class OpenmrsUtil {
 			log.error("Unsupported encoding used in properties file" + uee);
 		}
 		catch (IOException ioe) {
-			log.error("Unable to read properties from properties file" + ioe);			
-		} 
-		finally { 
-			try { 
-				if (inputStream != null) 
+			log.error("Unable to read properties from properties file" + ioe);
+		}
+		finally {
+			try {
+				if (inputStream != null)
 					inputStream.close();
-			} 
-			catch (IOException ioe) { 
-				log.error("Unable to close properties file " + ioe);				
 			}
-		}		
+			catch (IOException ioe) {
+				log.error("Unable to close properties file " + ioe);
+			}
+		}
 	}
-	
-	
 	
 	/**
 	 * By default java will escape colons and equal signs when writing properites files. <br/>
@@ -2060,5 +2062,54 @@ public class OpenmrsUtil {
 			}
 		}
 		return false;
+	}
+	
+	/**
+	 * A null-safe and exception safe way to close an inputstream or an outputstream
+	 * 
+	 * @param closableStream an InputStream or OutputStream to close
+	 */
+	public static void closeStream(Closeable closableStream) {
+		if (closableStream != null) {
+			try {
+				closableStream.close();
+			}
+			catch (IOException io) {
+				log.trace("Error occurred while closing stream", io);
+			}
+		}
+	}
+	
+	/**
+	 * Convert a stack trace into a shortened version for easier viewing and data storage, including
+	 * only those lines we are most concerned with
+	 * 
+	 * @param stackTrace original stack trace from an error
+	 * @return shortened stack trace
+	 * @should return null if stackTrace is null
+	 * @should remove springframework and reflection related lines
+	 */
+	public static String shortenedStackTrace(String stackTrace) {
+		if (stackTrace == null)
+			return null;
+
+		List<String> results = new ArrayList<String>();
+		final Pattern exclude = Pattern.compile("(org.springframework.|java.lang.reflect.Method.invoke|sun.reflect.)");
+		boolean found = false;
+
+		for (String line : stackTrace.split("\n")) {
+			Matcher m = exclude.matcher(line);
+			if (m.find())
+				found = true;
+			else {
+				if (found) {
+					found = false;
+					results.add("\tat [ignored] ...");
+				}
+				results.add(line);
+			}
+		}
+		
+		return StringUtils.join(results, "\n");
 	}
 }

@@ -1,16 +1,11 @@
 <%@ include file="/WEB-INF/template/include.jsp" %>
 <openmrs:htmlInclude file="/scripts/easyAjax.js" />
 
-<openmrs:htmlInclude file="/scripts/jquery/jquery-1.3.2.min.js" />
 <openmrs:htmlInclude file="/scripts/jquery/dataTables/css/dataTables.css" />
 <openmrs:htmlInclude file="/scripts/jquery/dataTables/js/jquery.dataTables.min.js" />
 
 <openmrs:htmlInclude file="/scripts/jquery-ui/js/jquery-ui-1.7.2.custom.min.js" />
 <openmrs:htmlInclude file="/scripts/jquery-ui/css/redmond/jquery-ui-1.7.2.custom.css" />
-
-<script type="text/javascript">
-	var $j = jQuery.noConflict(); 
-</script>
 
 <openmrs:globalProperty key="dashboard.encounters.showViewLink" var="showViewLink" defaultValue="true"/>
 <openmrs:globalProperty key="dashboard.encounters.showEditLink" var="showEditLink" defaultValue="true"/>
@@ -140,7 +135,7 @@ Parameters
 						</thead>
 						<tbody>
 							<openmrs:forEachEncounter encounters="${model.patientEncounters}" sortBy="encounterDatetime" descending="true" var="enc" num="${model.num}">
-								<tr class="<c:choose><c:when test="${count % 2 == 0}">evenRow</c:when><c:otherwise>oddRow</c:otherwise></c:choose>">
+								<tr class='${status.index % 2 == 0 ? "evenRow" : "oddRow"}'>
 									<td class="hidden">
 										<%--  this column contains the encounter id and will be used for sorting in the dataTable's encounter edit column --%>
 										${enc.encounterId}
@@ -169,7 +164,7 @@ Parameters
 													<c:param name="inPopup" value="true"/>
 												</c:url>
 											</c:if>
-											<a href="javascript:void(0)" onClick="loadUrlIntoEncounterPopup('<openmrs:format encounter="${enc}"/>', '${viewEncounterUrl}'); return false;">
+											<a href="javascript:void(0)" onClick="loadUrlIntoEncounterPopup('<openmrs:format encounter="${enc}" javaScriptEscape="true"/>', '${viewEncounterUrl}'); return false;">
 												<img src="${pageContext.request.contextPath}/images/file.gif" title="<spring:message code="general.view"/>" border="0" align="top" />
 											</a>
 										</c:if>
@@ -181,10 +176,10 @@ Parameters
 									<%--  this column contains milliseconds and will be used for sorting in the dataTable's encounterDatetime column --%>
 										<openmrs:formatDate date="${enc.encounterDatetime}" type="milliseconds" />
 									</td>
-					 				<td class="encounterType">${enc.encounterType.name}</td>
-					 				<td class="encounterProvider">${enc.provider.personName}</td>
+					 				<td class="encounterType"><openmrs:format encounterType="${enc.encounterType}"/></td>
+					 				<td class="encounterProvider"><openmrs:format person="${enc.provider}"/></td>
 					 				<td class="encounterForm">${enc.form.name}</td>
-					 				<td class="encounterLocation">${enc.location.name}</td>
+					 				<td class="encounterLocation"><openmrs:format location="${enc.location}"/></td>
 					 				<td class="encounterEnterer">${enc.creator.personName}</td>
 								</tr>
 							</openmrs:forEachEncounter>

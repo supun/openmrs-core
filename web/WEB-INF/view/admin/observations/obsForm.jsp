@@ -161,7 +161,7 @@
 	}
 	
 	function validateNumericRange(value) {
-		if (!isNaN(value)) {
+		if (!isNaN(value) && value != '') {
 			var conceptId = conceptSelection.hiddenInputNode.value;
 			var numericErrorMessage = function(validValue) {
 				var errorTag = $('numericRangeError');
@@ -341,11 +341,7 @@
 		<th><spring:message code="Obs.location"/></th>
 		<td>
 			<spring:bind path="location">
-				<select name="location" <c:if test="${obs.obsId != null}">disabled</c:if>>
-					<openmrs:forEachRecord name="location">
-						<option value="${record.locationId}" <c:if test="${status.editor.value.locationId == record.locationId}">selected</c:if>>${record.name}</option>
-					</openmrs:forEachRecord>
-				</select>
+				<openmrs_tag:locationField formFieldName="location" initialValue="${status.value}"/>
 				<c:if test="${status.errorMessage != ''}"><span class="error">${status.errorMessage}</span></c:if>
 			</spring:bind>
 		</td>
@@ -393,12 +389,12 @@
 	</c:if>
 	<tr id="valueBooleanRow" class="obsValue">
 		<th><spring:message code="general.value"/></th>
-		<spring:bind path="valueNumeric">
+		<spring:bind path="valueBoolean">
 			<td>
 				<select name="${status.expression}" id="valueBooleanSelect">
-					<option value="" <c:if test="${status.value == null}">selected</c:if>></option>
-					<option value="1" <c:if test="${status.value != null && status.value != 0}">selected</c:if>><spring:message code="general.true"/></option>
-					<option value="0" <c:if test="${status.value == 0}">selected</c:if>><spring:message code="general.false"/></option>
+					<option value="" <c:if test="${status.value == null || status.value == ''}">selected</c:if>></option>
+					<option value="true" <c:if test="${status.value == 'true'}">selected</c:if>><spring:message code="general.true"/></option>
+					<option value="false" <c:if test="${status.value == 'false'}">selected</c:if>><spring:message code="general.false"/></option>
 				</select>
 				<c:if test="${status.errorMessage != ''}"><span class="error">${status.errorMessage}</span></c:if>
 			</td>
@@ -453,7 +449,7 @@
 		<th><spring:message code="general.value"/></th>
 		<spring:bind path="valueText">
 			<td>
-				<textarea name="${status.expression}" rows="3" cols="35">${status.value}</textarea>
+				<textarea name="${status.expression}" rows="9" cols="80">${status.value}</textarea>
 				<c:if test="${status.errorMessage != ''}"><span class="error">${status.errorMessage}</span></c:if>
 			</td>
 		</spring:bind>
@@ -563,6 +559,21 @@
 			<input type="submit" value='<spring:message code="Obs.voidObs"/>' name="voidObs"/>
 		</fieldset>
 	</form>
+</c:if>
+
+<c:if test="${obs.obsId != null}">
+<br/>
+<openmrs:extensionPoint pointId="org.openmrs.admin.observations.obsFormBottom" type="html" parameters="obsId=${obs.obsId}">
+	<openmrs:hasPrivilege privilege="${extension.requiredPrivilege}">
+		<div class="boxHeader" style="font-weight: bold;"><spring:message code="${extension.title}" /></div>
+		<div class="box" style="padding: 0px 0px 5px;"><spring:message code="${extension.content}" />
+  			<c:if test="${extension.portletUrl != null}">
+   				<openmrs:portlet url="${extension.portletUrl}" moduleId="${extension.moduleId}" id="${extension.portletUrl}" parameters="allowEdits=true|obsId=${obs.obsId}"/>
+ 			</c:if>
+		</div>
+		<br />
+	</openmrs:hasPrivilege>
+</openmrs:extensionPoint>
 </c:if>
 
 <script type="text/javascript">

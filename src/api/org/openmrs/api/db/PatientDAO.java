@@ -56,6 +56,12 @@ public interface PatientDAO {
 	/**
 	 * @see org.openmrs.api.PatientService#getPatients(java.lang.String, java.lang.String,
 	 *      java.util.List, boolean)
+	 * @should escape percentage character in name phrase
+	 * @should escape underscore character in name phrase
+	 * @should escape an asterix character in name phrase
+	 * @should escape percentage character in identifier phrase
+	 * @should escape underscore character in identifier phrase
+	 * @should escape an asterix character in identifier phrase
 	 */
 	public List<Patient> getPatients(String name, String identifier, List<PatientIdentifierType> identifierTypes,
 	                                 boolean matchIdentifierExactly) throws DAOException;
@@ -124,4 +130,18 @@ public interface PatientDAO {
 	 */
 	public PatientIdentifierType getPatientIdentifierTypeByUuid(String uuid);
 	
+	/**
+	 * @see org.openmrs.api.PatientService#getPatientIdentifier(java.lang.Integer)
+	 */
+	public PatientIdentifier getPatientIdentifier(Integer patientIdentifierId) throws DAOException;
+	
+	/**
+	 * @see org.openmrs.api.PatientService#savePatientIdentifier(org.openmrs.PatientIdentifier)
+	 */
+	public PatientIdentifier savePatientIdentifier(PatientIdentifier patientIdentifier);
+	
+	/**
+	 * @see org.openmrs.api.PatientService#purgePatientIdentifier(org.openmrs.PatientIdentifier)
+	 */
+	public void deletePatientIdentifier(PatientIdentifier patientIdentifier) throws DAOException;
 }

@@ -1,6 +1,6 @@
 <%@ include file="/WEB-INF/template/include.jsp" %>
 
-<openmrs:require privilege="" otherwise="/login.htm" redirect="/admin/concepts/conceptProposal.list" />
+<openmrs:require privilege="View Concept Proposals" otherwise="/login.htm" redirect="/admin/concepts/conceptProposal.list" />
 
 <%@ include file="/WEB-INF/template/header.jsp" %>
 <%@ include file="localHeader.jsp" %>
@@ -83,9 +83,9 @@
 			<c:forEach var="map" items="${conceptProposalMap}" varStatus="rowStatus">
 				<c:forEach items="${map.key}" var="conceptProposal" varStatus="varStatus">
 					<c:if test="${varStatus.first}">
-						<tr class='<c:choose><c:when test="${rowStatus.index % 2 == 0}">evenRow</c:when><c:otherwise>oddRow</c:otherwise></c:choose><c:if test="${conceptProposal.state != unmapped}"> voided</c:if>'
-							onclick="selectProposal('${conceptProposal.conceptProposalId}')"
-							onmouseover="mouseOver(this)" onmouseout="mouseOut(this)">
+						<tr class='${rowStatus.index % 2 == 0 ? "evenRow" : "oddRow"} ${conceptProposal.state != unmapped ? "voided" : ""}'
+    						onclick="selectProposal('${conceptProposal.conceptProposalId}')"
+    						onmouseover="mouseOver(this)" onmouseout="mouseOut(this)"> 
 							<td valign="top">${conceptProposal.encounter.encounterId}</td>
 							<td valign="top">${conceptProposal.originalText}</td>
 							<td valign="top"><openmrs:format user="${conceptProposal.creator}"/></td>

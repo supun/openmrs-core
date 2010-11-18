@@ -3,6 +3,7 @@
 <openmrs:htmlInclude file="/dwr/interface/DWRRelationshipService.js" />
 <openmrs:htmlInclude file="/dwr/interface/DWRPatientService.js" />
 <openmrs:htmlInclude file="/dwr/interface/DWRObsService.js" />
+<openmrs:htmlInclude file="/dwr/interface/DWRConceptService.js" />
 <openmrs:htmlInclude file="/dwr/engine.js" />
 <openmrs:htmlInclude file="/dwr/util.js" />
 
@@ -24,9 +25,9 @@
 <div id="patientActionsBoxHeader" class="boxHeader${model.patientVariation}"><spring:message code="Patient.actions" /></div>
 <div id="patientActionsBox" class="box${model.patientVariation}">
 	<table id="patientActions">
-		<tr>
+		<tr class="patientActionsRow">
 			<td id="patientActionsPatientSummary">
-				<openmrs:extensionPoint pointId="org.openmrs.patientDashboard.patientSummary">
+				<openmrs:extensionPoint pointId="org.openmrs.patientDashboard.patientSummary" parameters="patientId=${model.patient.patientId}">
 					<a href="javascript:window.open('${extension.url}?patientId=${model.patient.patientId}', 'summaryWindow', 'toolbar=no,width=660,height=600,resizable=yes,scrollbars=yes').focus()">${extension.label}</a>
 				</openmrs:extensionPoint>
 			</td>
@@ -34,7 +35,7 @@
 	</table>
 	<table id="patientActions">
 		<openmrs:extensionPoint pointId="org.openmrs.patientDashboard.patientActionsContent" type="html" parameters="patientId=${model.patient.patientId}"/> 
-		<tr>
+		<tr class="patientActionsRow">
 		<c:if test="${empty model.patientReasonForExit}">
 			<td id="patientActionsOutcome">
 				<div id="patientActionsOutcomeLink">					
@@ -43,7 +44,7 @@
 				<div id="patientActionsOutcomeForm" style="display:none; padding: 3px; border: 1px black dashed">
 					<form method="post" id="exitForm">
 						<table id="outcomeFormTable">
-							<tr>
+							<tr class="patientOutcomeRow">
 								<td id="patientActionsOutcomeReason">
 									<span id="patientOutcomeTextReason"><spring:message code="Patient.outcome.exitType" /></span>
 									<openmrs:fieldGen type="org.openmrs.Patient.exitReason" formFieldName="reasonForExit" val="" parameters="optionHeader=[blank]|globalProp=concept.reasonExitedCare|onChange=updateCauseField()" />
@@ -54,8 +55,8 @@
 									<openmrs:globalProperty key="concept.otherNonCoded" var="conceptOther" />
 									<openmrs:fieldGen type="org.openmrs.Concept" formFieldName="causeOfDeath" val="${status.value}" parameters="showAnswers=${conceptCauseOfDeath}|showOther=${conceptOther}|otherValue=${causeOfDeathOther}" />
 								</td>
-							<tr>
-							<tr>
+							</tr>
+							<tr class="patientOutcomeRow">
 								<td id="patientActionsOutcomeDate">
 									<span id="patientOutcomeTextExitDate"><spring:message code="Patient.outcome.exitDate" /></span>
 									<openmrs:fieldGen type="java.util.Date" formFieldName="dateOfExit" val="" parameters="noBind=true" />
@@ -193,14 +194,29 @@
 	<div id="patientMostRecentObsBox" class="box${model.patientVariation}">
 		<openmrs:portlet url="customMostRecentObs" size="normal" patientId="${patient.patientId}" parameters="conceptIds=${conceptIdsToUse}|allowNew=true" />
 	</div>
-	
 	<br/>
 </c:if>
 
 <openmrs:hasPrivilege privilege="View Relationships">
-<div id="patientRelationshipsBoxHeader" class="boxHeader${model.patientVariation}"><spring:message code="Relationship.relationships" /></div>
-<div id="patientRelationshipsBox" class="box${model.patientVariation}">
-	<openmrs:portlet url="personRelationships" size="normal" patientId="${patient.patientId}" />
-</div>
-<br/>
+	<div id="patientRelationshipsBoxHeader" class="boxHeader${model.patientVariation}"><spring:message code="Relationship.relationships" /></div>
+	<div id="patientRelationshipsBox" class="box${model.patientVariation}">
+		<openmrs:portlet url="personRelationships" size="normal" patientId="${patient.patientId}" />
+	</div>
+	<br/>
+</openmrs:hasPrivilege>
+
+<openmrs:hasPrivilege privilege="View Allergies">
+	<div id="patientActiveListsAllergyBoxHeader" class="boxHeader${model.patientVariation}"><spring:message code="ActiveLists.allergy.title" /></div>
+	<div id="patientActiveListsAllergyBox" class="box${model.patientVariation}">
+		<openmrs:portlet url="activeListAllergy" patientId="${patient.patientId}" parameters="type=allergy"/>
+	</div>
+	<br/>
+</openmrs:hasPrivilege>
+
+<openmrs:hasPrivilege privilege="View Problems">
+	<div id="patientActiveListsProblemBoxHeader" class="boxHeader${model.patientVariation}"><spring:message code="ActiveLists.problem.title" /></div>
+	<div id="patientActiveListsProblemBox" class="box${model.patientVariation}">
+		<openmrs:portlet url="activeListProblem" patientId="${patient.patientId}" parameters="type=problem"/>
+	</div>
+	<br/>
 </openmrs:hasPrivilege>

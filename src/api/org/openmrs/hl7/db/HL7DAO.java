@@ -82,6 +82,30 @@ public interface HL7DAO {
 	 * @see org.openmrs.hl7.HL7Service#deleteHL7InQueue(org.openmrs.hl7.HL7InQueue)
 	 */
 	public void deleteHL7InQueue(HL7InQueue hl7InQueue) throws DAOException;
+
+	/**
+	 * Returns hl7s based on batch settings and filtered by a query
+	 * @param <T>
+	 * 
+	 * @param clazz
+	 * @param start
+	 * @param length
+	 * @param query
+	 * @return list of hl7s
+	 */
+	@SuppressWarnings("rawtypes")
+	public <T> List<T> getHL7Batch(Class clazz, int start, int length, Integer messageState, String query);
+	
+	/**
+	 * Returns the amount of HL7 items in the database
+	 * 
+	 * @param clazz
+	 * @param messageState
+	 * @param query
+	 * @return count of HL7 items
+	 */
+	@SuppressWarnings("rawtypes")
+	public Integer countHL7s(Class clazz, Integer messageState, String query);
 	
 	/* HL7InArchive */
 
@@ -96,9 +120,19 @@ public interface HL7DAO {
 	public HL7InArchive getHL7InArchive(Integer hl7InArchiveId) throws DAOException;
 	
 	/**
-	 * @see org.openmrs.hl7.HL7Service#getHL7InArchiveByState(Integer stateId)
+	 * @see org.openmrs.hl7.HL7Service#getHL7InArchiveByUuid(String)
 	 */
-	public List<HL7InArchive> getHL7InArchiveByState(Integer stateId) throws DAOException;
+	public HL7InArchive getHL7InArchiveByUuid(String uuid) throws DAOException;
+	
+	/**
+	 * @see org.openmrs.hl7.HL7Service#getHL7InArchiveByState(Integer state)
+	 */
+	public List<HL7InArchive> getHL7InArchiveByState(Integer state) throws DAOException;
+	
+	/**
+	 * @see org.openmrs.hl7.HL7Service#getHL7InQueueByState(Integer stateId)
+	 */
+	public List<HL7InQueue> getHL7InQueueByState(Integer stateId) throws DAOException;
 	
 	/**
 	 * @see org.openmrs.hl7.HL7Service#getAllHL7InArchives()
@@ -106,11 +140,24 @@ public interface HL7DAO {
 	public List<HL7InArchive> getAllHL7InArchives() throws DAOException;
 	
 	/**
+	 * Returns hl7 in archives but with a limited resultset size to save memory
+	 * 
+	 * @param maxResults the maximum number of rows to be returned from the database
+	 * @return list of hl7 archives
+	 */
+	public List<HL7InArchive> getAllHL7InArchives(Integer maxResults);
+	
+	/**
 	 * @see org.openmrs.hl7.HL7Service#deleteHL7InArchive(org.openmrs.hl7.HL7InArchive)
 	 */
 	public void deleteHL7InArchive(HL7InArchive hl7InArchive) throws DAOException;
 	
-	/* HL7InException */
+	/**
+	 * provides a list of archives to be migrated
+	 */
+	public List<HL7InArchive> getHL7InArchivesToMigrate();
+	
+	/* HL7InError */
 
 	/**
 	 * @see org.openmrs.hl7.HL7Service#saveHL7InError(org.openmrs.hl7.HL7InError)
@@ -132,8 +179,11 @@ public interface HL7DAO {
 	 */
 	public void deleteHL7InError(HL7InError hl7InError) throws DAOException;
 	
+	// miscellaneous
+	
 	/**
 	 * @see org.openmrs.hl7.HL7Service#garbageCollect()
 	 */
 	public void garbageCollect();
+
 }

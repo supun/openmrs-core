@@ -40,9 +40,9 @@ import org.simpleframework.xml.Root;
 @Root(strict = false)
 public class PersonAttribute extends BaseOpenmrsData implements java.io.Serializable, Comparable<PersonAttribute> {
 	
-	private transient Log log = LogFactory.getLog(getClass());
-	
 	public static final long serialVersionUID = 11231211232111L;
+	
+	private static final Log log = LogFactory.getLog(PersonAttribute.class);
 	
 	// Fields
 	
@@ -273,10 +273,18 @@ public class PersonAttribute extends BaseOpenmrsData implements java.io.Serializ
 	public Object getHydratedObject() {
 		try {
 			Class c = OpenmrsClassLoader.getInstance().loadClass(getAttributeType().getFormat());
-			Object o = c.newInstance();
-			if (o instanceof Attributable) {
-				Attributable attr = (Attributable) o;
-				return attr.hydrate(getValue());
+			try {
+				Object o = c.newInstance();
+				if (o instanceof Attributable) {
+					Attributable attr = (Attributable) o;
+					return attr.hydrate(getValue());
+				}
+			}
+			catch (InstantiationException e) {
+				// try to hydrate the object with the String constructor
+				log.trace("Unable to call no-arg constructor for class: " + c.getName());
+				Object o = c.getConstructor(String.class).newInstance(getValue());
+				return o;
 			}
 		}
 		catch (Throwable t) {

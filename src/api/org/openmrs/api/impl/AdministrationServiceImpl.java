@@ -756,7 +756,7 @@ public class AdministrationServiceImpl extends BaseOpenmrsService implements Adm
 		log.debug("saving a list of global properties");
 		
 		// delete all properties not in this new list
-		for (GlobalProperty gp : getGlobalProperties()) {
+		for (GlobalProperty gp : getAllGlobalProperties()) {
 			if (!props.contains(gp))
 				purgeGlobalProperty(gp);
 		}
@@ -995,7 +995,7 @@ public class AdministrationServiceImpl extends BaseOpenmrsService implements Adm
 				} else {
 					// to be sure, check for language-only matches
 					for (Locale allowedLocale : allowedLocales) {
-						if ((allowedLocale.getCountry() == "" || possibleLocale.getCountry() == "")
+						if (( "".equals(allowedLocale.getCountry()) || "".equals(possibleLocale.getCountry()))
 						        && (allowedLocale.getLanguage().equals(possibleLocale.getLanguage()))) {
 							presentationLocales.add(possibleLocale);
 							break;
@@ -1032,8 +1032,39 @@ public class AdministrationServiceImpl extends BaseOpenmrsService implements Adm
 		return propertyName.equals(OpenmrsConstants.GLOBAL_PROPERTY_LOCALE_ALLOWED_LIST);
 	}
 	
+	/**
+	 * @see org.openmrs.api.AdministrationService#getGlobalPropertyByUuid(java.lang.String)
+	 */
 	public GlobalProperty getGlobalPropertyByUuid(String uuid) {
 		return dao.getGlobalPropertyByUuid(uuid);
 	}
 	
+	/**
+	 * @see org.openmrs.api.AdministrationService#getGlobalPropertyValue(java.lang.String,
+	 *      java.lang.Object)
+	 */
+	@SuppressWarnings("unchecked")
+	public <T> T getGlobalPropertyValue(String propertyName, T defaultValue) throws APIException {
+		if (defaultValue == null)
+			throw new IllegalArgumentException("The defaultValue argument cannot be null");
+		
+		String propVal = getGlobalProperty(propertyName);
+		if (!StringUtils.hasLength(propVal))
+			return defaultValue;
+		
+		try {
+			return (T) defaultValue.getClass().getDeclaredConstructor(String.class).newInstance(propVal);
+		}
+		catch (InstantiationException e) {
+			throw new APIException(defaultValue.getClass().getName() + " is not able to be instantiated with value: " + propVal, e);
+		}
+		catch (NoSuchMethodException e) {
+			throw new APIException(defaultValue.getClass().getName() + " does not have a string constructor", e);
+		}
+		catch (Exception e) {
+			log.error("Unable to turn value '" + propVal + "' into type " + defaultValue.getClass().getName(), e);
+			return defaultValue;
+		}
+	}
+
 }

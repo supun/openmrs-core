@@ -14,14 +14,18 @@
 package org.openmrs.api.context;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.aopalliance.aop.Advice;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.openmrs.api.APIException;
+import org.openmrs.api.ActiveListService;
 import org.openmrs.api.AdministrationService;
 import org.openmrs.api.CohortService;
 import org.openmrs.api.ConceptService;
@@ -48,6 +52,7 @@ import org.openmrs.reporting.ReportObjectService;
 import org.openmrs.scheduler.SchedulerService;
 import org.openmrs.util.OpenmrsClassLoader;
 import org.springframework.aop.Advisor;
+import org.springframework.aop.framework.Advised;
 import org.springframework.aop.framework.ProxyFactory;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
@@ -82,9 +87,17 @@ public class ServiceContext implements ApplicationContextAware {
 	 */
 	private boolean useSystemClassLoader = false;
 	
-	// proxy factories used for programmatically adding spring AOP  
+	// Cached service objects
 	@SuppressWarnings("unchecked")
-	Map<Class, ProxyFactory> proxyFactories = new HashMap<Class, ProxyFactory>();
+	Map<Class, Object> services = new HashMap<Class, Object>();
+	
+	// Advisors added to services by this service
+	@SuppressWarnings("unchecked")
+	Map<Class, Set<Advisor>> addedAdvisors = new HashMap<Class, Set<Advisor>>();
+	
+	// Advice added to services by this service
+	@SuppressWarnings("unchecked")
+	Map<Class, Set<Advice>> addedAdvice = new HashMap<Class, Set<Advice>>();
 	
 	/**
 	 * The default constructor is private so as to keep only one instance per java vm.
@@ -116,17 +129,32 @@ public class ServiceContext implements ApplicationContextAware {
 	 */
 	@SuppressWarnings("unchecked")
 	public static void destroyInstance() {
-		if (instance != null && instance.proxyFactories != null) {
+		if (instance != null && instance.services != null) {
 			if (log.isDebugEnabled()) {
-				for (Map.Entry<Class, ProxyFactory> entry : instance.proxyFactories.entrySet()) {
-					log.debug("Class:ProxyFactory - " + entry.getKey().getName() + ":" + entry.getValue());
+				for (Map.Entry<Class, Object> entry : instance.services.entrySet()) {
+					log.debug("Service - " + entry.getKey().getName() + ":" + entry.getValue());
 				}
 			}
 			
-			if (instance.proxyFactories != null)
-				instance.proxyFactories.clear();
+			// Remove advice and advisors that this service added
+			for (Class serviceClass : instance.services.keySet()) {
+				instance.removeAddedAOP(serviceClass);
+			}
 			
-			instance.proxyFactories = null;
+			if (instance.services != null) {
+				instance.services.clear();
+				instance.services = null;
+			}
+			
+			if (instance.addedAdvisors != null) {
+				instance.addedAdvisors.clear();
+				instance.addedAdvisors = null;
+			}
+			
+			if (instance.addedAdvice != null) {
+				instance.addedAdvice.clear();
+				instance.addedAdvice = null;
+			}
 		}
 		
 		if (log.isDebugEnabled())
@@ -139,35 +167,35 @@ public class ServiceContext implements ApplicationContextAware {
 	 * @return encounter-related services
 	 */
 	public EncounterService getEncounterService() {
-		return (EncounterService) getService(EncounterService.class);
+		return getService(EncounterService.class);
 	}
 	
 	/**
 	 * @return location services
 	 */
 	public LocationService getLocationService() {
-		return (LocationService) getService(LocationService.class);
+		return getService(LocationService.class);
 	}
 	
 	/**
 	 * @return observation services
 	 */
 	public ObsService getObsService() {
-		return (ObsService) getService(ObsService.class);
+		return getService(ObsService.class);
 	}
 	
 	/**
 	 * @return patientset-related services
 	 */
 	public PatientSetService getPatientSetService() {
-		return (PatientSetService) getService(PatientSetService.class);
+		return getService(PatientSetService.class);
 	}
 	
 	/**
 	 * @return cohort related service
 	 */
 	public CohortService getCohortService() {
-		return (CohortService) getService(CohortService.class);
+		return getService(CohortService.class);
 	}
 	
 	/**
@@ -181,14 +209,14 @@ public class ServiceContext implements ApplicationContextAware {
 	 * @return order service
 	 */
 	public OrderService getOrderService() {
-		return (OrderService) getService(OrderService.class);
+		return getService(OrderService.class);
 	}
 	
 	/**
 	 * @return form service
 	 */
 	public FormService getFormService() {
-		return (FormService) getService(FormService.class);
+		return getService(FormService.class);
 	}
 	
 	/**
@@ -197,14 +225,14 @@ public class ServiceContext implements ApplicationContextAware {
 	 */
 	@Deprecated
 	public ReportObjectService getReportObjectService() {
-		return (ReportObjectService) getService(ReportObjectService.class);
+		return getService(ReportObjectService.class);
 	}
 	
 	/**
 	 * @return serialization service
 	 */
 	public SerializationService getSerializationService() {
-		return (SerializationService) getService(SerializationService.class);
+		return getService(SerializationService.class);
 	}
 	
 	/**
@@ -213,42 +241,42 @@ public class ServiceContext implements ApplicationContextAware {
 	 */
 	@Deprecated
 	public ReportService getReportService() {
-		return (ReportService) getService(ReportService.class);
+		return getService(ReportService.class);
 	}
 	
 	/**
 	 * @return admin-related services
 	 */
 	public AdministrationService getAdministrationService() {
-		return (AdministrationService) getService(AdministrationService.class);
+		return getService(AdministrationService.class);
 	}
 	
 	/**
 	 * @return programWorkflowService
 	 */
 	public ProgramWorkflowService getProgramWorkflowService() {
-		return (ProgramWorkflowService) getService(ProgramWorkflowService.class);
+		return getService(ProgramWorkflowService.class);
 	}
 	
 	/**
 	 * @return ardenService
 	 */
 	public ArdenService getArdenService() {
-		return (ArdenService) getService(ArdenService.class);
+		return getService(ArdenService.class);
 	}
 	
 	/**
 	 * @return logicService
 	 */
 	public LogicService getLogicService() {
-		return (LogicService) getService(LogicService.class);
+		return getService(LogicService.class);
 	}
 	
 	/**
 	 * @return scheduler service
 	 */
 	public SchedulerService getSchedulerService() {
-		return (SchedulerService) getService(SchedulerService.class);
+		return getService(SchedulerService.class);
 	}
 	
 	/**
@@ -264,7 +292,7 @@ public class ServiceContext implements ApplicationContextAware {
 	 * @return alert service
 	 */
 	public AlertService getAlertService() {
-		return (AlertService) getService(AlertService.class);
+		return getService(AlertService.class);
 	}
 	
 	/**
@@ -299,7 +327,7 @@ public class ServiceContext implements ApplicationContextAware {
 	 * @return message service
 	 */
 	public MessageService getMessageService() {
-		return (MessageService) getService(MessageService.class);
+		return getService(MessageService.class);
 	}
 	
 	/**
@@ -315,7 +343,7 @@ public class ServiceContext implements ApplicationContextAware {
 	 * @return the hl7Service
 	 */
 	public HL7Service getHL7Service() {
-		return (HL7Service) getService(HL7Service.class);
+		return getService(HL7Service.class);
 	}
 	
 	/**
@@ -415,14 +443,14 @@ public class ServiceContext implements ApplicationContextAware {
 	 */
 	@Deprecated
 	public DataSetService getDataSetService() {
-		return (DataSetService) getService(DataSetService.class);
+		return getService(DataSetService.class);
 	}
 	
 	/**
 	 * @return patient related services
 	 */
 	public PatientService getPatientService() {
-		return (PatientService) getService(PatientService.class);
+		return getService(PatientService.class);
 	}
 	
 	/**
@@ -436,7 +464,7 @@ public class ServiceContext implements ApplicationContextAware {
 	 * @return person related services
 	 */
 	public PersonService getPersonService() {
-		return (PersonService) getService(PersonService.class);
+		return getService(PersonService.class);
 	}
 	
 	/**
@@ -450,7 +478,7 @@ public class ServiceContext implements ApplicationContextAware {
 	 * @return concept related services
 	 */
 	public ConceptService getConceptService() {
-		return (ConceptService) getService(ConceptService.class);
+		return getService(ConceptService.class);
 	}
 	
 	/**
@@ -464,7 +492,7 @@ public class ServiceContext implements ApplicationContextAware {
 	 * @return user-related services
 	 */
 	public UserService getUserService() {
-		return (UserService) getService(UserService.class);
+		return getService(UserService.class);
 	}
 	
 	/**
@@ -480,7 +508,7 @@ public class ServiceContext implements ApplicationContextAware {
 	 * @return MessageSourceService
 	 */
 	public MessageSourceService getMessageSourceService() {
-		return (MessageSourceService) getService(MessageSourceService.class);
+		return getService(MessageSourceService.class);
 	}
 	
 	/**
@@ -493,17 +521,19 @@ public class ServiceContext implements ApplicationContextAware {
 	}
 	
 	/**
-	 * Get the proxy factory object for the given Class
+	 * Gets the ActiveListService used in the context.
 	 * 
-	 * @param cls
-	 * @return
+	 * @return ActiveListService
 	 */
-	@SuppressWarnings("unchecked")
-	private ProxyFactory getFactory(Class cls) {
-		ProxyFactory factory = proxyFactories.get(cls);
-		if (factory == null)
-			throw new APIException("A proxy factory for: '" + cls + "' doesn't exist");
-		return factory;
+	public ActiveListService getActiveListService() {
+		return getService(ActiveListService.class);
+	}
+	
+	/**
+	 * Sets the ActiveListService used in the context
+	 */
+	public void setActiveListService(ActiveListService activeListService) {
+		setService(ActiveListService.class, activeListService);
 	}
 	
 	/**
@@ -512,8 +542,12 @@ public class ServiceContext implements ApplicationContextAware {
 	 */
 	@SuppressWarnings("unchecked")
 	public void addAdvisor(Class cls, Advisor advisor) {
-		ProxyFactory factory = getFactory(cls);
-		factory.addAdvisor(advisor);
+		Advised advisedService = (Advised) services.get(cls);
+		if (advisedService.indexOf(advisor) < 0)
+			advisedService.addAdvisor(advisor);
+		if (addedAdvisors.get(cls) == null)
+			addedAdvisors.put(cls, new HashSet<Advisor>());
+		getAddedAdvisors(cls).add(advisor);
 	}
 	
 	/**
@@ -522,8 +556,12 @@ public class ServiceContext implements ApplicationContextAware {
 	 */
 	@SuppressWarnings("unchecked")
 	public void addAdvice(Class cls, Advice advice) {
-		ProxyFactory factory = getFactory(cls);
-		factory.addAdvice(advice);
+		Advised advisedService = (Advised) services.get(cls);
+		if (advisedService.indexOf(advice) < 0)
+			advisedService.addAdvice(advice);
+		if (addedAdvice.get(cls) == null)
+			addedAdvice.put(cls, new HashSet<Advice>());
+		getAddedAdvice(cls).add(advice);
 	}
 	
 	/**
@@ -532,8 +570,9 @@ public class ServiceContext implements ApplicationContextAware {
 	 */
 	@SuppressWarnings("unchecked")
 	public void removeAdvisor(Class cls, Advisor advisor) {
-		ProxyFactory factory = getFactory(cls);
-		factory.removeAdvisor(advisor);
+		Advised advisedService = (Advised) services.get(cls);
+		advisedService.removeAdvisor(advisor);
+		getAddedAdvisors(cls).remove(advisor);
 	}
 	
 	/**
@@ -542,8 +581,96 @@ public class ServiceContext implements ApplicationContextAware {
 	 */
 	@SuppressWarnings("unchecked")
 	public void removeAdvice(Class cls, Advice advice) {
-		ProxyFactory factory = getFactory(cls);
-		factory.removeAdvice(advice);
+		Advised advisedService = (Advised) services.get(cls);
+		advisedService.removeAdvice(advice);
+		getAddedAdvice(cls).remove(advice);
+	}
+	
+	/**
+	 * Moves advisors and advice added by ServiceContext from the source service to the target one.
+	 * 
+	 * @param source the existing service
+	 * @param target the new service
+	 */
+	@SuppressWarnings("unchecked")
+	private void moveAddedAOP(Advised source, Advised target) {
+		Class serviceClass = source.getClass();
+		Set<Advisor> existingAdvisors = getAddedAdvisors(serviceClass);
+		for (Advisor advisor : existingAdvisors) {
+			target.addAdvisor(advisor);
+			source.removeAdvisor(advisor);
+		}
+		
+		Set<Advice> existingAdvice = getAddedAdvice(serviceClass);
+		for (Advice advice : existingAdvice) {
+			target.addAdvice(advice);
+			source.removeAdvice(advice);
+		}
+	}
+	
+	/**
+	 * Removes all advice and advisors added by ServiceContext.
+	 * 
+	 * @param cls the class of the cached service to cleanup
+	 */
+	@SuppressWarnings("unchecked")
+	private void removeAddedAOP(Class cls) {
+		removeAddedAdvisors(cls);
+		removeAddedAdvice(cls);
+	}
+	
+	/**
+	 * Removes all the advisors added by ServiceContext.
+	 * 
+	 * @param cls the class of the cached service to cleanup
+	 */
+	@SuppressWarnings("unchecked")
+	private void removeAddedAdvisors(Class cls) {
+		Advised advisedService = (Advised) services.get(cls);
+		Set<Advisor> advisorsToRemove = addedAdvisors.get(cls);
+		if (advisedService != null && advisorsToRemove != null) {
+			for (Advisor advisor : advisorsToRemove.toArray(new Advisor[] {}))
+				removeAdvisor(cls, advisor);
+		}
+	}
+	
+	/**
+	 * Returns the set of advisors added by ServiceContext.
+	 * 
+	 * @param cls the class of the cached service
+	 * @return the set of advisors or an empty set
+	 */
+	@SuppressWarnings("unchecked")
+	private Set<Advisor> getAddedAdvisors(Class cls) {
+		Set<Advisor> result = addedAdvisors.get(cls);
+		return result == null ? Collections.EMPTY_SET : result;
+	}
+	
+	/**
+	 * Removes all the advice added by the ServiceContext.
+	 * 
+	 * @param cls the class of the caches service to cleanup
+	 */
+	@SuppressWarnings("unchecked")
+	private void removeAddedAdvice(Class cls) {
+		Advised advisedService = (Advised) services.get(cls);
+		Set<Advice> adviceToRemove = addedAdvice.get(cls);
+		if (advisedService != null && adviceToRemove != null) {
+			for (Advice advice : adviceToRemove.toArray(new Advice[] {}))
+				removeAdvice(cls, advice);
+		}
+	}
+	
+	/**
+	 * Returns the set of advice added by ServiceContext.
+	 * 
+	 * @param cls the class of the cached service
+	 * @return the set of advice or an empty set
+	 */
+	@SuppressWarnings("unchecked")
+	private Set<Advice> getAddedAdvice(Class cls) {
+		Set<Advice> result = addedAdvice.get(cls);
+		return result == null ? Collections.EMPTY_SET : result;
 	}
 	
 	/**
@@ -557,7 +684,7 @@ public class ServiceContext implements ApplicationContextAware {
 		if (log.isTraceEnabled())
 			log.trace("Getting service: " + cls);
 		
-		// if the context is refreshing, wait until it is 
+		// if the context is refreshing, wait until it is
 		// done -- otherwise a null service might be returned
 		synchronized (refreshingContext) {
 			if (refreshingContext.booleanValue())
@@ -571,11 +698,11 @@ public class ServiceContext implements ApplicationContextAware {
 				}
 		}
 		
-		ProxyFactory factory = proxyFactories.get(cls);
-		if (factory == null)
+		Object service = services.get(cls);
+		if (service == null)
 			throw new APIException("Service not found: " + cls);
 		
-		return (T) factory.getProxy(OpenmrsClassLoader.getInstance());
+		return (T) service;
 	}
 	
 	/**
@@ -591,10 +718,29 @@ public class ServiceContext implements ApplicationContextAware {
 		
 		if (cls != null && classInstance != null) {
 			try {
-				Class[] interfaces = { cls };
-				ProxyFactory factory = new ProxyFactory(interfaces);
-				factory.setTarget(classInstance);
-				proxyFactories.put(cls, factory);
+				Advised cachedService = (Advised) services.get(cls);
+				boolean noExistingService = cachedService == null;
+				boolean replacingService = cachedService != null && cachedService != classInstance;
+				boolean serviceAdvised = classInstance instanceof Advised;
+				
+				if (noExistingService || replacingService) {
+					
+					Advised advisedService;
+					
+					if (!serviceAdvised) {
+						// Adding a bare service, wrap with AOP proxy
+						Class[] interfaces = { cls };
+						ProxyFactory factory = new ProxyFactory(interfaces);
+						factory.setTarget(classInstance);
+						advisedService = (Advised) factory.getProxy(OpenmrsClassLoader.getInstance());
+					} else
+						advisedService = (Advised) classInstance;
+					
+					if (replacingService)
+						moveAddedAOP(cachedService, advisedService);
+					
+					services.put(cls, advisedService);
+				}
 				log.debug("Service: " + cls + " set successfully");
 			}
 			catch (Exception e) {

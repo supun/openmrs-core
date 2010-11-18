@@ -6,11 +6,11 @@
 		<div id="footerInner">
 		
 			<span id="localeOptions">
-				<%  //removes last instance of lang= from querystring
-					String qs = request.getQueryString();
+				<%  //removes last instance of lang= from querystring and encodes the url to avoid xml problems
+					String qs = org.apache.commons.lang.StringEscapeUtils.escapeXml(request.getQueryString());
 					if (qs == null)
 						qs = "";
-					int i = qs.lastIndexOf("&lang=");
+					int i = qs.lastIndexOf("&amp;lang=");
 					if (i == -1)
 						i = qs.length();
 					pageContext.setAttribute("qs", qs.substring(0, i));
@@ -30,9 +30,11 @@
 				</c:forEach>
 			</span>	
 	
-			<span id="buildDate">Last Build: <%= org.openmrs.web.WebConstants.BUILD_TIMESTAMP %></span>
+			<span id="buildDate"><spring:message code="footer.lastBuild"/>: <%= org.openmrs.web.WebConstants.BUILD_TIMESTAMP %></span>
 			
-			<span id="codeVersion">Version: ${openmrsVersion}</span>
+			<span id="codeVersion"><spring:message code="footer.version"/>: ${openmrsVersion}</span>
+			
+			<span id="poweredBy"><a href="http://openmrs.org"><spring:message code="footer.poweredBy"/> <img border="0" align="top" src="<%= request.getContextPath() %>/images/openmrs_logo_tiny.png"/></a></span>
 		</div>
 	</div>
 

@@ -18,6 +18,7 @@ import java.util.Date;
 import java.util.Map;
 import java.util.Properties;
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.hibernate.FlushMode;
@@ -77,6 +78,9 @@ public class HibernateContextDAO implements ContextDAO {
 		User candidateUser = null;
 		
 		if (login != null) {
+			//if username is blank or white space character(s)
+			if (StringUtils.isEmpty(login) || StringUtils.isWhitespace(login))
+				throw new ContextAuthenticationException(errorMsg);
 			
 			// loginWithoutDash is used to compare to the system id
 			String loginWithDash = login;
@@ -108,8 +112,8 @@ public class HibernateContextDAO implements ContextDAO {
 			
 			// if they've been locked out, don't continue with the authentication
 			if (lockoutTime != null) {
-				// unlock them after 5 mins, otherwise reset the timestamp 
-				// to now and make them wait another 5 mins 
+				// unlock them after 5 mins, otherwise reset the timestamp
+				// to now and make them wait another 5 mins
 				if (new Date().getTime() - lockoutTime > 300000) {
 					candidateUser.setUserProperty(OpenmrsConstants.USER_PROPERTY_LOGIN_ATTEMPTS, "0");
 					candidateUser.removeUserProperty(OpenmrsConstants.USER_PROPERTY_LOCKOUT_TIMESTAMP);
@@ -172,6 +176,14 @@ public class HibernateContextDAO implements ContextDAO {
 		
 	}
 	
+	/**
+	 * @see org.openmrs.api.db.ContextDAO#getUserByUuid(java.lang.String)
+	 */
+	public User getUserByUuid(String uuid) {
+		return (User) sessionFactory.getCurrentSession().createQuery("from User u where u.uuid = :uuid").setString("uuid",
+		    uuid).uniqueResult();
+	}
+
 	/**
 	 * Call the UserService to save the given user while proxying the privileges needed to do so.
 	 * 
@@ -340,7 +352,7 @@ public class HibernateContextDAO implements ContextDAO {
 			propertyStream = ConfigHelper.getResourceAsStream("/hibernate.default.properties");
 			OpenmrsUtil.loadProperties(props, propertyStream);
 			
-			// add in all default properties that don't exist in the runtime 
+			// add in all default properties that don't exist in the runtime
 			// properties yet
 			for (Map.Entry<Object, Object> entry : props.entrySet()) {
 				if (!runtimeProperties.containsKey(entry.getKey()))
@@ -352,7 +364,7 @@ public class HibernateContextDAO implements ContextDAO {
 				propertyStream.close();
 			}
 			catch (Throwable t) {
-				// pass 
+				// pass
 			}
 		}
 		

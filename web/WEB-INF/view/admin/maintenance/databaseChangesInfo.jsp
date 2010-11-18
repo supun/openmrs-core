@@ -11,6 +11,11 @@
 <spring:message code="DatabaseChangesInfo.help" />
 <br/>
 <br/>
+<b><spring:message code="DatabaseChangesInfo.filename.title" /></b>
+<div style="padding-left: 20px; padding-top: 5px">${updateLogFile}</div>
+
+<br/>
+<br/>
 
 <b class="boxHeader"><spring:message code="DatabaseChangesInfo.header"/></b>
 <table cellpadding="4" cellspacing="0" border="0" class="box">
@@ -22,7 +27,7 @@
 		<th><spring:message code="general.author" /></th>
 	</tr>
 	<c:forEach items="${databaseChanges}" var="databaseChange" varStatus="varStatus">
-		<tr class="<c:choose><c:when test="${varStatus.index % 2 == 0}">evenRow</c:when><c:otherwise>oddRow</c:otherwise></c:choose>">
+		<tr class="${varStatus.index % 2 == 0 ? 'evenRow' : 'oddRow'}">
 			<td style="white-space: nowrap"><openmrs:formatDate date="${databaseChange.ranDate}" type="medium" /></td>
 			<td>${databaseChange.comments}</td>
 			<td>${databaseChange.description}</td>

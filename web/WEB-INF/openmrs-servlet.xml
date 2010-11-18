@@ -1,19 +1,31 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<!-- Application context definition for Spring for the OpenMRS web layer. -->
-<!-- See /metadata/api/spring/applicationContext-service.xml for layer agnostic spring setup -->
+<!-- Application context definition for Spring for the OpenMRS web layer.
+-->
+<!-- See /metadata/api/spring/applicationContext-service.xml for layer agnostic spring setup
+-->
 
 <beans xmlns="http://www.springframework.org/schema/beans"
-       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-       xmlns:context="http://www.springframework.org/schema/context"
+	   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	   xmlns:p="http://www.springframework.org/schema/p"
+	   xmlns:context="http://www.springframework.org/schema/context"
+	   xmlns:jee="http://www.springframework.org/schema/jee"
+       xmlns:tx="http://www.springframework.org/schema/tx"
+       xmlns:aop="http://www.springframework.org/schema/aop"
        xmlns:util="http://www.springframework.org/schema/util"
-       xsi:schemaLocation="http://www.springframework.org/schema/beans 
-           http://www.springframework.org/schema/beans/spring-beans-2.5.xsd
-           http://www.springframework.org/schema/context
-           http://www.springframework.org/schema/context/spring-context-2.5.xsd
-           http://www.springframework.org/schema/util
-           http://www.springframework.org/schema/util/spring-util-2.0.xsd">
-	
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+       		http://www.springframework.org/schema/beans/spring-beans-3.0.xsd
+			http://www.springframework.org/schema/context
+			http://www.springframework.org/schema/context/spring-context-3.0.xsd
+			http://www.springframework.org/schema/jee
+			http://www.springframework.org/schema/jee/spring-jee-3.0.xsd
+			http://www.springframework.org/schema/tx
+			http://www.springframework.org/schema/tx/spring-tx-3.0.xsd
+			http://www.springframework.org/schema/aop
+           	http://www.springframework.org/schema/aop/spring-aop-3.0.xsd
+            http://www.springframework.org/schema/util
+            http://www.springframework.org/schema/util/spring-util-3.0.xsd">
+            	
 	<!--  **************************  VIEW RESOLVER / CONTROLLERS  *************************  -->
 	
 	<bean id="jspViewResolver"
@@ -29,12 +41,37 @@
 		<property name="maxUploadSize"><value>75000000</value></property>
 	</bean>
 	
+	<bean class="org.springframework.web.servlet.view.ContentNegotiatingViewResolver">
+		<property name="mediaTypes">
+			<map>
+				<entry key="json" value="application/json" />
+			</map>
+		</property>
+		<property name="defaultViews">
+			<list>
+				<bean class="org.springframework.web.servlet.view.json.MappingJacksonJsonView" />
+			</list>
+		</property>
+	</bean>
+	
 	<bean id="defaultMethodParamResolver" class="org.springframework.web.servlet.mvc.multiaction.ParameterMethodNameResolver">
 		<property name="paramName"><value>method</value></property>
 		<property name="defaultMethodName"><value>handleRequest</value></property>
 	</bean>
 	
-	<!-- So that controllers can use annotations like @Controller and @RequestMapping -->
+	<!--  Exception handler mappings --> 
+ 		 
+ 	<bean class="org.springframework.web.servlet.handler.SimpleMappingExceptionResolver"> 
+ 		<property name="exceptionMappings"> 
+ 			<map> 
+ 				<entry key="org.openmrs.api.APIException" value="uncaughtException"/> 
+ 			</map> 
+ 		</property> 
+ 		<property name="order" value="100" /> 
+ 	</bean>
+	
+	<!-- So that controllers can use annotations like @Controller and @RequestMapping
+-->
 	<bean class="org.springframework.web.servlet.mvc.annotation.DefaultAnnotationHandlerMapping">
 		<!-- makes annotations more important than default mappings -->
 		<property name="order"><value>98</value></property>
@@ -42,10 +79,30 @@
 		<property name="interceptors">
 			<list>
 				<ref bean="localeChangeInterceptor" />
+				<ref bean="themeChangeInterceptor" />
 				<!-- <ref bean="openSessionInViewInterceptor"/> -->
 			</list>
 		</property>
 	</bean>
+
+	<bean class="org.springframework.web.servlet.mvc.SimpleControllerHandlerAdapter"/>
+
+	<bean class="org.springframework.web.servlet.mvc.annotation.AnnotationMethodHandlerAdapter">
+		<property name="webBindingInitializer">
+			<bean class="org.openmrs.web.OpenmrsBindingInitializer"/>
+		</property>
+		<property name="messageConverters">
+			<list>
+				<bean class="org.springframework.http.converter.ByteArrayHttpMessageConverter" />
+				<bean class="org.springframework.http.converter.StringHttpMessageConverter" />
+				<bean class="org.springframework.http.converter.FormHttpMessageConverter" />
+				<bean class="org.springframework.http.converter.xml.SourceHttpMessageConverter" />
+				<bean class="org.springframework.http.converter.json.MappingJacksonHttpMessageConverter" />
+			</list>
+		</property>
+	</bean>
+		
+	<bean id="conversion-service" class="org.springframework.format.support.FormattingConversionServiceFactoryBean" />
 	
 	<!-- The default place to look for controllers that have annotations -->
 	<context:component-scan base-package="org.openmrs.web.controller" />
@@ -54,6 +111,7 @@
 		<property name="interceptors">
 			<list>
 				<ref bean="localeChangeInterceptor" />
+				<ref bean="themeChangeInterceptor" />
 				<!-- <ref bean="openSessionInViewInterceptor"/> -->
 			</list>
 		</property>
@@ -133,14 +191,12 @@
 				<prop key="admin/forms/field.list">fieldList</prop>
 				<prop key="admin/forms/fieldType.form">fieldTypeForm</prop>
 				<prop key="admin/forms/fieldType.list">fieldTypeList</prop>
-
+				<prop key="admin/forms/auditField.form">auditFieldController</prop>
+				
 				<prop key="admin/scheduler/scheduler.list">schedulerListController</prop>
 				<prop key="admin/scheduler/scheduler.form">schedulerFormController</prop>
 
 				<prop key="remotecommunication/postHl7.form">postHl7FormController</prop>
-				<prop key="admin/hl7/hl7InError.list">hl7InErrorListController</prop>
-				<prop key="admin/hl7/hl7InQueue.list">hl7InQueueListController</prop>
-				<prop key="admin/hl7/hl7Deleted.form">hl7DeletedFormController</prop>
 				
 				<prop key="admin/programs/program.list">programList</prop>
 				<prop key="admin/programs/program.form">programForm</prop>
@@ -171,6 +227,8 @@
 				<prop key="**/patientRegimenDiscontinued.portlet">patientRegimenPortletController</prop>
 				<prop key="**/patientEncounters.portlet">patientEncountersPortletController</prop>
 				<prop key="**/personFormEntry.portlet">personFormEntryPortletController</prop>
+				<prop key="**/activeListAllergy.portlet">activeListPortletController</prop>
+				<prop key="**/activeListProblem.portlet">activeListPortletController</prop>
 				<!--<prop key="**/calendar.portlet">calendarPortletController</prop>-->
 
 				<prop key="**/*.portlet">portletController</prop>
@@ -190,6 +248,7 @@
 	<bean id="personFormEntryPortletController" class="org.openmrs.web.controller.PersonFormEntryPortletController" />
 	<bean id="addressLayoutPortletController" class="org.openmrs.web.controller.layout.AddressLayoutPortletController" />
 	<bean id="nameLayoutPortletController" class="org.openmrs.web.controller.layout.NameLayoutPortletController" />
+	<bean id="activeListPortletController" class="org.openmrs.web.controller.ActiveListPortletController" />
 	<!--<bean id="calendarPortletController" class="org.openmrs.web.controller.CalendarPortletController"/>-->
 	<bean id="springController" class="org.openmrs.web.controller.SpringController" />
 
@@ -205,8 +264,6 @@
 		<property name="successView"><value>scheduler.list</value></property>
 	</bean>
 	
-	
-	<bean id="taskValidator" class="org.openmrs.validator.SchedulerFormValidator" />
 	<bean id="schedulerFormController" class="org.openmrs.scheduler.web.controller.SchedulerFormController">
 		<property name="commandName"><value>task</value></property>
 		<property name="formView"><value>/admin/scheduler/schedulerForm</value></property>
@@ -217,40 +274,10 @@
 	</bean>
 	<!-- ** /Scheduler ** -->
 
-
-	<!-- =============================== -->
-	<!-- =====      HL7 Messages Section     ===== -->
-	<!-- =============================== -->
-
-	<!-- ** HL7 in Error List Controller ** -->
-	<bean id="hl7InErrorListController"
-		class="org.openmrs.hl7.web.controller.Hl7InErrorListController">
-		<property name="commandName"><value>errorList</value></property>
-		<property name="formView"><value>/admin/hl7/hl7InErrorList</value></property>
-		<property name="successView"><value>hl7InError.list</value></property>
-	</bean>
-	
-	<!-- ** HL7 in Queue List Controller ** -->
-	<bean id="hl7InQueueListController"
-		class="org.openmrs.hl7.web.controller.Hl7InQueueListController">
-		<property name="commandName"><value>queueList</value></property>
-		<property name="formView"><value>/admin/hl7/hl7InQueueList</value></property>
-		<property name="successView"><value>hl7InQueue.list</value></property>
-	</bean>
-		
-	<bean id="hl7DeletedFormController"
-		class="org.openmrs.hl7.web.controller.Hl7DeletedFormController">
-		<property name="commandName"><value>queueForm</value></property>
-		<property name="formView"><value>/admin/hl7/hl7DeletedForm</value></property>
-		<property name="successView"><value>hl7Deleted.form</value></property>
-	</bean>
-	<!-- ** /HL7 Messages Section** -->
-
 	<!-- ================================ -->
 	<!-- ====== Observation Sector ====== -->
 	<!-- ================================ -->
 
-	<bean id="obsValidator" class="org.openmrs.validator.ObsValidator" />
 	<bean id="obsForm" class="org.openmrs.web.controller.observation.ObsFormController">
 		<property name="commandName"><value>obs</value></property>
 		<property name="formView"><value>/admin/observations/obsForm</value></property>
@@ -273,7 +300,8 @@
 	<!-- ========================== -->
 
 	<!-- ** Order Type ** -->
-	<!--this is the optional method of declaring values in the constructor -->
+	<!--this is the optional method of declaring values in the constructor
+-->
 	<!--<bean id="orderTypeList" class="org.openmrs.web.controller.OrderTypeListController" />-->
 	<!--<bean id="orderTypeForm" class="org.openmrs.web.controller.OrderTypeFormController" />-->
 
@@ -284,8 +312,7 @@
 		<property name="successView"><value>orderType.list</value></property>
 	</bean>
 
-	<!--  Validator and Form Controller for the add/edit order types page -->
-	<bean id="orderTypeValidator" class="org.openmrs.validator.OrderTypeValidator" />
+	<!--  Form Controller for the add/edit order types page -->
 	<bean id="orderTypeForm" class="org.openmrs.web.controller.order.OrderTypeFormController">
 		<property name="sessionForm"><value>true</value></property>
 		<property name="commandName"><value>orderType</value></property>
@@ -307,8 +334,7 @@
 		<property name="successView"><value>order.list</value></property>
 	</bean>
 
-	<!--  Validator and Form Controller for the add/edit order types page -->
-	<bean id="orderValidator" class="org.openmrs.validator.OrderValidator" />
+	<!--  Form Controller for the add/edit order types page -->
 	<bean id="orderForm" class="org.openmrs.web.controller.order.OrderFormController">
 		<property name="commandName"><value>order</value></property>
 		<property name="validator">
@@ -325,12 +351,11 @@
 		<property name="successView"><value>orderDrug.list</value></property>
 	</bean>
 
-	<!--  Validator and Form Controller for the add/edit order types page -->
-	<bean id="orderDrugValidator" class="org.openmrs.validator.DrugOrderValidator" />
+	<!--  Form Controller for the add/edit order types page -->
 	<bean id="orderDrugForm" class="org.openmrs.web.controller.order.OrderDrugFormController">
 		<property name="commandName"><value>order</value></property>
 		<property name="validator">
-			<ref bean="orderDrugValidator" />
+			<ref bean="drugOrderValidator" />
 		</property>
 		<property name="formView"><value>/admin/orders/orderDrugForm</value></property>
 		<property name="successView"><value>orderDrug.list</value></property>
@@ -350,7 +375,6 @@
 	<!-- ====== /Order Sector ====== -->
 
 	<!-- ** Patient ** -->
-	<bean id="patientValidator" class="org.openmrs.validator.PatientValidator" />
 	<bean id="patientForm" class="org.openmrs.web.controller.patient.PatientFormController">
 		<property name="commandName"><value>patient</value></property>
 		<property name="formView"><value>/admin/patients/patientForm</value></property>
@@ -360,6 +384,7 @@
 	<!-- ** /Patient ** -->
 
 	<!-- ** New (mini) Patient ** -->
+	<bean id="shortPatientValidator" class="org.openmrs.web.controller.patient.ShortPatientValidator" />
 	<bean id="newPatientForm" class="org.openmrs.web.controller.patient.NewPatientFormController">
 		<property name="commandName"><value>patient</value></property>
 		<property name="commandClass"><value>org.openmrs.web.controller.patient.ShortPatientModel</value></property>
@@ -382,8 +407,6 @@
 		<property name="formView"><value>/admin/patients/patientIdentifierTypeList</value></property>
 		<property name="successView"><value>patientIdentifierType.list</value></property>
 	</bean>
-	<bean id="patientIdentifierTypeValidator"
-		class="org.openmrs.validator.PatientIdentifierTypeValidator" />
 	<bean id="patientIdentifierTypeForm"
 		class="org.openmrs.web.controller.patient.PatientIdentifierTypeFormController">
 		<property name="sessionForm"><value>true</value></property>
@@ -436,7 +459,6 @@
 	</bean>
 	<!-- ** /Relationship Type   ** -->
 
-	<bean id="personAttributeTypeValidator" class="org.openmrs.validator.PersonAttributeTypeValidator" />
 	<bean id="personAttributeTypeForm"
 		class="org.openmrs.web.controller.person.PersonAttributeTypeFormController">
 		<property name="commandName"><value>personAttributeType</value></property>
@@ -469,7 +491,6 @@
 		<property name="formView"><value>/admin/users/userList</value></property>
 		<property name="successView"><value>user.list</value></property>
 	</bean>
-	<bean id="userValidator" class="org.openmrs.validator.UserValidator" />
 	<!-- ** /User ** -->
 	<!-- ** Role  ** -->
 	<bean id="roleList" class="org.openmrs.web.controller.user.RoleListController">
@@ -479,8 +500,7 @@
 		<property name="successView"><value>role.list</value></property>
 	</bean>
 
-	<!--  Validator and Form Controller for the add/edit role page -->
-	<bean id="roleValidator" class="org.openmrs.validator.RoleValidator" />
+	<!--  Form Controller for the add/edit role page -->
 	<bean id="roleForm" class="org.openmrs.web.controller.user.RoleFormController">
 		<property name="sessionForm"><value>true</value></property>
 		<property name="commandName"><value>role</value></property>
@@ -499,8 +519,7 @@
 		<property name="successView"><value>privilege.list</value></property>
 	</bean>
 
-	<!--  Validator and Form Controller for the add/edit privilege page -->
-	<bean id="privilegeValidator" class="org.openmrs.validator.PrivilegeValidator" />
+	<!--  Form Controller for the add/edit privilege page -->
 	<bean id="privilegeForm" class="org.openmrs.web.controller.user.PrivilegeFormController">
 		<property name="sessionForm"><value>true</value></property>
 		<property name="commandName"><value>privilege</value></property>
@@ -547,9 +566,7 @@
 		<property name="successView"><value>encounterType.list</value></property>
 	</bean>
 
-	<!--  Validator and Form Controller for the add/edit encounter types page -->
-	<bean id="encounterTypeValidator"
-		class="org.openmrs.validator.EncounterTypeValidator" />
+	<!--  Form Controller for the add/edit encounter types page -->
 	<bean id="encounterTypeForm"
 		class="org.openmrs.web.controller.encounter.EncounterTypeFormController">
 		<property name="commandName"><value>encounterType</value></property>
@@ -567,8 +584,7 @@
 		<property name="successView"><value>location.list</value></property>
 	</bean>
 
-	<!--  Validator and Form Controller for the add/edit encounter types page -->
-	<bean id="locationValidator" class="org.openmrs.validator.LocationValidator" />
+	<!--  Form Controller for the add/edit encounter types page -->
 	<bean id="locationForm" class="org.openmrs.web.controller.encounter.LocationFormController">
 		<property name="commandName"><value>location</value></property>
 		<property name="validator">
@@ -633,9 +649,7 @@
 		<property name="successView"><value>conceptClass.list</value></property>
 	</bean>
 
-	<!--  Validator and Form Controller for the add/edit concept types page -->
-	<bean id="conceptClassValidator"
-		class="org.openmrs.validator.ConceptClassValidator" />
+	<!--  Form Controller for the add/edit concept types page -->
 	<bean id="conceptClassForm"
 		class="org.openmrs.web.controller.concept.ConceptClassFormController">
 		<property name="sessionForm"><value>true</value></property>
@@ -656,9 +670,7 @@
 		<property name="successView"><value>conceptDatatype.list</value></property>
 	</bean>
 
-	<!--  Validator and Form Controller for the add/edit concept types page -->
-	<bean id="conceptDatatypeValidator"
-		class="org.openmrs.validator.ConceptDatatypeValidator" />
+	<!--  Form Controller for the add/edit concept types page -->
 	<bean id="conceptDatatypeForm"
 		class="org.openmrs.web.controller.concept.ConceptDatatypeFormController">
 		<property name="sessionForm"><value>true</value></property>
@@ -759,7 +771,6 @@
 		<property name="successView"><value>form.list</value></property>
 	</bean>
 
-	<bean id="formEditValidator" class="org.openmrs.validator.FormValidator" />
 	<bean id="formEditForm" class="org.openmrs.web.controller.form.FormFormController">
 		<property name="commandName"><value>form</value></property>
 		<property name="formView"><value>/admin/forms/formEditForm</value></property>
@@ -788,6 +799,10 @@
 		<property name="formView"><value>/admin/forms/fieldForm</value></property>
 		<property name="successView"><value>field.list</value></property>
 	</bean>
+	<bean id="auditFieldController" class="org.openmrs.web.controller.form.AuditFieldController">
+		<property name="formView"><value>/admin/forms/auditFieldForm</value></property>
+		<property name="successView"><value>auditField.form</value></property>
+	</bean>
 	<!-- ** /Field  ** -->
 
 
@@ -799,8 +814,7 @@
 		<property name="successView"><value>fieldType.list</value></property>
 	</bean>
 
-	<!--  Validator and Form Controller for the add/edit forms page -->
-	<bean id="fieldTypeValidator" class="org.openmrs.validator.FieldTypeValidator" />
+	<!--  Form Controller for the add/edit forms page -->
 	<bean id="fieldTypeForm" class="org.openmrs.web.controller.form.FieldTypeFormController">
 		<property name="commandName"><value>fieldType</value></property>
 		<property name="validator">
@@ -822,7 +836,6 @@
 		<property name="formView"><value>/admin/programs/programList</value></property>
 		<property name="successView"><value>program.list</value></property>
 	</bean>
-	<bean id="programValidator" class="org.openmrs.validator.ProgramValidator" />
 	<bean id="programForm" class="org.openmrs.web.controller.program.ProgramFormController">
 		<property name="commandName"><value>program</value></property>
 		<property name="validator">
@@ -855,8 +868,6 @@
 		<property name="formView"><value>/admin/programs/conversionList</value></property>
 		<property name="successView"><value>conversion.list</value></property>
 	</bean>
-	<bean id="stateConversionValidator"
-		class="org.openmrs.validator.StateConversionValidator" />
 	<bean id="stateConversionForm"
 		class="org.openmrs.web.controller.program.StateConversionFormController">
 		<property name="sessionForm"><value>true</value></property>
@@ -960,14 +971,28 @@
 	-->	
 	<alias name="messageSourceServiceTarget" alias="messageSource"/>
 	
+	<bean id="parentTheme" class="org.openmrs.web.StaticThemeSource">
+		<property name="themeName"><value>/themes/defaults</value></property>
+	</bean>
+	
 	<!-- Specify the default OpenMRS look and feel. -->
 	<bean id="themeSource"
 		class="org.springframework.ui.context.support.ResourceBundleThemeSource">
+		<property name="parentThemeSource"><ref bean="parentTheme"/></property>
 		<property name="basenamePrefix">
-			<value>standard_</value>
+			<value>/themes/</value>
 		</property>
 	</bean>
-
+	
+	<bean id="themeResolver" class="org.openmrs.web.OpenmrsCookieThemeResolver">
+		<property name="defaultThemeName"><value>green</value></property>
+	</bean>
+	
+	<bean id="themeChangeInterceptor"
+		class="org.springframework.web.servlet.theme.ThemeChangeInterceptor">
+		<property name="paramName"><value>theme</value></property>
+	</bean>
+	
 	<bean id="localeResolver" class="org.openmrs.web.OpenmrsCookieLocaleResolver" />
 
 	<bean id="localeChangeInterceptor"
@@ -1402,12 +1427,15 @@
 
 	<!-- NAME LAYOUT SUPPORT -->
 	
-	<!-- specialTokens ordered so that the subset string 'familyName' is last -->
+	<!-- specialTokens ordered so that the subset string 'familyName' is last
+-->
 	<bean id="nameSupport" class="org.openmrs.layout.web.name.NameSupport">
 		<property name="defaultLayoutFormat"><value>short</value></property>
 		<property name="layoutTemplates">
 			<list>
 				<ref bean="nameTemplateSpain" />
+				<ref bean="nameTemplateLatinAmerica" />
+				<ref bean="nameTemplateGivenFamily" />
 				<ref bean="nameTemplateShort" />
 				<ref bean="nameTemplateLong" />
 			</list>
@@ -1451,6 +1479,58 @@
 			</list>
 		</property>
 	</bean>
+	
+	<bean id="nameTemplateLatinAmerica" class="org.openmrs.layout.web.name.NameTemplate">
+		<property name="displayName"><value>Formato de Nombres en Latino America</value></property>
+		<property name="codeName"><value>latinamerica</value></property>
+		<property name="nameMappings">
+			<props>
+				<prop key="givenName">PersonName.firstName</prop>
+				<prop key="middleName">PersonName.secondName</prop>
+				<prop key="familyName">PersonName.familyName1</prop>
+				<prop key="familyName2">PersonName.familyName2</prop>
+			</props>
+		</property>
+		<property name="sizeMappings">
+			<props>
+				<prop key="givenName">30</prop>
+				<prop key="middleName">30</prop>
+				<prop key="familyName">30</prop>
+				<prop key="familyName2">30</prop>
+			</props>
+		</property>
+		<property name="lineByLineFormat">
+			<list>
+				<value>givenName</value>
+				<value>middleName</value>
+				<value>familyName</value>
+				<value>familyName2</value>
+			</list>
+		</property>
+	</bean>
+	
+	<bean id="nameTemplateGivenFamily" class="org.openmrs.layout.web.name.NameTemplate">
+        <property name="displayName"><value>&quot;Given Family&quot; Format</value></property>
+        <property name="codeName"><value>givenfamily</value></property>
+        <property name="nameMappings">
+                <props>
+                        <prop key="givenName">PersonName.givenName</prop>
+                        <prop key="familyName">PersonName.familyName</prop>
+                </props>
+        </property>
+        <property name="sizeMappings">
+                <props>
+                        <prop key="givenName">30</prop>
+                        <prop key="familyName">30</prop>
+                </props>
+        </property>
+        <property name="lineByLineFormat">
+                <list>
+                        <value>givenName</value>
+                        <value>familyName</value>
+                </list>
+        </property>
+    </bean>
 
 	<bean id="nameTemplateShort" class="org.openmrs.layout.web.name.NameTemplate">
 		<property name="displayName"><value>Short Name Format</value></property>

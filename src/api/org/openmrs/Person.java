@@ -24,8 +24,6 @@ import java.util.Vector;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.openmrs.api.APIException;
-import org.openmrs.api.PersonService;
 import org.openmrs.api.UserService;
 import org.openmrs.util.OpenmrsUtil;
 import org.simpleframework.xml.Attribute;
@@ -33,6 +31,7 @@ import org.simpleframework.xml.Element;
 import org.simpleframework.xml.ElementList;
 import org.simpleframework.xml.Root;
 import org.simpleframework.xml.load.Replace;
+import org.springframework.util.StringUtils;
 
 /**
  * A Person in the system. This can be either a small person stub, or indicative of an actual
@@ -45,9 +44,9 @@ import org.simpleframework.xml.load.Replace;
 @Root(strict = false)
 public class Person extends BaseOpenmrsData implements java.io.Serializable {
 	
-	private transient static final Log log = LogFactory.getLog(Person.class);
-	
 	public static final long serialVersionUID = 2L;
+	
+	private static final Log log = LogFactory.getLog(Person.class);
 	
 	protected Integer personId;
 	
@@ -408,9 +407,14 @@ public class Person extends BaseOpenmrsData implements java.io.Serializable {
 	 * @should fail when new atribute are the same type with same value
 	 * @should void old attribute when new attribute are the same type with different value
 	 * @should remove attribute when old attribute are temporary
+	 * @should not save an attribute with a null value
+	 * @should not save an attribute with a blank string value
+	 * @should void old attribute when a null or blank string value is added
 	 */
 	public void addAttribute(PersonAttribute newAttribute) {
 		newAttribute.setPerson(this);
+		boolean newIsNull = !StringUtils.hasText(newAttribute.getValue());
+		
 		for (PersonAttribute currentAttribute : getActiveAttributes()) {
 			if (currentAttribute.equals(newAttribute))
 				return; // if we have the same PersonAttributeId, don't add the new attribute
@@ -421,7 +425,7 @@ public class Person extends BaseOpenmrsData implements java.io.Serializable {
 				
 				// if the to-be-added attribute isn't already voided itself
 				// and if we have the same type, different value
-				if (newAttribute.isVoided() == false) {
+				if (newAttribute.isVoided() == false || newIsNull) {
 					if (currentAttribute.getCreator() != null)
 						currentAttribute.voidAttribute("New value: " + newAttribute.getValue());
 					else
@@ -432,7 +436,7 @@ public class Person extends BaseOpenmrsData implements java.io.Serializable {
 			}
 		}
 		attributeMap = null;
-		if (!OpenmrsUtil.collectionContains(attributes, newAttribute))
+		if (!OpenmrsUtil.collectionContains(attributes, newAttribute) && !newIsNull)
 			attributes.add(newAttribute);
 	}
 	

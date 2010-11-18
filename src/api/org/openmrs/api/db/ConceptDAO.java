@@ -170,9 +170,19 @@ public interface ConceptDAO {
 	public List<ConceptDatatype> getAllConceptDatatypes(boolean includeRetired) throws DAOException;
 	
 	/**
+	 * @deprecated
 	 * @see org.openmrs.api.ConceptService#getConceptDatatypes(java.lang.String)
 	 */
+	@Deprecated
 	public List<ConceptDatatype> getConceptDatatypes(String name) throws DAOException;
+	
+	/**
+	 * @param name
+	 * @return the {@link ConceptDatatype} that matches <em>name</em> exactly or null if one does
+	 *         not exist.
+	 * @throws DAOException
+	 */
+	public ConceptDatatype getConceptDatatypeByName(String name) throws DAOException;
 	
 	/**
 	 * @see org.openmrs.api.ConceptService#getConceptDatatype(java.lang.Integer)
@@ -314,7 +324,7 @@ public interface ConceptDAO {
 	 * @see org.openmrs.api.ConceptService#conceptIterator()
 	 */
 	public Iterator<Concept> conceptIterator();
-
+	
 	/**
 	 * @see org.openmrs.api.ConceptService#getConceptByMapping(java.lang.String, java.lang.String)
 	 */
@@ -398,10 +408,31 @@ public interface ConceptDAO {
 	 */
 	public List<ConceptMap> getConceptsByConceptSource(ConceptSource conceptSourceName) throws DAOException;
 	
-	
 	/**
 	 * @see org.openmrs.api.ConceptService#getConceptSourceByName(java.lang.String)
 	 */
 	public ConceptSource getConceptSourceByName(String conceptSourceName) throws DAOException;
+	
+	/**
+	 * Gets the value of conceptDatatype currently saved in the database for the given concept,
+	 * bypassing any caches. This is used prior to saving an concept so that we can change the obs
+	 * if need be
+	 * 
+	 * @param concept for which the conceptDatatype should be fetched
+	 * @return the conceptDatatype currently in the database for this concept
+	 * @should get saved conceptDatatype from database
+	 */
+	public ConceptDatatype getSavedConceptDatatype(Concept concept);
+	
+	/**
+	 * Gets the persisted copy of the conceptName currently saved in the database for the given
+	 * conceptName, bypassing any caches. This is used prior to saving an concept so that we can
+	 * change the obs if need be or avoid breaking any obs referencing it.
+	 * 
+	 * @param conceptName ConceptName to fetch from the database
+	 * @return the persisted copy of the conceptName currently saved in the database for this
+	 *         conceptName
+	 */
+	public ConceptName getSavedConceptName(ConceptName conceptName);
 	
 }

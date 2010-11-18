@@ -21,6 +21,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.hibernate.Criteria;
 import org.hibernate.Query;
+import org.hibernate.SQLQuery;
 import org.hibernate.SessionFactory;
 import org.hibernate.criterion.Expression;
 import org.hibernate.criterion.MatchMode;
@@ -358,7 +359,6 @@ public class HibernatePersonDAO implements PersonDAO {
 	public List<PersonAttributeType> getPersonAttributeTypes(String exactName, String format, Integer foreignKey,
 	                                                         Boolean searchable) throws DAOException {
 		Criteria criteria = sessionFactory.getCurrentSession().createCriteria(PersonAttributeType.class, "r");
-		criteria.add(Expression.eq("retired", false));
 		
 		if (exactName != null)
 			criteria.add(Expression.eq("name", exactName));
@@ -552,6 +552,16 @@ public class HibernatePersonDAO implements PersonDAO {
 		    "from PersonAttributeType pat where pat.uuid = :uuid").setString("uuid", uuid).uniqueResult();
 	}
 	
+	/**
+     * @see org.openmrs.api.db.PersonDAO#getSavedPersonAttributeTypeName(org.openmrs.PersonAttributeType)
+     */
+    public String getSavedPersonAttributeTypeName(PersonAttributeType personAttributeType) {
+		SQLQuery sql = sessionFactory.getCurrentSession().createSQLQuery(
+		    "select name from person_attribute_type where person_attribute_type_id = :personAttributeTypeId");
+		sql.setInteger("personAttributeTypeId", personAttributeType.getId());
+		return (String) sql.uniqueResult();
+	}
+
 	/**
 	 * @see org.openmrs.api.db.PersonDAO#getPersonByUuid(java.lang.String)
 	 */

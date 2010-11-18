@@ -24,6 +24,7 @@ import java.util.Vector;
 import org.openmrs.GlobalProperty;
 import org.openmrs.Privilege;
 import org.openmrs.api.ConceptService;
+import org.openmrs.hl7.HL7Constants;
 import org.openmrs.module.ModuleConstants;
 import org.openmrs.module.ModuleFactory;
 import org.openmrs.patient.impl.LuhnIdentifierValidator;
@@ -80,6 +81,7 @@ public final class OpenmrsConstants {
 	 * 
 	 * @deprecated the database doesn't have just one main version now that we are using liquibase.
 	 */
+	@Deprecated
 	public static final String DATABASE_VERSION_EXPECTED = THIS_PACKAGE.getImplementationVersion();
 	
 	public static String DATABASE_NAME = "openmrs";
@@ -93,6 +95,7 @@ public final class OpenmrsConstants {
 	 * 
 	 * @deprecated the database doesn't have just one main version now that we are using liquibase.
 	 */
+	@Deprecated
 	public static String DATABASE_VERSION = null;
 	
 	/**
@@ -118,7 +121,7 @@ public final class OpenmrsConstants {
 	 * OpenmrsUtil.getApplicationDataDirectory() should be used. This should be null here. This
 	 * constant will hold the value of the user's runtime property for the
 	 * application_data_directory and is set programmatically at startup. This value is set in the
-	 * openmrs startup method If this is null, the getApplicationDataDirectory() uses some OS
+	 * openmrs startup method. If this is null, the getApplicationDataDirectory() uses some OS
 	 * heuristics to determine where to put an app data dir.
 	 * 
 	 * @see #APPLICATION_DATA_DIRECTORY_RUNTIME_PROPERTY
@@ -182,6 +185,8 @@ public final class OpenmrsConstants {
 	public static final String PRIV_MANAGE_CONCEPTS = "Manage Concepts";
 	
 	public static final String PRIV_PURGE_CONCEPTS = "Purge Concepts";
+	
+	public static final String PRIV_MANAGE_CONCEPT_NAME_TAGS = "Manage Concept Name tags";
 	
 	public static final String PRIV_VIEW_CONCEPT_PROPOSALS = "View Concept Proposals";
 	
@@ -463,6 +468,22 @@ public final class OpenmrsConstants {
 	
 	public static final String PRIV_SQL_LEVEL_ACCESS = "SQL Level Access";
 	
+	public static final String PRIV_VIEW_PROBLEMS = "View Problems";
+	
+	public static final String PRIV_ADD_PROBLEMS = "Add Problems";
+	
+	public static final String PRIV_EDIT_PROBLEMS = "Edit Problems";
+	
+	public static final String PRIV_DELETE_PROBLEMS = "Remove Problems";
+
+	public static final String PRIV_VIEW_ALLERGIES = "View Allergies";
+	
+	public static final String PRIV_ADD_ALLERGIES = "Add Allergies";
+	
+	public static final String PRIV_EDIT_ALLERGIES = "Edit Allergies";
+	
+	public static final String PRIV_DELETE_ALLERGIES = "Remove Allergies";
+
 	/**
 	 * Cached list of core privileges
 	 */
@@ -493,6 +514,8 @@ public final class OpenmrsConstants {
 			
 			CORE_PRIVILEGES.put(PRIV_VIEW_CONCEPTS, "Able to view concept entries");
 			CORE_PRIVILEGES.put(PRIV_MANAGE_CONCEPTS, "Able to add/edit/delete concept entries");
+			
+			CORE_PRIVILEGES.put(PRIV_MANAGE_CONCEPT_NAME_TAGS, "Able to add/edit/delete concept name tags");
 			
 			CORE_PRIVILEGES.put(PRIV_VIEW_CONCEPT_PROPOSALS, "Able to view concept proposals to the system");
 			CORE_PRIVILEGES.put(PRIV_ADD_CONCEPT_PROPOSALS, "Able to add concept proposals to the system");
@@ -621,6 +644,15 @@ public final class OpenmrsConstants {
 			
 			CORE_PRIVILEGES.put(PRIV_VIEW_DATABASE_CHANGES, "Able to view database changes from the admin screen");
 			CORE_PRIVILEGES.put(PRIV_MANAGE_IMPLEMENTATION_ID, "Able to view/add/edit the implementation id for the system");
+			
+			CORE_PRIVILEGES.put(PRIV_ADD_ALLERGIES, "Add allergies");
+			CORE_PRIVILEGES.put(PRIV_EDIT_ALLERGIES, "Able to edit allergies");
+			CORE_PRIVILEGES.put(PRIV_DELETE_ALLERGIES, "Remove allergies");
+			CORE_PRIVILEGES.put(PRIV_ADD_PROBLEMS, "Add problems");
+			CORE_PRIVILEGES.put(PRIV_EDIT_PROBLEMS, "Able to edit problems");
+			CORE_PRIVILEGES.put(PRIV_DELETE_PROBLEMS, "Remove problems");
+			CORE_PRIVILEGES.put(PRIV_VIEW_ALLERGIES, "Able to view allergies");
+			CORE_PRIVILEGES.put(PRIV_VIEW_PROBLEMS, "Able to view problems");
 		}
 		
 		// always add the module core privileges back on
@@ -672,6 +704,8 @@ public final class OpenmrsConstants {
 		return roles;
 	}
 	
+	public static final String GLOBAL_PROPERTY_DRUG_FREQUENCIES = "dashboard.regimen.displayFrequencies";
+	
 	public static final String GLOBAL_PROPERTY_CONCEPTS_LOCKED = "concepts.locked";
 	
 	public static final String GLOBAL_PROPERTY_PATIENT_LISTING_ATTRIBUTES = "patient.listingAttributeTypes";
@@ -685,6 +719,20 @@ public final class OpenmrsConstants {
 	public static final String GLOBAL_PROPERTY_USER_VIEWING_ATTRIBUTES = "user.viewingAttributeTypes";
 	
 	public static final String GLOBAL_PROPERTY_USER_HEADER_ATTRIBUTES = "user.headerAttributeTypes";
+	
+	public static final String GLOBAL_PROPERTY_HL7_ARCHIVE_DIRECTORY = "hl7_archive.dir";
+	
+	public static final String GLOBAL_PROPERTY_DEFAULT_THEME = "default_theme";
+
+	/**
+	 * Array of all core global property names that represent comma-separated lists of
+	 * PersonAttributeTypes. (If you rename a PersonAttributeType then these global properties are
+	 * potentially modified.)
+	 */
+	public static final String[] GLOBAL_PROPERTIES_OF_PERSON_ATTRIBUTES = { GLOBAL_PROPERTY_PATIENT_LISTING_ATTRIBUTES,
+	        GLOBAL_PROPERTY_PATIENT_VIEWING_ATTRIBUTES, GLOBAL_PROPERTY_PATIENT_HEADER_ATTRIBUTES,
+	        GLOBAL_PROPERTY_USER_LISTING_ATTRIBUTES, GLOBAL_PROPERTY_USER_VIEWING_ATTRIBUTES,
+	        GLOBAL_PROPERTY_USER_HEADER_ATTRIBUTES };
 	
 	public static final String GLOBAL_PROPERTY_PATIENT_IDENTIFIER_REGEX = "patient.identifierRegex";
 	
@@ -708,6 +756,8 @@ public final class OpenmrsConstants {
 	public static final String GLOBAL_PROPERTY_REPORT_XML_MACROS = "report.xmlMacros";
 	
 	public static final String GLOBAL_PROPERTY_STANDARD_DRUG_REGIMENS = "dashboard.regimen.standardRegimens";
+	
+	public static final String GLOBAL_PROPERTY_SHOW_PATIENT_NAME = "dashboard.showPatientName";
 	
 	public static final String GLOBAL_PROPERTY_DEFAULT_PATIENT_IDENTIFIER_VALIDATOR = "patient.defaultPatientIdentifierValidator";
 	
@@ -737,6 +787,14 @@ public final class OpenmrsConstants {
 	
 	public static final String GLOBAL_PROPERTY_IGNORE_MISSING_NONLOCAL_PATIENTS = "hl7_processor.ignore_missing_patient_non_local";
 	
+	public static final String GLOBAL_PROPERTY_TRUE_CONCEPT = "concept.true";
+	
+	public static final String GLOBAL_PROPERTY_FALSE_CONCEPT = "concept.false";
+	
+	public static final String GLOBAL_PROPERTY_LOCATION_WIDGET_TYPE = "location.field.style";
+	
+	public static final String GLOBAL_PROPERTY_REPORT_BUG_URL = "reportProblem.url";
+
 	/**
 	 * Global property name that allows specification of whether user passwords must contain both
 	 * upper and lower case characters. Allowable values are "true", "false", and null
@@ -772,6 +830,21 @@ public final class OpenmrsConstants {
 	 * adhere to
 	 */
 	public static String GP_PASSWORD_CUSTOM_REGEX = "security.passwordCustomRegex";
+	
+	/**
+	 * Global property name for absolute color for patient graphs.
+	 */
+	public static final String GP_GRAPH_COLOR_ABSOLUTE = "graph.color.absolute";
+	
+	/**
+	 * Global property name for normal color for patient graphs.
+	 */
+	public static final String GP_GRAPH_COLOR_NORMAL = "graph.color.normal";
+	
+	/**
+	 * Global property name for critical color for patient graphs.
+	 */
+	public static final String GP_GRAPH_COLOR_CRITICAL = "graph.color.critical";
 	
 	/**
 	 * At OpenMRS startup these global properties/default values/descriptions are inserted into the
@@ -824,6 +897,24 @@ public final class OpenmrsConstants {
 		                "dashboard.regimen.displayDrugSetIds",
 		                "ANTIRETROVIRAL DRUGS,TUBERCULOSIS TREATMENT DRUGS",
 		                "Drug sets that appear on the Patient Dashboard Regimen tab. Comma separated list of name of concepts that are defined as drug sets."));
+		
+		props
+		        .add(new GlobalProperty(
+		                GLOBAL_PROPERTY_DRUG_FREQUENCIES,
+		                "7 days/week,6 days/week,5 days/week,4 days/week,3 days/week,2 days/week,1 days/week",
+		                "Frequency of a drug order that appear on the Patient Dashboard. Comma separated list of name of concepts that are defined as drug frequencies."));
+		
+		props.add(new GlobalProperty(GP_GRAPH_COLOR_ABSOLUTE, "rgb(20,20,20)",
+		        "Color of the 'invalid' section of numeric graphs on the patient dashboard."));
+		
+		props.add(new GlobalProperty(GP_GRAPH_COLOR_NORMAL, "rgb(255,126,0)",
+		        "Color of the 'normal' section of numeric graphs on the patient dashboard."));
+		
+		props.add(new GlobalProperty(GP_GRAPH_COLOR_CRITICAL, "rgb(200,0,0)",
+		        "Color of the 'critical' section of numeric graphs on the patient dashboard."));
+		
+		props.add(new GlobalProperty(GLOBAL_PROPERTY_LOCATION_WIDGET_TYPE, "default",
+		        "Type of widget to use for location fields"));
 		
 		String standardRegimens = "<list>" + "  <regimenSuggestion>" + "    <drugComponents>" + "      <drugSuggestion>"
 		        + "        <drugId>2</drugId>" + "        <dose>1</dose>" + "        <units>tab(s)</units>"
@@ -959,12 +1050,13 @@ public final class OpenmrsConstants {
 		                        + GLOBAL_PROPERTY_PATIENT_IDENTIFIER_REGEX
 		                        + " is empty.  The string here is prepended to the sql indentifier search string.  The sql becomes \"... where identifier like '<PREFIX><QUERY STRING><SUFFIX>';\".  Typically this value is either a percent sign (%) or empty."));
 		props
-        .add(new GlobalProperty(
-        	GLOBAL_PROPERTY_PATIENT_IDENTIFIER_SEARCH_PATTERN,
-                "",
-                "If this is empty, the regex or suffix/prefix search is used.  Comma separated list of identifiers to check.  Allows for faster searching of multiple options rather than the slow regex. e.g. @SEARCH@,0@SEARCH@,@SEARCH-1@-@CHECKDIGIT@,0@SEARCH-1@-@CHECKDIGIT@ would turn a request for \"4127\" into a search for \"in ('4127','04127','412-7','0412-7')\""));
+		        .add(new GlobalProperty(
+		                GLOBAL_PROPERTY_PATIENT_IDENTIFIER_SEARCH_PATTERN,
+		                "",
+		                "If this is empty, the regex or suffix/prefix search is used.  Comma separated list of identifiers to check.  Allows for faster searching of multiple options rather than the slow regex. e.g. @SEARCH@,0@SEARCH@,@SEARCH-1@-@CHECKDIGIT@,0@SEARCH-1@-@CHECKDIGIT@ would turn a request for \"4127\" into a search for \"in ('4127','04127','412-7','0412-7')\""));
 		
-		props.add(new GlobalProperty(GLOBAL_PROPERTY_PERSON_SEARCH_MAX_RESULTS, String.valueOf(GLOBAL_PROPERTY_PERSON_SEARCH_MAX_RESULTS_DEFAULT_VALUE),
+		props.add(new GlobalProperty(GLOBAL_PROPERTY_PERSON_SEARCH_MAX_RESULTS, String
+		        .valueOf(GLOBAL_PROPERTY_PERSON_SEARCH_MAX_RESULTS_DEFAULT_VALUE),
 		        "The maximum number of results returned by patient searches"));
 		
 		props
@@ -1034,26 +1126,41 @@ public final class OpenmrsConstants {
 		                "Specifies the default locale. You can specify both the language code(ISO-639) and the country code(ISO-3166), e.g. 'en_GB' or just country: e.g. 'en'"));
 		
 		props.add(new GlobalProperty(GP_PASSWORD_CANNOT_MATCH_USERNAME_OR_SYSTEMID, "true",
-									 "Configure whether passwords must not match user's username or system id"));
+		        "Configure whether passwords must not match user's username or system id"));
 		
 		props.add(new GlobalProperty(GP_PASSWORD_CUSTOM_REGEX, "",
-									 "Configure a custom regular expression that a password must match"));
+		        "Configure a custom regular expression that a password must match"));
 		
 		props.add(new GlobalProperty(GP_PASSWORD_MINIMUM_LENGTH, "8",
-									 "Configure the minimum length required of all passwords"));
-	
+		        "Configure the minimum length required of all passwords"));
+		
 		props.add(new GlobalProperty(GP_PASSWORD_REQUIRES_DIGIT, "true",
-		 							 "Configure whether passwords must contain at least one digit"));
+		        "Configure whether passwords must contain at least one digit"));
 		
 		props.add(new GlobalProperty(GP_PASSWORD_REQUIRES_NON_DIGIT, "true",
-		 							 "Configure whether passwords must contain at least one non-digit"));
+		        "Configure whether passwords must contain at least one non-digit"));
 		
 		props.add(new GlobalProperty(GP_PASSWORD_REQUIRES_UPPER_AND_LOWER_CASE, "true",
-		 							 "Configure whether passwords must contain both upper and lower case characters"));
+		        "Configure whether passwords must contain both upper and lower case characters"));
 		
 		props.add(new GlobalProperty(GLOBAL_PROPERTY_IGNORE_MISSING_NONLOCAL_PATIENTS, "false",
-									 "If true, hl7 messages for patients that are not found and are non-local will silently be dropped/ignored"));
+		        "If true, hl7 messages for patients that are not found and are non-local will silently be dropped/ignored"));
 		
+		props
+		        .add(new GlobalProperty(
+		                GLOBAL_PROPERTY_SHOW_PATIENT_NAME,
+		                "false",
+		                "Whether or not to display the patient name in the patient dashboard title. Note that enabling this could be security risk if multiple users operate on the same computer."));
+		
+		props.add(new GlobalProperty(GLOBAL_PROPERTY_DEFAULT_THEME, "",
+		        "Default theme for users.  OpenMRS ships with themes of 'green', 'orange', 'purple', and 'legacy'"));
+		
+		props.add(new GlobalProperty(GLOBAL_PROPERTY_HL7_ARCHIVE_DIRECTORY, HL7Constants.HL7_ARCHIVE_DIRECTORY_NAME,
+		        "The default name or absolute path for the folder where to write the hl7_in_archives."));
+		
+		props.add(new GlobalProperty(GLOBAL_PROPERTY_REPORT_BUG_URL, "http://errors.openmrs.org/scrap",
+		        "The openmrs url where to submit bug reports"));
+
 		for (GlobalProperty gp : ModuleFactory.getGlobalProperties()) {
 			props.add(gp);
 		}

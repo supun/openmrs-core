@@ -41,7 +41,6 @@ import org.openmrs.test.SkipBaseSetup;
 import org.openmrs.test.Verifies;
 import org.openmrs.util.OpenmrsConstants;
 import org.openmrs.util.Security;
-import org.springframework.test.annotation.Rollback;
 
 /**
  * TODO add more tests to cover the methods in <code>UserService</code>
@@ -78,7 +77,7 @@ public class UserServiceTest extends BaseContextSensitiveTest {
 		u.setUsername("bwolfe");
 		u.getPerson().setGender("M");
 		
-		User createdUser = us.saveUser(u, "some arbitrary password to use");
+		User createdUser = us.saveUser(u, "Openmr5xy");
 		
 		// if we're returning the object from create methods, check validity
 		assertTrue("The user returned by the create user method should equal the passed in user", createdUser.equals(u));
@@ -88,22 +87,13 @@ public class UserServiceTest extends BaseContextSensitiveTest {
 	}
 	
 	/**
-	 * variable used to help prevent the {@link #shouldCheckThatPatientUserWasCreatedSuccessfully()}
-	 * method from method run alone accidentally
-	 */
-	private static Integer shouldCreateUserWhoIsPatientAlreadyTestUserIdCreated = null;
-	
-	/**
-	 * Creates a user object that was a patient/person object already. This test is set to _NOT_
-	 * roll back when finished. This commits the transaction which is then checked in the method
-	 * directly following: {@link #shouldCheckThatPatientUserWasCreatedSuccessfully()}
+	 * Creates a user object that was a patient/person object already.
 	 * 
 	 * @throws Exception
 	 * @see {@link UserService#saveUser(User,String)}
 	 */
 	@Test
 	@SkipBaseSetup
-	@Rollback(false)
 	@Verifies(value = "should should create user who is patient already", method = "saveUser(User,String)")
 	public void saveUser_shouldShouldCreateUserWhoIsPatientAlready() throws Exception {
 		// create the basic user and give it full rights
@@ -140,58 +130,32 @@ public class UserServiceTest extends BaseContextSensitiveTest {
 		assertTrue(user.hasRole("Some Role"));
 		
 		// do the actual creating of the user object
-		userService.saveUser(user, "password");
+		userService.saveUser(user, "Openmr5xy");
 		Assert.assertNotNull("User was not created", userService.getUser(user.getUserId()));
 		
-		shouldCreateUserWhoIsPatientAlreadyTestUserIdCreated = user.getUserId();
-	}
-	
-	/**
-	 * This method works in tandem with the {@link #shouldCreateUserWhoIsPatientAlready()} test. The @shouldCreateUserWhoIsPatientAlready
-	 * test is set to commit its transaction. This test then checks that the username, etc was
-	 * created correctly. This test deletes all data in the db at the end of it, so this transaction
-	 * needs to be marked as non-rollback. If it was not marked as such, then the db retains the
-	 * multiple users that we've added in these two tests and bad things could happen. (Namely, in
-	 * tests that expect there to be only one user in the database)
-	 * 
-	 * @throws Exception
-	 */
-	@Test
-	@SkipBaseSetup
-	@Rollback(false)
-	public void shouldCheckThatPatientUserWasCreatedSuccessfully() throws Exception {
-		// assumes that the previous test also skipped the base setup
-		// and so only has this limited setup
+		Integer shouldCreateUserWhoIsPatientAlreadyTestUserIdCreated = user.getUserId();
 		
-		try {
-			assertNotNull("This test should not be run without first running 'shouldCreateUserWhoIsPatient' test method",
-			    shouldCreateUserWhoIsPatientAlreadyTestUserIdCreated);
-			
-			UserService userService = Context.getUserService();
-			
-			// get the same user we just created and make sure the user portion exists
-			User fetchedUser = userService.getUser(shouldCreateUserWhoIsPatientAlreadyTestUserIdCreated);
-			User fetchedUser3 = userService.getUser(3);
-			if (fetchedUser3 != null)
-				throw new Exception("There is a user with id #3");
-			
-			assertNotNull("Uh oh, the user object was not created", fetchedUser);
-			assertNotNull("Uh oh, the username was not saved", fetchedUser.getUsername());
-			assertTrue("Uh oh, the username was not saved", fetchedUser.getUsername().equals("bwolfe"));
-			assertTrue("Uh oh, the role was not assigned", fetchedUser.hasRole("Some Role"));
-			
-			Context.clearSession();
-			
-			List<User> allUsers = userService.getAllUsers();
-			assertEquals(9, allUsers.size());
-			
-			// there should still only be the one patient we created in the xml file
-			Cohort allPatientsSet = Context.getPatientSetService().getAllPatients();
-			assertEquals(1, allPatientsSet.getSize());
-		}
-		finally {
-			deleteAllData();
-		}
+		Context.flushSession();
+		
+		// get the same user we just created and make sure the user portion exists
+		User fetchedUser = userService.getUser(shouldCreateUserWhoIsPatientAlreadyTestUserIdCreated);
+		User fetchedUser3 = userService.getUser(3);
+		if (fetchedUser3 != null)
+			throw new Exception("There is a user with id #3");
+		
+		assertNotNull("Uh oh, the user object was not created", fetchedUser);
+		assertNotNull("Uh oh, the username was not saved", fetchedUser.getUsername());
+		assertTrue("Uh oh, the username was not saved", fetchedUser.getUsername().equals("bwolfe"));
+		assertTrue("Uh oh, the role was not assigned", fetchedUser.hasRole("Some Role"));
+		
+		Context.clearSession();
+		
+		List<User> allUsers = userService.getAllUsers();
+		assertEquals(9, allUsers.size());
+		
+		// there should still only be the one patient we created in the xml file
+		Cohort allPatientsSet = Context.getPatientSetService().getAllPatients();
+		assertEquals(1, allPatientsSet.getSize());
 	}
 	
 	/**
@@ -1003,14 +967,13 @@ public class UserServiceTest extends BaseContextSensitiveTest {
 		Assert.assertNotNull(user.getRetiredBy());
 		Assert.assertEquals("because", user.getRetireReason());
 	}
-
+	
 	/**
-     * @see {@link UserService#unretireUser(User)}
-     * 
-     */
-    @Test
-    @Verifies(value = "should unretire and unmark all attributes", method = "unretireUser(User)")
-    public void unretireUser_shouldUnretireAndUnmarkAllAttributes() throws Exception {
+	 * @see {@link UserService#unretireUser(User)}
+	 */
+	@Test
+	@Verifies(value = "should unretire and unmark all attributes", method = "unretireUser(User)")
+	public void unretireUser_shouldUnretireAndUnmarkAllAttributes() throws Exception {
 		UserService userService = Context.getUserService();
 		User user = userService.getUser(501);
 		userService.unretireUser(user);
@@ -1018,5 +981,27 @@ public class UserServiceTest extends BaseContextSensitiveTest {
 		Assert.assertNull(user.getDateRetired());
 		Assert.assertNull(user.getRetiredBy());
 		Assert.assertNull(user.getRetireReason());
-	}	
+	}
+
+	/**
+	 * Test that user is not created with a weak password
+	 * 
+	 * @see {@link UserService#saveUser(User,String)}
+	 */
+	@Test(expected = PasswordException.class)
+	@Verifies(value = "fail to create the user with a weak password", method = "saveUser(User,String)")
+	public void saveUser_shouldFailToCreateTheUserWithAWeakPassword() throws Exception {
+		assertTrue("The context needs to be correctly authenticated to by a user", Context.isAuthenticated());
+		
+		UserService us = Context.getUserService();
+		
+		User u = new User();
+		u.setPerson(new Person());
+		
+		u.addName(new PersonName("Benjamin", "A", "Wolfe"));
+		u.setUsername("bwolfe");
+		u.getPerson().setGender("M");
+		
+		us.saveUser(u, "short");
+	}
 }

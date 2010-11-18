@@ -20,7 +20,7 @@
 			<td><openmrs_tag:concept conceptId="${conceptId}"/>:</td>
 			<td>
 				<b>
-				<openmrs_tag:mostRecentObs concept="${conceptId}" observations="${model.patientObs}" locale="${model.locale}" labelIfNone="general.none" showDate="true"/>
+				<openmrs_tag:mostRecentObs concept="${conceptId}" observations="${model.patientObs}" locale="${model.locale}" labelIfNone="general.none" showDate="true" showEditLink="true"/>
 				</b>
 			</td>
 			<c:if test="${allowNew}">
@@ -34,10 +34,10 @@
 				
 				<c:choose>
 					<c:when test="${thisConcept.datatype.hl7Abbreviation == 'DT'}">		
-				 		<input type="text" size="10" value="" onClick="showCalendar(this)" id="value_${conceptId}" />
+				 		<openmrs:format conceptId="${conceptId}"/><input type="text" size="10" value="" onClick="showCalendar(this)" id="value_${conceptId}" />
 					</c:when>
 					<c:otherwise>
-						<input type="text" id="value_${conceptId}"/>	
+						<openmrs:format conceptId="${conceptId}"/><input type="text" id="value_${conceptId}"/>	
 					</c:otherwise>
 				</c:choose>	
 				

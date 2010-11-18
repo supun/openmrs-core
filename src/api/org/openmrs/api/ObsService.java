@@ -20,6 +20,7 @@ import java.util.Set;
 
 import org.openmrs.Cohort;
 import org.openmrs.Concept;
+import org.openmrs.ConceptName;
 import org.openmrs.Encounter;
 import org.openmrs.Location;
 import org.openmrs.MimeType;
@@ -57,18 +58,21 @@ public interface ObsService extends OpenmrsService {
 	 * @see org.openmrs.util.OpenmrsConstants
 	 * @deprecated Use org.openmrs.util.OpenmrsConstants#PERSON_TYPE.PATIENT
 	 */
+	@Deprecated
 	public static final Integer PERSON = 1;
 	
 	/**
 	 * @see org.openmrs.util.OpenmrsConstants
 	 * @deprecated Use OpenmrsConstants#PERSON_TYPE.PATIENT
 	 */
+	@Deprecated
 	public static final Integer PATIENT = 2;
 	
 	/**
 	 * @see org.openmrs.util.OpenmrsConstants
 	 * @deprecated Use OpenmrsConstants.PERSON_TYPE.USER
 	 */
+	@Deprecated
 	public static final Integer USER = 4;
 	
 	/**
@@ -86,6 +90,7 @@ public interface ObsService extends OpenmrsService {
 	 * @throws APIException
 	 * @deprecated use {@link #saveObs(Obs, String)}
 	 */
+	@Deprecated
 	@Authorized(OpenmrsConstants.PRIV_ADD_OBS)
 	public void createObs(Obs obs) throws APIException;
 	
@@ -107,6 +112,7 @@ public interface ObsService extends OpenmrsService {
 	 *             temporary until we created a true ObsGroup pojo. Replaced by
 	 *             {@link #saveObs(Obs, String)}
 	 */
+	@Deprecated
 	@Authorized(OpenmrsConstants.PRIV_ADD_OBS)
 	public void createObsGroup(Obs[] obs) throws APIException;
 	
@@ -128,9 +134,10 @@ public interface ObsService extends OpenmrsService {
 	 * @param uuid
 	 * @return
 	 * @should find object given valid uuid
-	 * @should return null if no object found with given uuid 
+	 * @should return null if no object found with given uuid
 	 */
 	@Transactional(readOnly = true)
+	@Authorized(OpenmrsConstants.PRIV_VIEW_OBS)
 	public Obs getObsByUuid(String uuid) throws APIException;
 	
 	/**
@@ -140,6 +147,7 @@ public interface ObsService extends OpenmrsService {
 	 * @throws APIException
 	 * @deprecated use {@link #saveObs(Obs, String)}
 	 */
+	@Deprecated
 	@Authorized(OpenmrsConstants.PRIV_EDIT_OBS)
 	public void updateObs(Obs obs) throws APIException;
 	
@@ -202,6 +210,7 @@ public interface ObsService extends OpenmrsService {
 	 * @throws APIException
 	 * @deprecated use #purgeObs(Obs)
 	 */
+	@Deprecated
 	@Authorized(OpenmrsConstants.PRIV_DELETE_OBS)
 	public void deleteObs(Obs obs) throws APIException;
 	
@@ -237,6 +246,7 @@ public interface ObsService extends OpenmrsService {
 	/**
 	 * @deprecated use {@link #getAllMimeTypes()}
 	 */
+	@Deprecated
 	@Transactional(readOnly = true)
 	@Authorized(OpenmrsConstants.PRIV_VIEW_MIME_TYPES)
 	public List<MimeType> getMimeTypes() throws APIException;
@@ -249,6 +259,7 @@ public interface ObsService extends OpenmrsService {
 	 * @throws APIException
 	 * @deprecated MimeTypes are no longer used. See ConceptComplex and its use of handlers
 	 */
+	@Deprecated
 	@Authorized(OpenmrsConstants.PRIV_VIEW_MIME_TYPES)
 	public List<MimeType> getAllMimeTypes() throws APIException;
 	
@@ -260,6 +271,7 @@ public interface ObsService extends OpenmrsService {
 	 * @throws APIException
 	 * @deprecated MimeTypes are no longer used. See ConceptComplex and its use of handlers
 	 */
+	@Deprecated
 	@Authorized(OpenmrsConstants.PRIV_VIEW_MIME_TYPES)
 	public List<MimeType> getAllMimeTypes(boolean includeRetired) throws APIException;
 	
@@ -271,6 +283,7 @@ public interface ObsService extends OpenmrsService {
 	 * @throws APIException
 	 * @deprecated MimeTypes are no longer used. See ConceptComplex and its use of handlers
 	 */
+	@Deprecated
 	@Transactional(readOnly = true)
 	@Authorized(OpenmrsConstants.PRIV_VIEW_MIME_TYPES)
 	public MimeType getMimeType(Integer mimeTypeId) throws APIException;
@@ -284,6 +297,7 @@ public interface ObsService extends OpenmrsService {
 	 * @throws APIException
 	 * @deprecated MimeTypes are no longer used. See ConceptComplex and its use of handlers
 	 */
+	@Deprecated
 	@Authorized(OpenmrsConstants.PRIV_MANAGE_MIME_TYPES)
 	public MimeType saveMimeType(MimeType mimeType) throws APIException;
 	
@@ -298,6 +312,7 @@ public interface ObsService extends OpenmrsService {
 	 * @see #createObs(Obs)
 	 * @deprecated MimeTypes are no longer used. See ConceptComplex and its use of handlers
 	 */
+	@Deprecated
 	@Authorized(OpenmrsConstants.PRIV_MANAGE_MIME_TYPES)
 	public MimeType voidMimeType(MimeType mimeType, String reason) throws APIException;
 	
@@ -311,12 +326,14 @@ public interface ObsService extends OpenmrsService {
 	 * @deprecated MimeTypes are no longer used. See {@link org.openmrs.ConceptComplex} and its use
 	 *             of handlers
 	 */
+	@Deprecated
 	@Authorized(OpenmrsConstants.PRIV_PURGE_MIME_TYPES)
 	public void purgeMimeType(MimeType mimeType) throws APIException;
 	
 	/**
 	 * @deprecated use {@link #getObservationsByPerson(Person)}
 	 */
+	@Deprecated
 	@Transactional(readOnly = true)
 	@Authorized(OpenmrsConstants.PRIV_VIEW_OBS)
 	public Set<Obs> getObservations(Person who, boolean includeVoided);
@@ -387,6 +404,53 @@ public interface ObsService extends OpenmrsService {
 	                                 boolean includeVoidedObs) throws APIException;
 	
 	/**
+	 * This method fetches the count of observations according to the criteria in the given
+	 * arguments. All arguments are optional and nullable. If more than one argument is non-null,
+	 * the result is equivalent to an "and"ing of the arguments. (e.g. if both a
+	 * <code>location</code> and a <code>fromDate</code> are given, only Obs that are <u>both</u> at
+	 * that Location and after the fromDate are returned). <br/>
+	 * <br/>
+	 * Note: If <code>whom</code> has elements, <code>personType</code> is ignored <br/>
+	 * <br/>
+	 * Note: to get all observations count on a certain date, use:<br/>
+	 * Date fromDate = "2009-08-15";<br/>
+	 * Date toDate = OpenmrsUtil.lastSecondOfDate(fromDate); List<Obs> obs = getObservations(....,
+	 * fromDate, toDate, ...);
+	 * 
+	 * @param whom List<Person> to restrict obs to (optional)
+	 * @param encounters List<Encounter> to restrict obs to (optional)
+	 * @param questions List<Concept> to restrict the obs to (optional)
+	 * @param answers List<Concept> to restrict the valueCoded to (optional)
+	 * @param personTypes List<PERSON_TYPE> objects to restrict this to. Only used if
+	 *            <code>whom</code> is an empty list (optional)
+	 * @param locations The org.openmrs.Location objects to restrict to (optional) obsDatetime
+	 *            (optional)
+	 * @param obsGroupId the Obs.getObsGroupId() to this integer (optional)
+	 * @param fromDate the earliest Obs date to get (optional)
+	 * @param toDate the latest Obs date to get (optional)
+	 * @param includeVoidedObs true/false whether to also include the voided obs (required)
+	 * @return list of Observations that match all of the criteria given in the arguments
+	 * @throws APIException
+	 * @should compare dates using lte and gte
+	 * @should get the count of all obs assigned to given encounters
+	 * @should get the count of all obs with question concept in given questions parameter
+	 * @should get the count of all obs with answer concept in given answers parameter
+	 * @should return the count of all obs whose person is a person only
+	 * @should return the count of all obs whose person is a patient only
+	 * @should return the count of obs whose person is a user only
+	 * @should return the count of obs with location in given locations parameter
+	 * @should return the count of obs whose groupId is given obsGroupId
+	 * @should not include count of voided obs
+	 * @should include count of voided obs if includeVoidedObs is true
+	 */
+	@Transactional(readOnly = true)
+	@Authorized(OpenmrsConstants.PRIV_VIEW_OBS)
+	public Integer getObservationCount(List<Person> whom, List<Encounter> encounters, List<Concept> questions,
+	                                   List<Concept> answers, List<PERSON_TYPE> personTypes, List<Location> locations,
+	                                   Integer obsGroupId, Date fromDate, Date toDate, boolean includeVoidedObs)
+	                                                                                                            throws APIException;
+	
+	/**
 	 * This method searches the obs table based on the given <code>searchString</code>.
 	 * 
 	 * @param searchString The string to search on
@@ -404,6 +468,7 @@ public interface ObsService extends OpenmrsService {
 	 * @deprecated use
 	 *             {@link #getObservations(List, List, List, List, List, List, List, Integer, Integer, Date, Date, boolean)}
 	 */
+	@Deprecated
 	@Transactional(readOnly = true)
 	@Authorized(OpenmrsConstants.PRIV_VIEW_OBS)
 	public List<Obs> getObservations(Concept c, Location loc, String sort, Integer personType, boolean includeVoided);
@@ -411,6 +476,7 @@ public interface ObsService extends OpenmrsService {
 	/**
 	 * @deprecated use {@link #getObservationsByPersonAndConcept(Person, Concept)}
 	 */
+	@Deprecated
 	@Transactional(readOnly = true)
 	@Authorized(OpenmrsConstants.PRIV_VIEW_OBS)
 	public Set<Obs> getObservations(Person who, Concept question, boolean includeVoided);
@@ -436,6 +502,7 @@ public interface ObsService extends OpenmrsService {
 	 * @deprecated use
 	 *             {@link #getObservations(List, List, List, List, List, List, List, Integer, Integer, Date, Date, boolean)}
 	 */
+	@Deprecated
 	@Transactional(readOnly = true)
 	@Authorized(OpenmrsConstants.PRIV_VIEW_OBS)
 	public List<Obs> getLastNObservations(Integer n, Person who, Concept question, boolean includeVoided);
@@ -444,6 +511,7 @@ public interface ObsService extends OpenmrsService {
 	 * @deprecated use
 	 *             {@link #getObservations(List, List, List, List, List, List, List, Integer, Integer, Date, Date, boolean)}
 	 */
+	@Deprecated
 	@Transactional(readOnly = true)
 	@Authorized(OpenmrsConstants.PRIV_VIEW_OBS)
 	public List<Obs> getObservations(Concept question, String sort, Integer personType, boolean includeVoided);
@@ -452,6 +520,7 @@ public interface ObsService extends OpenmrsService {
 	 * @deprecated use
 	 *             {@link #getObservations(List, List, List, List, List, List, List, Integer, Integer, Date, Date, boolean)}
 	 */
+	@Deprecated
 	@Transactional(readOnly = true)
 	@Authorized(OpenmrsConstants.PRIV_VIEW_OBS)
 	public List<Obs> getObservationsAnsweredByConcept(Concept answer, Integer personType, boolean includeVoided);
@@ -468,6 +537,7 @@ public interface ObsService extends OpenmrsService {
 	 * @return List<Object[]> [0]=<code>obsId</code>, [1]=<code>obsDatetime</code>, [2]=
 	 *         <code>valueNumeric</code>s
 	 **/
+	@Deprecated
 	@Transactional(readOnly = true)
 	@Authorized(OpenmrsConstants.PRIV_VIEW_OBS)
 	public List<Object[]> getNumericAnswersForConcept(Concept answer, Boolean sortByValue, Integer personType,
@@ -476,6 +546,7 @@ public interface ObsService extends OpenmrsService {
 	/**
 	 * @deprecated use {@link org.openmrs#Encounter.getObservations()}
 	 */
+	@Deprecated
 	@Transactional(readOnly = true)
 	@Authorized(OpenmrsConstants.PRIV_VIEW_OBS)
 	public Set<Obs> getObservations(Encounter whichEncounter);
@@ -484,6 +555,7 @@ public interface ObsService extends OpenmrsService {
 	 * @deprecated use
 	 *             {@link #getObservations(List, List, List, List, List, List, List, Integer, Integer, Date, Date, boolean)}
 	 */
+	@Deprecated
 	@Transactional(readOnly = true)
 	@Authorized(OpenmrsConstants.PRIV_VIEW_OBS)
 	public List<Obs> getVoidedObservations();
@@ -491,6 +563,7 @@ public interface ObsService extends OpenmrsService {
 	/**
 	 * @deprecated use {@link #getObservations(String)}
 	 */
+	@Deprecated
 	@Transactional(readOnly = true)
 	@Authorized(OpenmrsConstants.PRIV_VIEW_OBS)
 	public List<Obs> findObservations(String search, boolean includeVoided, Integer personType);
@@ -499,6 +572,7 @@ public interface ObsService extends OpenmrsService {
 	 * @deprecated should use {@link Obs#getGroupMembers()} or
 	 *             {@link #getObservations(List, List, List, List, List, List, List, Integer, Integer, Date, Date, boolean)}
 	 */
+	@Deprecated
 	@Transactional(readOnly = true)
 	@Authorized(OpenmrsConstants.PRIV_VIEW_OBS)
 	public List<Obs> findObsByGroupId(Integer obsGroupId);
@@ -507,6 +581,7 @@ public interface ObsService extends OpenmrsService {
 	 * @deprecated use
 	 *             {@link #getObservations(List, List, List, List, List, List, List, Integer, Integer, Date, Date, boolean)}
 	 */
+	@Deprecated
 	@Transactional(readOnly = true)
 	@Authorized(OpenmrsConstants.PRIV_VIEW_OBS)
 	public List<Obs> getObservations(List<Concept> concepts, Date fromDate, Date toDate, boolean includeVoided);
@@ -515,6 +590,7 @@ public interface ObsService extends OpenmrsService {
 	 * @deprecated use
 	 *             {@link #getObservations(List, List, List, List, List, List, List, Integer, Integer, Date, Date, boolean)}
 	 */
+	@Deprecated
 	@Transactional(readOnly = true)
 	@Authorized(OpenmrsConstants.PRIV_VIEW_OBS)
 	public List<Obs> getObservations(List<Concept> concepts, Date fromDate, Date toDate);
@@ -523,6 +599,7 @@ public interface ObsService extends OpenmrsService {
 	 * @deprecated use
 	 *             {@link #getObservations(List, List, List, List, List, List, List, Integer, Integer, Date, Date, boolean)}
 	 */
+	@Deprecated
 	@Transactional(readOnly = true)
 	@Authorized(OpenmrsConstants.PRIV_VIEW_OBS)
 	public List<Obs> getObservations(Cohort patients, List<Concept> concepts, Date fromDate, Date toDate);
@@ -615,4 +692,19 @@ public interface ObsService extends OpenmrsService {
 	 */
 	public void removeHandler(String key) throws APIException;
 	
+	/**
+	 * Gets the number of observations(including voided ones) that are using the specified
+	 * conceptNames as valueCodedName answers
+	 * 
+	 * @param conceptNames the conceptNames to be searched against
+	 * @param includeVoided whether voided observation should be included
+	 * @return The number of observations using the specified conceptNames as valueCodedNames
+	 * @should return the count of all observations using the specified conceptNames as answers
+	 * @should include voided observations using the specified conceptNames as answers
+	 * @should return zero if no observation is using any of the concepNames in the list
+	 * @since Version 1.7
+	 */
+	@Transactional(readOnly = true)
+	@Authorized(OpenmrsConstants.PRIV_VIEW_OBS)
+	public Integer getObservationCount(List<ConceptName> conceptNames, boolean includeVoided);
 }
