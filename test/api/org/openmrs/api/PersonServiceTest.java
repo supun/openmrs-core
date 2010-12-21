@@ -166,6 +166,11 @@ public class PersonServiceTest extends BaseContextSensitiveTest {
 		PersonName pname = Context.getPersonService().parsePersonName("Doe, John");
 		assertEquals("Doe", pname.getFamilyName());
 		assertEquals("John", pname.getGivenName());
+		
+		// try without a space
+		pname = Context.getPersonService().parsePersonName("Doe,John");
+		assertEquals("Doe", pname.getFamilyName());
+		assertEquals("John", pname.getGivenName());
 	}
 	
 	/**
@@ -1259,6 +1264,38 @@ public class PersonServiceTest extends BaseContextSensitiveTest {
 		Assert.assertNull(Context.getPersonService().getRelationshipTypeByUuid("some invalid uuid"));
 	}
 
+	/**
+	 * @see PersonService#parsePersonName(String)
+	 * @verifies not fail when ending with whitespace
+	 */
+	@Test
+	public void parsePersonName_shouldNotFailWhenEndingWithWhitespace() throws Exception {
+		PersonName pname = Context.getPersonService().parsePersonName("John ");
+		assertEquals("John", pname.getGivenName());
+	}
 
+	/**
+	 * @see PersonService#parsePersonName(String)
+	 * @verifies not fail when ending with a comma
+	 */
+	@Test
+	public void parsePersonName_shouldNotFailWhenEndingWithAComma() throws Exception {
+		PersonName pname = Context.getPersonService().parsePersonName("John,");
+		assertEquals("John", pname.getGivenName());
+		
+	}
+
+	/**
+	 * @see PersonService#parsePersonName(String)
+	 * @verifies parse four person name
+	 */
+	@Test
+	public void parsePersonName_shouldParseFourPersonName() throws Exception {
+		PersonName pname = Context.getPersonService().parsePersonName("John David Alex Smith");
+		assertEquals("John", pname.getGivenName());
+		assertEquals("David", pname.getMiddleName());
+		assertEquals("Alex", pname.getFamilyName());
+		assertEquals("Smith", pname.getFamilyName2());
+	}
 
 }

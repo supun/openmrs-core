@@ -89,7 +89,7 @@ public class LoginServlet extends HttpServlet {
 			        + GP_ALLOWED_LOGIN_ATTEMPTS_PER_IP + " as an integer");
 		}
 		
-		// allowing for configurable login attempts here in case network setups are such that all users have the same IP address. 
+		// allowing for configurable login attempts here in case network setups are such that all users have the same IP address.
 		if (allowedLockoutAttempts > 0 && loginAttempts > allowedLockoutAttempts) {
 			lockedOut = true;
 			
@@ -184,7 +184,7 @@ public class LoginServlet extends HttpServlet {
 			
 		}
 		
-		// send the user back the login page because they either 
+		// send the user back the login page because they either
 		// had a bad password or are locked out
 		loginAttemptsByIP.put(ipAddress, loginAttempts);
 		httpSession.setAttribute(WebConstants.OPENMRS_LOGIN_REDIRECT_HTTPSESSION_ATTR, redirect);
@@ -204,11 +204,18 @@ public class LoginServlet extends HttpServlet {
 		// second option for redirecting is the referrer parameter set at login.jsp
 		if (redirect == null || redirect.equals("")) {
 			redirect = request.getParameter("refererURL");
-			if (redirect != null) {
-				// checking for a redirect like /openmrs/openmrs (for some reason)
-				int index = redirect.indexOf(request.getContextPath(), 2);
-				if (index != -1)
-					redirect = redirect.substring(index);
+			if (redirect != null && !redirect.startsWith("/")) {
+				// if we have an absolute url, make sure its in our domain
+				Integer requestURLLength = request.getRequestURL().length();
+				StringBuffer domainAndPort = request.getRequestURL();
+				domainAndPort.delete(requestURLLength - request.getRequestURI().length(), requestURLLength);
+				if (!redirect.startsWith(domainAndPort.toString()))
+					redirect = null; // send them to the homepage
+				else {
+					// now cut out everything but the path
+					// get the first slash after https:// or http://
+					redirect = redirect.substring(redirect.indexOf("/", 9));
+				}
 			}
 		}
 		
@@ -237,8 +244,7 @@ public class LoginServlet extends HttpServlet {
 
 		else if (redirect.contains("/options.form") || redirect.contains("/changePassword.form")
 		        || redirect.contains("/forgotPassword.form")) {
-			log
-			        .debug("The user was on a page for setting/changing passwords. Send them to the homepage to reduce confusion");
+			log.debug("The user was on a page for setting/changing passwords. Send them to the homepage to reduce confusion");
 			redirect = request.getContextPath();
 		}
 		
