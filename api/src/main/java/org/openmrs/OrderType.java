@@ -16,8 +16,10 @@ package org.openmrs;
 /**
  * OrderType
  * 
+ * @deprecated Will be removed in version 1.10
  * @see Order
  */
+@Deprecated
 public class OrderType extends BaseOpenmrsMetadata implements java.io.Serializable {
 	
 	public static final long serialVersionUID = 23232L;
@@ -47,27 +49,6 @@ public class OrderType extends BaseOpenmrsMetadata implements java.io.Serializab
 	public OrderType(String name, String description) {
 		setName(name);
 		setDescription(description);
-	}
-	
-	/**
-	 * @see java.lang.Object#equals(java.lang.Object)
-	 */
-	public boolean equals(Object obj) {
-		if (obj instanceof OrderType) {
-			OrderType o = (OrderType) obj;
-			if (o != null)
-				return (getOrderTypeId().equals(o.getOrderTypeId()));
-		}
-		return false;
-	}
-	
-	/**
-	 * @see java.lang.Object#hashCode()
-	 */
-	public int hashCode() {
-		if (this.getOrderTypeId() == null)
-			return super.hashCode();
-		return this.getOrderTypeId().hashCode();
 	}
 	
 	// Property accessors

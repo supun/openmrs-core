@@ -15,7 +15,6 @@ package org.openmrs.web.test;
 
 import org.openmrs.test.BaseContextSensitiveTest;
 import org.springframework.test.context.ContextConfiguration;
-import org.springframework.test.context.TestExecutionListeners;
 
 /**
  * Web tests for controllers, etc should use this class instead of the general
@@ -23,7 +22,8 @@ import org.springframework.test.context.TestExecutionListeners;
  * openmrs-servlet.xml context file to the config locations so that controller tests can pick up the
  * right type of controller, etc.
  */
-@ContextConfiguration(locations = { "classpath:openmrs-servlet.xml" }, inheritLocations = true)
+// put refernce to openmrs-servlet in the parent class to make this class really do nothing
+//@ContextConfiguration(locations = { "classpath:openmrs-servlet.xml" }, inheritLocations = true)
 public abstract class BaseWebContextSensitiveTest extends BaseContextSensitiveTest {
 
 }

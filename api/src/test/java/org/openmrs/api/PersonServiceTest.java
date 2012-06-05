@@ -15,13 +15,17 @@ package org.openmrs.api;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
+import static org.junit.Assert.fail;
+import static org.openmrs.test.TestUtil.containsId;
 
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.Vector;
 
 import org.junit.Assert;
 import org.junit.Before;
@@ -40,7 +44,10 @@ import org.openmrs.Relationship;
 import org.openmrs.RelationshipType;
 import org.openmrs.User;
 import org.openmrs.api.context.Context;
+import org.openmrs.person.PersonMergeLog;
+import org.openmrs.person.PersonMergeLogData;
 import org.openmrs.test.BaseContextSensitiveTest;
+import org.openmrs.test.TestUtil;
 import org.openmrs.test.Verifies;
 import org.openmrs.util.OpenmrsConstants;
 
@@ -53,6 +60,8 @@ public class PersonServiceTest extends BaseContextSensitiveTest {
 	protected static final String CREATE_PATIENT_XML = "org/openmrs/api/include/PatientServiceTest-createPatient.xml";
 	
 	protected static final String CREATE_RELATIONSHIP_XML = "org/openmrs/api/include/PersonServiceTest-createRelationship.xml";
+	
+	protected static final DateFormat df = new SimpleDateFormat("yyyy-MM-dd");
 	
 	protected PatientService ps = null;
 	
@@ -82,8 +91,88 @@ public class PersonServiceTest extends BaseContextSensitiveTest {
 		executeDataSet(CREATE_PATIENT_XML);
 		executeDataSet(CREATE_RELATIONSHIP_XML);
 		
-		// TODO use xml imported in BaseContextSensitiveTest#baseSetupWithStandardDataAndAuthentication()
-		// Create Patient#3.
+		Patient p1 = ps.getPatient(6);
+		Patient p2 = ps.getPatient(8);
+		
+		// Create a sibling relationship between o1 and p2
+		Relationship sibling = new Relationship();
+		sibling.setPersonA(p1);
+		sibling.setPersonB(p2);
+		sibling.setRelationshipType(personService.getRelationshipType(4));
+		personService.saveRelationship(sibling);
+		
+		// Make p2 the Doctor of p1.
+		Relationship doctor = new Relationship();
+		doctor.setPersonB(p1);
+		doctor.setPersonA(p2);
+		doctor.setRelationshipType(personService.getRelationshipType(3));
+		personService.saveRelationship(doctor);
+		
+		// Void all relationships.
+		List<Relationship> allRels = personService.getAllRelationships();
+		for (Relationship r : allRels) {
+			personService.voidRelationship(r, "Because of a JUnit test.");
+		}
+		
+		List<Relationship> updatedARels = personService.getRelationshipsByPerson(p1);
+		List<Relationship> updatedBRels = personService.getRelationshipsByPerson(p2);
+		
+		// Neither p1 or p2 should have any relationships now.
+		assertEquals(0, updatedARels.size());
+		assertEquals(updatedARels, updatedBRels);
+	}
+	
+	/**
+	 * Tests a voided relationship between personA and Person B to see if it is still listed when
+	 * retrieving unvoided relationships for personA and if it is still listed when retrieving
+	 * unvoided relationships for personB.
+	 * 
+	 * @see {@link PersonService#getRelationshipsByPerson(Person,Date)}
+	 */
+	@Test
+	@Verifies(value = "should only get unvoided relationships regardless of effective date", method = "getRelationshipsByPerson(Person,Date)")
+	public void getRelationshipsByPerson_shouldOnlyGetUnvoidedRelationshipsRegardlessOfEffectiveDate() throws Exception {
+		executeDataSet(CREATE_PATIENT_XML);
+		executeDataSet(CREATE_RELATIONSHIP_XML);
+		
+		Patient p1 = ps.getPatient(6);
+		Patient p2 = ps.getPatient(8);
+		
+		// Create a sibling relationship between o1 and p2
+		Relationship sibling = new Relationship();
+		sibling.setPersonA(p1);
+		sibling.setPersonB(p2);
+		sibling.setRelationshipType(personService.getRelationshipType(4));
+		personService.saveRelationship(sibling);
+		
+		// Make p2 the Doctor of p1.
+		Relationship doctor = new Relationship();
+		doctor.setPersonB(p1);
+		doctor.setPersonA(p2);
+		doctor.setRelationshipType(personService.getRelationshipType(3));
+		personService.saveRelationship(doctor);
+		
+		// Void all relationships.
+		List<Relationship> allRels = personService.getAllRelationships();
+		for (Relationship r : allRels) {
+			personService.voidRelationship(r, "Because of a JUnit test.");
+		}
+		
+		// Get unvoided relationships after voiding all of them.
+		// (specified date should not matter as no relationships have date specified)
+		
+		List<Relationship> updatedARels = personService.getRelationshipsByPerson(p1, new Date());
+		List<Relationship> updatedBRels = personService.getRelationshipsByPerson(p2, new Date());
+		
+		// Neither p1 or p2 should have any relationships now.
+		assertEquals(0, updatedARels.size());
+		assertEquals(updatedARels, updatedBRels);
+	}
+	
+	/*
+	 * Helper to create patient that does not have any existing relationships. Returns created Patient.
+	 */
+	private Patient createTestPatient() {
 		Patient patient = new Patient();
 		PersonName pName = new PersonName();
 		pName.setGivenName("Tom");
@@ -109,52 +198,144 @@ public class PersonServiceTest extends BaseContextSensitiveTest {
 		patientIdentifier.setIdentifier("123-0");
 		patientIdentifier.setIdentifierType(patientIdTypes.get(0));
 		patientIdentifier.setLocation(new Location(1));
+		patientIdentifier.setPreferred(true);
 		Set<PatientIdentifier> patientIdentifiers = new TreeSet<PatientIdentifier>();
 		patientIdentifiers.add(patientIdentifier);
 		patient.setIdentifiers(patientIdentifiers);
 		ps.savePatient(patient);
+		return patient;
+	}
+	
+	/*
+	 * Helper to create relationships with start and/or endDate. Returns a List of the relationships created.
+	 */
+	private List<Relationship> createTestDatedRelationships(Person personA, Person personB, RelationshipType rt)
+	        throws Exception {
+		List<Relationship> rels = new Vector<Relationship>();
 		
-		// Create a sibling relationship between Patient#2 and Patient#3
-		Relationship sibling = new Relationship();
-		sibling.setPersonA(ps.getPatient(2));
-		sibling.setPersonB(patient);
-		sibling.setRelationshipType(personService.getRelationshipType(4));
-		// relationship.setCreator(Context.getUserService().getUser(1));
-		personService.saveRelationship(sibling);
+		// Start & end dates
+		Relationship r = new Relationship(); // 0
+		r.setPersonA(personA);
+		r.setPersonB(personB);
+		r.setRelationshipType(rt);
+		r.setStartDate(df.parse("1980-01-01"));
+		r.setEndDate(df.parse("2010-01-01"));
+		personService.saveRelationship(r);
+		rels.add(r);
 		
-		// Make Patient#3 the Doctor of Patient#2.
-		Relationship doctor = new Relationship();
-		doctor.setPersonB(ps.getPatient(2));
-		doctor.setPersonA(patient);
-		doctor.setRelationshipType(personService.getRelationshipType(3));
-		personService.saveRelationship(doctor);
+		r = new Relationship(); // 1
+		r.setPersonA(personA);
+		r.setPersonB(personB);
+		r.setRelationshipType(rt);
+		r.setStartDate(df.parse("1990-01-01"));
+		r.setEndDate(df.parse("2010-01-01"));
+		personService.saveRelationship(r);
+		rels.add(r);
 		
-		// Get unvoided relationships before voiding any.
-		Person p = personService.getPerson(2);
+		r = new Relationship(); // 2
+		r.setPersonA(personA);
+		r.setPersonB(personB);
+		r.setRelationshipType(rt);
+		r.setStartDate(df.parse("1980-01-01"));
+		r.setEndDate(df.parse("1990-01-01"));
+		personService.saveRelationship(r);
+		rels.add(r);
 		
-		//test loading relationship types real quick.
-		List<RelationshipType> rTmp = personService.getAllRelationshipTypes();
-		assertNotNull(rTmp);
-		RelationshipType rTypeTmp = personService.getRelationshipTypeByName("Doctor/Patient");
-		assertNotNull(rTypeTmp);
-		rTypeTmp = personService.getRelationshipTypeByName("booya");
-		assertNull(rTypeTmp);
+		// Only start dates
+		r = new Relationship(); // 3
+		r.setPersonA(personA);
+		r.setPersonB(personB);
+		r.setRelationshipType(rt);
+		r.setStartDate(df.parse("1980-01-01"));
+		personService.saveRelationship(r);
+		rels.add(r);
 		
-		// Void all relationships.
-		List<Relationship> allRels = personService.getAllRelationships();
-		for (Relationship r : allRels) {
-			personService.voidRelationship(r, "Because of a JUnit test.");
+		r = new Relationship(); // 4
+		r.setPersonA(personA);
+		r.setPersonB(personB);
+		r.setRelationshipType(rt);
+		r.setStartDate(df.parse("1990-01-01"));
+		personService.saveRelationship(r);
+		rels.add(r);
+		
+		r = new Relationship(); // 5
+		r.setPersonA(personA);
+		r.setPersonB(personB);
+		r.setRelationshipType(rt);
+		r.setStartDate(df.parse("2010-01-01"));
+		personService.saveRelationship(r);
+		rels.add(r);
+		
+		// Only end dates
+		r = new Relationship(); // 6
+		r.setPersonA(personA);
+		r.setPersonB(personB);
+		r.setRelationshipType(rt);
+		r.setEndDate(df.parse("1980-01-01"));
+		personService.saveRelationship(r);
+		rels.add(r);
+		
+		r = new Relationship(); // 7
+		r.setPersonA(personA);
+		r.setPersonB(personB);
+		r.setRelationshipType(rt);
+		r.setEndDate(df.parse("1990-01-01"));
+		personService.saveRelationship(r);
+		rels.add(r);
+		
+		r = new Relationship(); // 8
+		r.setPersonA(personA);
+		r.setPersonB(personB);
+		r.setRelationshipType(rt);
+		r.setEndDate(df.parse("2010-01-01"));
+		personService.saveRelationship(r);
+		rels.add(r);
+		
+		return rels;
+	}
+	
+	/**
+	 * Creates several relationships. Tests that a relationship is returned only when the effective
+	 * date is as follows: - for relationships with both a start date and an end date, the effective
+	 * date falls between the start and end dates; - for relationships with only a start date, the
+	 * effective date falls after the start date; - for relationships with only an end date, the
+	 * effective date falls before the end date; - relationship with neither a start nor end date
+	 * are always returned.
+	 * 
+	 * @see {@link PersonService#getRelationshipsByPerson(Person,Date)}
+	 */
+	@Test
+	@Verifies(value = "fetch relationships that were active during effectiveDate", method = "getRelationshipsByPerson(Person,Date)")
+	public void getRelationshipsByPerson_shouldFetchRelationshipsThatWereActiveDuringEffectiveDate() throws Exception {
+		executeDataSet(CREATE_PATIENT_XML);
+		executeDataSet(CREATE_RELATIONSHIP_XML);
+		
+		// TODO use xml imported in BaseContextSensitiveTest#baseSetupWithStandardDataAndAuthentication()
+		Patient patient = createTestPatient();
+		List<Relationship> rels = createTestDatedRelationships(ps.getPatient(2), patient, personService
+		        .getRelationshipType(4));
+		
+		// Get relationships effective 1988-01-01
+		List<Relationship> res = personService.getRelationshipsByPerson(patient, df.parse("1988-01-01"));
+		
+		// Verify # of results and which results we have received
+		assertEquals(5, res.size());
+		for (Relationship rr : res) {
+			if (!rr.equals(rels.get(0)) && !rr.equals(rels.get(2)) && !rr.equals(rels.get(3)) && !rr.equals(rels.get(7))
+			        && !rr.equals(rels.get(8))) {
+				if (rr.equals(rels.get(1))) {
+					fail("unexpected relationship 1 in results from getRelationshipsByPerson with effeciveDate of 1988-01-01");
+				} else if (rr.equals(rels.get(4))) {
+					fail("unexpected relationship 4 in results from getRelationshipsByPerson with effeciveDate of 1988-01-01");
+				} else if (rr.equals(rels.get(5))) {
+					fail("unexpected relationship 5 in results from getRelationshipsByPerson with effeciveDate of 1988-01-01");
+				} else if (rr.equals(rels.get(6))) {
+					fail("unexpected relationship 6 in results from getRelationshipsByPerson with effeciveDate of 1988-01-01");
+				} else {
+					fail("unrecognized unexpected relationship in results from getRelationshipsByPerson with effeciveDate of 1988-01-01");
+				}
+			}
 		}
-		
-		// TODO this is the actual test.  Cut this method down to just this
-		
-		// Get unvoided relationships after voiding all of them.
-		List<Relationship> updatedARels = personService.getRelationshipsByPerson(p);
-		List<Relationship> updatedBRels = personService.getRelationshipsByPerson(patient);
-		
-		// Neither Patient#2 or Patient#3 should have any relationships now.
-		assertEquals(0, updatedARels.size());
-		assertEquals(updatedARels, updatedBRels);
 	}
 	
 	/**
@@ -200,7 +381,7 @@ public class PersonServiceTest extends BaseContextSensitiveTest {
 		
 		service.savePersonAttributeType(pat);
 		
-		assertEquals(new User(1), pat.getCreator());
+		assertEquals(1, pat.getCreator().getId().intValue());
 		assertNotNull(pat.getDateCreated());
 	}
 	
@@ -219,7 +400,7 @@ public class PersonServiceTest extends BaseContextSensitiveTest {
 		// save the type again
 		service.savePersonAttributeType(pat);
 		
-		assertEquals(new User(1), pat.getChangedBy());
+		assertEquals(1, pat.getChangedBy().getId().intValue());
 		assertNotNull(pat.getDateChanged());
 	}
 	
@@ -265,8 +446,8 @@ public class PersonServiceTest extends BaseContextSensitiveTest {
 		executeDataSet("org/openmrs/api/include/PersonServiceTest-names.xml");
 		Set<Person> matches = Context.getPersonService().getSimilarPeople("Darius Graham Jazayeri Junior", 1979, "M");
 		Assert.assertEquals(2, matches.size());
-		Assert.assertTrue(matches.contains(new Person(1006)));
-		Assert.assertTrue(matches.contains(new Person(1007)));
+		Assert.assertTrue(containsId(matches, 1006));
+		Assert.assertTrue(containsId(matches, 1007));
 	}
 	
 	/**
@@ -278,15 +459,15 @@ public class PersonServiceTest extends BaseContextSensitiveTest {
 		executeDataSet("org/openmrs/api/include/PersonServiceTest-names.xml");
 		Set<Person> matches = Context.getPersonService().getSimilarPeople("Darius", 1979, "M");
 		Assert.assertEquals(9, matches.size());
-		Assert.assertTrue(matches.contains(new Person(1000)));
-		Assert.assertTrue(matches.contains(new Person(1001)));
-		Assert.assertTrue(matches.contains(new Person(1002)));
-		Assert.assertTrue(matches.contains(new Person(1003)));
-		Assert.assertTrue(matches.contains(new Person(1004)));
-		Assert.assertTrue(matches.contains(new Person(1005)));
-		Assert.assertTrue(matches.contains(new Person(1006)));
-		Assert.assertTrue(matches.contains(new Person(1007)));
-		Assert.assertTrue(matches.contains(new Person(1008)));
+		Assert.assertTrue(containsId(matches, 1000));
+		Assert.assertTrue(containsId(matches, 1001));
+		Assert.assertTrue(containsId(matches, 1002));
+		Assert.assertTrue(containsId(matches, 1003));
+		Assert.assertTrue(containsId(matches, 1004));
+		Assert.assertTrue(containsId(matches, 1005));
+		Assert.assertTrue(containsId(matches, 1006));
+		Assert.assertTrue(containsId(matches, 1007));
+		Assert.assertTrue(containsId(matches, 1008));
 	}
 	
 	/**
@@ -298,12 +479,12 @@ public class PersonServiceTest extends BaseContextSensitiveTest {
 		executeDataSet("org/openmrs/api/include/PersonServiceTest-names.xml");
 		Set<Person> matches = Context.getPersonService().getSimilarPeople("Darius Graham", 1979, "M");
 		Assert.assertEquals(6, matches.size());
-		Assert.assertTrue(matches.contains(new Person(1000)));
-		Assert.assertTrue(matches.contains(new Person(1003)));
-		Assert.assertTrue(matches.contains(new Person(1004)));
-		Assert.assertTrue(matches.contains(new Person(1005)));
-		Assert.assertTrue(matches.contains(new Person(1006)));
-		Assert.assertTrue(matches.contains(new Person(1007)));
+		Assert.assertTrue(containsId(matches, 1000));
+		Assert.assertTrue(containsId(matches, 1003));
+		Assert.assertTrue(containsId(matches, 1004));
+		Assert.assertTrue(containsId(matches, 1005));
+		Assert.assertTrue(containsId(matches, 1006));
+		Assert.assertTrue(containsId(matches, 1007));
 	}
 	
 	/**
@@ -315,9 +496,9 @@ public class PersonServiceTest extends BaseContextSensitiveTest {
 		executeDataSet("org/openmrs/api/include/PersonServiceTest-names.xml");
 		Set<Person> matches = Context.getPersonService().getSimilarPeople("Darius Graham Jazayeri", 1979, "M");
 		Assert.assertEquals(3, matches.size());
-		Assert.assertTrue(matches.contains(new Person(1003)));
-		Assert.assertTrue(matches.contains(new Person(1006)));
-		Assert.assertTrue(matches.contains(new Person(1007)));
+		Assert.assertTrue(containsId(matches, 1003));
+		Assert.assertTrue(containsId(matches, 1006));
+		Assert.assertTrue(containsId(matches, 1007));
 	}
 	
 	/**
@@ -330,9 +511,9 @@ public class PersonServiceTest extends BaseContextSensitiveTest {
 		
 		List<Person> people = Context.getPersonService().getPeople("Johnson", false);
 		Assert.assertEquals(3, people.size());
-		Assert.assertTrue(people.contains(new Patient(2)));
-		Assert.assertTrue(people.contains(new Patient(4)));
-		Assert.assertTrue(people.contains(new Patient(5)));
+		Assert.assertTrue(TestUtil.containsId(people, 2));
+		Assert.assertTrue(TestUtil.containsId(people, 4));
+		Assert.assertTrue(TestUtil.containsId(people, 5));
 	}
 	
 	/**
@@ -345,13 +526,12 @@ public class PersonServiceTest extends BaseContextSensitiveTest {
 		
 		Set<Person> people = Context.getPersonService().getSimilarPeople("Johnson", null, "M");
 		Assert.assertEquals(2, people.size());
-		Assert.assertTrue(people.contains(new Patient(2)));
-		Assert.assertTrue(people.contains(new Patient(4)));
+		Assert.assertTrue(TestUtil.containsId(people, 2));
+		Assert.assertTrue(TestUtil.containsId(people, 4));
 	}
 	
 	/**
 	 * @see {@link PersonService#getAllPersonAttributeTypes()}
-	 * 
 	 */
 	@Test
 	@Verifies(value = "should return all person attribute types including retired", method = "getAllPersonAttributeTypes()")
@@ -375,12 +555,11 @@ public class PersonServiceTest extends BaseContextSensitiveTest {
 	
 	/**
 	 * @see {@link PersonService#getAllPersonAttributeTypes(null)}
-	 * 
 	 */
 	@Test
 	@Verifies(value = "should return all person attribute types excluding retired when include retired is false", method = "getAllPersonAttributeTypes(null)")
 	public void getAllPersonAttributeTypes_shouldReturnAllPersonAttributeTypesExcludingRetiredWhenIncludeRetiredIsFalse()
-	                                                                                                                     throws Exception {
+	        throws Exception {
 		executeDataSet("org/openmrs/api/include/PersonServiceTest-createRetiredPersonAttributeType.xml");
 		
 		List<PersonAttributeType> attributeTypes = Context.getPersonService().getAllPersonAttributeTypes(false);
@@ -400,12 +579,11 @@ public class PersonServiceTest extends BaseContextSensitiveTest {
 	
 	/**
 	 * @see {@link PersonService#getAllPersonAttributeTypes(null)}
-	 * 
 	 */
 	@Test
 	@Verifies(value = "should return all person attribute types including retired when include retired is true", method = "getAllPersonAttributeTypes(null)")
 	public void getAllPersonAttributeTypes_shouldReturnAllPersonAttributeTypesIncludingRetiredWhenIncludeRetiredIsTrue()
-	                                                                                                                    throws Exception {
+	        throws Exception {
 		executeDataSet("org/openmrs/api/include/PersonServiceTest-createRetiredPersonAttributeType.xml");
 		
 		//TODO: is this the correct way? or should we loop to find a retired type and then perform the following?
@@ -426,7 +604,6 @@ public class PersonServiceTest extends BaseContextSensitiveTest {
 	
 	/**
 	 * @see {@link PersonService#getAllRelationships()}
-	 * 
 	 */
 	@Test
 	@Verifies(value = "should return all unvoided relationships", method = "getAllRelationships()")
@@ -451,7 +628,6 @@ public class PersonServiceTest extends BaseContextSensitiveTest {
 	
 	/**
 	 * @see {@link PersonService#getAllRelationships(null)}
-	 * 
 	 */
 	@Test
 	@Verifies(value = "should return all relationship including voided when include voided equals true", method = "getAllRelationships(null)")
@@ -476,12 +652,11 @@ public class PersonServiceTest extends BaseContextSensitiveTest {
 	
 	/**
 	 * @see {@link PersonService#getAllRelationships(null)}
-	 * 
 	 */
 	@Test
 	@Verifies(value = "should return all relationship excluding voided when include voided equals false", method = "getAllRelationships(null)")
 	public void getAllRelationships_shouldReturnAllRelationshipExcludingVoidedWhenIncludeVoidedEqualsFalse()
-	                                                                                                        throws Exception {
+	        throws Exception {
 		executeDataSet("org/openmrs/api/include/PersonServiceTest-createRetiredRelationship.xml");
 		
 		List<Relationship> relationships = Context.getPersonService().getAllRelationships(false);
@@ -502,7 +677,6 @@ public class PersonServiceTest extends BaseContextSensitiveTest {
 	
 	/**
 	 * @see {@link PersonService#getAllRelationshipTypes()}
-	 * 
 	 */
 	@Test
 	@Verifies(value = "should return all relationship types", method = "getAllRelationshipTypes()")
@@ -515,7 +689,6 @@ public class PersonServiceTest extends BaseContextSensitiveTest {
 	
 	/**
 	 * @see {@link PersonService#getPerson(Integer)}
-	 * 
 	 */
 	@Test
 	@Verifies(value = "should return null when no person has the given id", method = "getPerson(Integer)")
@@ -526,7 +699,6 @@ public class PersonServiceTest extends BaseContextSensitiveTest {
 	
 	/**
 	 * @see {@link PersonService#getPersonAttribute(Integer)}
-	 * 
 	 */
 	@Test
 	@Verifies(value = "should return null when given id does not exist", method = "getPersonAttribute(Integer)")
@@ -537,7 +709,6 @@ public class PersonServiceTest extends BaseContextSensitiveTest {
 	
 	/**
 	 * @see {@link PersonService#getPersonAttribute(Integer)}
-	 * 
 	 */
 	@Test
 	@Verifies(value = "should return person attribute when given id does exist", method = "getPersonAttribute(Integer)")
@@ -550,7 +721,6 @@ public class PersonServiceTest extends BaseContextSensitiveTest {
 	
 	/**
 	 * @see {@link PersonService#getPersonAttributeType(Integer)}
-	 * 
 	 */
 	@Test
 	@Verifies(value = "should return null when no person attribute with the given id exist", method = "getPersonAttributeType(Integer)")
@@ -561,7 +731,6 @@ public class PersonServiceTest extends BaseContextSensitiveTest {
 	
 	/**
 	 * @see {@link PersonService#getPersonAttributeTypeByName(String)}
-	 * 
 	 */
 	@Test
 	@Verifies(value = "should return person attribute type when name matches given type name", method = "getPersonAttributeTypeByName(String)")
@@ -572,7 +741,6 @@ public class PersonServiceTest extends BaseContextSensitiveTest {
 	
 	/**
 	 * @see {@link PersonService#getPersonAttributeTypeByName(String)}
-	 * 
 	 */
 	@Test
 	@Verifies(value = "should return null when no person attribute type match given type name", method = "getPersonAttributeTypeByName(String)")
@@ -583,7 +751,6 @@ public class PersonServiceTest extends BaseContextSensitiveTest {
 	
 	/**
 	 * @see {@link PersonService#getPersonAttributeTypes(String,String,Integer,Boolean)}
-	 * 
 	 */
 	@Test
 	@Verifies(value = "should return person attribute types matching given parameters", method = "getPersonAttributeTypes(String,String,Integer,Boolean)")
@@ -606,12 +773,11 @@ public class PersonServiceTest extends BaseContextSensitiveTest {
 	
 	/**
 	 * @see {@link PersonService#getPersonAttributeTypes(String,String,Integer,Boolean)}
-	 * 
 	 */
 	@Test
 	@Verifies(value = "should return empty list when no person attribute types match given parameters", method = "getPersonAttributeTypes(String,String,Integer,Boolean)")
 	public void getPersonAttributeTypes_shouldReturnEmptyListWhenNoPersonAttributeTypesMatchGivenParameters()
-	                                                                                                         throws Exception {
+	        throws Exception {
 		executeDataSet("org/openmrs/api/include/PersonServiceTest-createRetiredPersonAttributeType.xml");
 		
 		List<PersonAttributeType> attributeTypes = Context.getPersonService().getPersonAttributeTypes(
@@ -622,7 +788,6 @@ public class PersonServiceTest extends BaseContextSensitiveTest {
 	
 	/**
 	 * @see {@link PersonService#getRelationship(Integer)}
-	 * 
 	 */
 	@Test
 	@Verifies(value = "should return relationship with given id", method = "getRelationship(Integer)")
@@ -633,7 +798,6 @@ public class PersonServiceTest extends BaseContextSensitiveTest {
 	
 	/**
 	 * @see {@link PersonService#getRelationship(Integer)}
-	 * 
 	 */
 	@Test
 	@Verifies(value = "should return null when relationship with given id does not exist", method = "getRelationship(Integer)")
@@ -644,7 +808,6 @@ public class PersonServiceTest extends BaseContextSensitiveTest {
 	
 	/**
 	 * @see {@link PersonService#getRelationshipMap(RelationshipType)}
-	 * 
 	 */
 	@Test
 	@Verifies(value = "should return empty map when no relationship has the matching relationship type", method = "getRelationshipMap(RelationshipType)")
@@ -661,7 +824,6 @@ public class PersonServiceTest extends BaseContextSensitiveTest {
 	
 	/**
 	 * @see {@link PersonService#getRelationships(Person,Person,RelationshipType)}
-	 * 
 	 */
 	@Test
 	@Verifies(value = "should fetch relationships matching the given from person", method = "getRelationships(Person,Person,RelationshipType)")
@@ -676,7 +838,6 @@ public class PersonServiceTest extends BaseContextSensitiveTest {
 	
 	/**
 	 * @see {@link PersonService#getRelationships(Person,Person,RelationshipType)}
-	 * 
 	 */
 	@Test
 	@Verifies(value = "should fetch relationships matching the given to person", method = "getRelationships(Person,Person,RelationshipType)")
@@ -691,7 +852,6 @@ public class PersonServiceTest extends BaseContextSensitiveTest {
 	
 	/**
 	 * @see {@link PersonService#getRelationships(Person,Person,RelationshipType)}
-	 * 
 	 */
 	@Test
 	@Verifies(value = "should fetch relationships matching the given rel type", method = "getRelationships(Person,Person,RelationshipType)")
@@ -705,25 +865,201 @@ public class PersonServiceTest extends BaseContextSensitiveTest {
 	}
 	
 	/**
-	 * @see {@link PersonService#getRelationships(Person,Person,RelationshipType)}
-	 * 
+	 * @see {@link PersonService#getRelationships(Person,Person,RelationshipType,Date)}
 	 */
 	@Test
-	@Verifies(value = "should return empty list when no relationship matching given parameters exist", method = "getRelationships(Person,Person,RelationshipType)")
-	public void getRelationships_shouldReturnEmptyListWhenNoRelationshipMatchingGivenParametersExist() throws Exception {
+	@Verifies(value = "should fetch relationships matching the given from person", method = "getRelationships(Person,Person,RelationshipType,Date)")
+	public void getRelationships2_shouldFetchRelationshipsMatchingTheGivenFromPerson() throws Exception {
+		PersonService personService = Context.getPersonService();
+		
+		Person firstPerson = personService.getPerson(502);
+		List<Relationship> relationships = personService.getRelationships(firstPerson, null, null, new Date());
+		Assert.assertNotNull(relationships);
+		Assert.assertTrue("There should be relationship found given the from person", relationships.size() > 0);
+	}
+	
+	/**
+	 * @see {@link PersonService#getRelationships(Person,Person,RelationshipType,Date)}
+	 */
+	@Test
+	@Verifies(value = "should fetch relationships matching the given to person", method = "getRelationships(Person,Person,RelationshipType,Date)")
+	public void getRelationships2_shouldFetchRelationshipsMatchingTheGivenToPerson() throws Exception {
+		PersonService personService = Context.getPersonService();
+		
+		Person secondPerson = personService.getPerson(7);
+		List<Relationship> relationships = personService.getRelationships(null, secondPerson, null, new Date());
+		Assert.assertNotNull(relationships);
+		Assert.assertTrue("There should be relationship found given the to person", relationships.size() > 0);
+	}
+	
+	/**
+	 * @see {@link PersonService#getRelationships(Person,Person,RelationshipType,Date)}
+	 */
+	@Test
+	@Verifies(value = "should fetch relationships matching the given rel type", method = "getRelationships(Person,Person,RelationshipType,Date)")
+	public void getRelationships2_shouldFetchRelationshipsMatchingTheGivenRelType() throws Exception {
+		PersonService personService = Context.getPersonService();
+		
+		RelationshipType relationshipType = personService.getRelationshipType(1);
+		List<Relationship> relationships = personService.getRelationships(null, null, relationshipType, new Date());
+		Assert.assertNotNull(relationships);
+		Assert.assertTrue("There should be relationship found given the relationship type", relationships.size() > 0);
+	}
+	
+	/**
+	 * @see {@link PersonService#getRelationships(Person,Person,RelationshipType,Date)}
+	 */
+	@Test
+	@Verifies(value = "should return empty list when no relationship matching given parameters exist", method = "getRelationships(Person,Person,RelationshipType,Date)")
+	public void getRelationships2_shouldReturnEmptyListWhenNoRelationshipMatchingGivenParametersExist() throws Exception {
 		PersonService personService = Context.getPersonService();
 		
 		Person firstPerson = personService.getPerson(501);
 		Person secondPerson = personService.getPerson(2);
 		RelationshipType relationshipType = personService.getRelationshipType(1);
-		List<Relationship> relationships = personService.getRelationships(firstPerson, secondPerson, relationshipType);
+		List<Relationship> relationships = personService.getRelationships(firstPerson, secondPerson, relationshipType,
+		    new Date());
 		Assert.assertNotNull(relationships);
 		Assert.assertTrue("There should be no relationship found given the from person", relationships.isEmpty());
 	}
 	
 	/**
+	 * @see {@link PersonService#getRelationships(Person,Person,RelationshipType,Date)}
+	 */
+	@Test
+	@Verifies(value = "should fetch relationships that were active during effectiveDate", method = "getRelationships(Person,Person,RelationshipType,Date)")
+	public void getRelationships2_shouldFetchRelationshipsThatWereActiveDuringEffectiveDate() throws Exception {
+		executeDataSet(CREATE_PATIENT_XML);
+		executeDataSet(CREATE_RELATIONSHIP_XML);
+		
+		// TODO use xml imported in BaseContextSensitiveTest#baseSetupWithStandardDataAndAuthentication()
+		Patient patient = createTestPatient();
+		List<Relationship> rels = createTestDatedRelationships(ps.getPatient(2), patient, personService
+		        .getRelationshipType(4));
+		
+		// Get relationships effective 1988-01-01
+		List<Relationship> res = personService.getRelationships(ps.getPatient(2), patient, null, df.parse("1988-01-01"));
+		
+		// Verify # of results and which results we have received
+		assertEquals(5, res.size());
+		for (Relationship rr : res) {
+			if (!rr.equals(rels.get(0)) && !rr.equals(rels.get(2)) && !rr.equals(rels.get(3)) && !rr.equals(rels.get(7))
+			        && !rr.equals(rels.get(8))) {
+				if (rr.equals(rels.get(1))) {
+					fail("unexpected relationship 1 in results from getRelationshipsByPerson with effeciveDate of 1988-01-01");
+				} else if (rr.equals(rels.get(4))) {
+					fail("unexpected relationship 4 in results from getRelationshipsByPerson with effeciveDate of 1988-01-01");
+				} else if (rr.equals(rels.get(5))) {
+					fail("unexpected relationship 5 in results from getRelationshipsByPerson with effeciveDate of 1988-01-01");
+				} else if (rr.equals(rels.get(6))) {
+					fail("unexpected relationship 6 in results from getRelationshipsByPerson with effeciveDate of 1988-01-01");
+				} else {
+					fail("unrecognized unexpected relationship in results from getRelationshipsByPerson with effeciveDate of 1988-01-01");
+				}
+			}
+		}
+	}
+	
+	/**
+	 * @see {@link PersonService#getRelationships(Person,Person,RelationshipType,Date,Date)}
+	 */
+	@Test
+	@Verifies(value = "should fetch relationships matching the given from person", method = "getRelationships(Person,Person,RelationshipType,Date,Date)")
+	public void getRelationships3_shouldFetchRelationshipsMatchingTheGivenFromPerson() throws Exception {
+		PersonService personService = Context.getPersonService();
+		
+		Person firstPerson = personService.getPerson(502);
+		List<Relationship> relationships = personService.getRelationships(firstPerson, null, null, new Date(), new Date());
+		Assert.assertNotNull(relationships);
+		Assert.assertTrue("There should be relationship found given the from person", relationships.size() > 0);
+	}
+	
+	/**
+	 * @see {@link PersonService#getRelationships(Person,Person,RelationshipType,Date,Date)}
+	 */
+	@Test
+	@Verifies(value = "should fetch relationships matching the given to person", method = "getRelationships(Person,Person,RelationshipType,Date,Date)")
+	public void getRelationships3_shouldFetchRelationshipsMatchingTheGivenToPerson() throws Exception {
+		PersonService personService = Context.getPersonService();
+		
+		Person secondPerson = personService.getPerson(7);
+		List<Relationship> relationships = personService.getRelationships(null, secondPerson, null, new Date(), new Date());
+		Assert.assertNotNull(relationships);
+		Assert.assertTrue("There should be relationship found given the to person", relationships.size() > 0);
+	}
+	
+	/**
+	 * @see {@link PersonService#getRelationships(Person,Person,RelationshipType,Date,Date)}
+	 */
+	@Test
+	@Verifies(value = "should fetch relationships matching the given rel type", method = "getRelationships(Person,Person,RelationshipType,Date,Date)")
+	public void getRelationships3_shouldFetchRelationshipsMatchingTheGivenRelType() throws Exception {
+		PersonService personService = Context.getPersonService();
+		
+		RelationshipType relationshipType = personService.getRelationshipType(1);
+		List<Relationship> relationships = personService.getRelationships(null, null, relationshipType, new Date(),
+		    new Date());
+		Assert.assertNotNull(relationships);
+		Assert.assertTrue("There should be relationship found given the relationship type", relationships.size() > 0);
+	}
+	
+	/**
+	 * @see {@link PersonService#getRelationships(Person,Person,RelationshipType,Date,Date)}
+	 */
+	@Test
+	@Verifies(value = "should return empty list when no relationship matching given parameters exist", method = "getRelationships(Person,Person,RelationshipType,Date,Date)")
+	public void getRelationships3_shouldReturnEmptyListWhenNoRelationshipMatchingGivenParametersExist() throws Exception {
+		PersonService personService = Context.getPersonService();
+		
+		Person firstPerson = personService.getPerson(501);
+		Person secondPerson = personService.getPerson(2);
+		RelationshipType relationshipType = personService.getRelationshipType(1);
+		List<Relationship> relationships = personService.getRelationships(firstPerson, secondPerson, relationshipType,
+		    new Date(), new Date());
+		Assert.assertNotNull(relationships);
+		Assert.assertTrue("There should be no relationship found given the from person", relationships.isEmpty());
+	}
+	
+	/**
+	 * @see {@link PersonService#getRelationships(Person,Person,RelationshipType,Date,Date)}
+	 */
+	@Test
+	@Verifies(value = "should fetch relationships that were active during the specified date range", method = "getRelationships(Person,Person,RelationshipType,Date,Date)")
+	public void getRelationships3_shouldFetchRelationshipsThatWereActiveDuringTheSpecifiedDateRange() throws Exception {
+		executeDataSet(CREATE_PATIENT_XML);
+		executeDataSet(CREATE_RELATIONSHIP_XML);
+		
+		// TODO use xml imported in BaseContextSensitiveTest#baseSetupWithStandardDataAndAuthentication()
+		Patient patient = createTestPatient();
+		List<Relationship> rels = createTestDatedRelationships(ps.getPatient(2), patient, personService
+		        .getRelationshipType(4));
+		
+		// Get relationships effective between 1987-01-01 and 1988-01-01
+		List<Relationship> res = personService.getRelationships(ps.getPatient(2), patient, null, df.parse("1987-01-01"), df
+		        .parse("1988-01-01"));
+		
+		// Verify # of results and which results we have received
+		assertEquals(5, res.size());
+		for (Relationship rr : res) {
+			if (!rr.equals(rels.get(0)) && !rr.equals(rels.get(2)) && !rr.equals(rels.get(3)) && !rr.equals(rels.get(7))
+			        && !rr.equals(rels.get(8))) {
+				if (rr.equals(rels.get(1))) {
+					fail("unexpected relationship 1 in results from getRelationshipsByPerson effective between 1987-01-01 and 1988-01-01");
+				} else if (rr.equals(rels.get(4))) {
+					fail("unexpected relationship 4 in results from getRelationshipsByPerson effective between 1987-01-01 and 1988-01-01");
+				} else if (rr.equals(rels.get(5))) {
+					fail("unexpected relationship 5 in results from getRelationshipsByPerson effective between 1987-01-01 and 1988-01-01");
+				} else if (rr.equals(rels.get(6))) {
+					fail("unexpected relationship 6 in results from getRelationshipsByPerson effective between 1987-01-01 and 1988-01-01");
+				} else {
+					fail("unrecognized unexpected relationship in results from getRelationshipsByPerson effective between 1987-01-01 and 1988-01-01");
+				}
+			}
+		}
+	}
+	
+	/**
 	 * @see {@link PersonService#getRelationshipsByPerson(Person)}
-	 * 
 	 */
 	@Test
 	@Verifies(value = "should fetch relationships associated with the given person", method = "getRelationshipsByPerson(Person)")
@@ -738,7 +1074,6 @@ public class PersonServiceTest extends BaseContextSensitiveTest {
 	
 	/**
 	 * @see {@link PersonService#getRelationshipsByPerson(Person)}
-	 * 
 	 */
 	@Test
 	@Verifies(value = "should fetch unvoided relationships only", method = "getRelationshipsByPerson(Person)")
@@ -755,8 +1090,38 @@ public class PersonServiceTest extends BaseContextSensitiveTest {
 	}
 	
 	/**
+	 * @see {@link PersonService#getRelationshipsByPerson(Person)}
+	 */
+	@Test
+	@Verifies(value = "should fetch relationships associated with the given person", method = "getRelationshipsByPerson(Person, Date)")
+	public void getRelationshipsByPerson2_shouldFetchRelationshipsAssociatedWithTheGivenPerson() throws Exception {
+		PersonService personService = Context.getPersonService();
+		
+		Person person = personService.getPerson(2);
+		List<Relationship> relationships = personService.getRelationshipsByPerson(person, new Date());
+		Assert.assertNotNull(relationships);
+		Assert.assertTrue("There should be relationship found given the person", relationships.size() > 0);
+	}
+	
+	/**
+	 * @see {@link PersonService#getRelationshipsByPerson(Person)}
+	 */
+	@Test
+	@Verifies(value = "should fetch unvoided relationships only", method = "getRelationshipsByPerson(Person, Date)")
+	public void getRelationshipsByPerson2_shouldFetchUnvoidedRelationshipsOnly() throws Exception {
+		executeDataSet("org/openmrs/api/include/PersonServiceTest-createRetiredRelationship.xml");
+		
+		PersonService personService = Context.getPersonService();
+		
+		Person person = personService.getPerson(6);
+		List<Relationship> relationships = personService.getRelationshipsByPerson(person, new Date());
+		Assert.assertNotNull(relationships);
+		Assert.assertTrue("There should be no relationship found given the person", relationships.isEmpty());
+		
+	}
+	
+	/**
 	 * @see {@link PersonService#getRelationshipType(Integer)}
-	 * 
 	 */
 	@Test
 	@Verifies(value = "should return relationship type with the given relationship type id", method = "getRelationshipType(Integer)")
@@ -769,7 +1134,6 @@ public class PersonServiceTest extends BaseContextSensitiveTest {
 	
 	/**
 	 * @see {@link PersonService#getRelationshipType(Integer)}
-	 * 
 	 */
 	@Test
 	@Verifies(value = "should return null when no relationship type matches given relationship type id", method = "getRelationshipType(Integer)")
@@ -780,7 +1144,6 @@ public class PersonServiceTest extends BaseContextSensitiveTest {
 	
 	/**
 	 * @see {@link PersonService#getRelationshipTypeByName(String)}
-	 * 
 	 */
 	@Test
 	@Verifies(value = "should return null when no relationship type match the given name", method = "getRelationshipTypeByName(String)")
@@ -791,7 +1154,6 @@ public class PersonServiceTest extends BaseContextSensitiveTest {
 	
 	/**
 	 * @see {@link PersonService#getRelationshipTypes(String)}
-	 * 
 	 */
 	@Test
 	@Verifies(value = "should return empty list when no relationship type match the search string", method = "getRelationshipTypes(String)")
@@ -802,8 +1164,8 @@ public class PersonServiceTest extends BaseContextSensitiveTest {
 	}
 	
 	/**
-	 * @see {@link PersonService#getRelationshipTypes(String,Boolean)}
-	 * TODO Needs to test "preferred" 
+	 * @see {@link PersonService#getRelationshipTypes(String,Boolean)} TODO Needs to test
+	 *      "preferred"
 	 */
 	@Test
 	@Verifies(value = "should return list of preferred relationship type matching given name", method = "getRelationshipTypes(String,Boolean)")
@@ -816,12 +1178,11 @@ public class PersonServiceTest extends BaseContextSensitiveTest {
 	
 	/**
 	 * @see {@link PersonService#getRelationshipTypes(String,Boolean)}
-	 * 
 	 */
 	@Test
 	@Verifies(value = "should return empty list when no preferred relationship type match the given name", method = "getRelationshipTypes(String,Boolean)")
 	public void getRelationshipTypes_shouldReturnEmptyListWhenNoPreferredRelationshipTypeMatchTheGivenName()
-	                                                                                                        throws Exception {
+	        throws Exception {
 		List<RelationshipType> relationshipTypes = Context.getPersonService().getRelationshipTypes("Doctor/Patient", true);
 		Assert.assertNotNull(relationshipTypes);
 		Assert.assertTrue("There should be no relationship type for the given name", relationshipTypes.isEmpty());
@@ -829,39 +1190,281 @@ public class PersonServiceTest extends BaseContextSensitiveTest {
 	
 	/**
 	 * @see {@link PersonService#purgePerson(Person)}
-	 * 
 	 */
 	@Test
 	@Verifies(value = "should delete person from the database", method = "purgePerson(Person)")
 	public void purgePerson_shouldDeletePersonFromTheDatabase() throws Exception {
 		PersonService personService = Context.getPersonService();
 		
-		Person person = personService.getPerson(8);
+		User user = Context.getAuthenticatedUser();
+		Person person = new Person();
+		person.setPersonCreator(user);
+		person.setPersonDateCreated(new Date());
+		person.setPersonChangedBy(user);
+		person.setPersonDateChanged(new Date());
+		person.setGender("F");
+		Assert.assertNull(person.getId());
+		person.addName(new PersonName("givenName", "middleName", "familyName"));
+		person = personService.savePerson(person);
+		Assert.assertNotNull(person.getId());
+		
 		personService.purgePerson(person);
 		
-		Person deletedPerson = personService.getPerson(8);
+		Person deletedPerson = personService.getPerson(person.getId());
 		Assert.assertNull(deletedPerson);
 	}
 	
 	/**
 	 * @see {@link PersonService#purgePersonAttributeType(PersonAttributeType)}
-	 * 
 	 */
 	@Test
 	@Verifies(value = "should delete person attribute type from database", method = "purgePersonAttributeType(PersonAttributeType)")
 	public void purgePersonAttributeType_shouldDeletePersonAttributeTypeFromDatabase() throws Exception {
-		PersonService personService = Context.getPersonService();
+		PersonService service = Context.getPersonService();
 		
-		PersonAttributeType personAttributeType = personService.getPersonAttributeType(1);
-		personService.purgePersonAttributeType(personAttributeType);
+		PersonAttributeType pat = new PersonAttributeType();
+		pat.setName("attr type name");
+		pat.setDescription("attr type desc");
 		
-		PersonAttributeType deletedPersonAttributeType = personService.getPersonAttributeType(1);
+		service.savePersonAttributeType(pat);
+		
+		assertNotNull(pat.getId());
+		
+		service.purgePersonAttributeType(pat);
+		
+		PersonAttributeType deletedPersonAttributeType = service.getPersonAttributeType(pat.getId());
 		Assert.assertNull(deletedPersonAttributeType);
 	}
 	
 	/**
+	 * @see PersonService#savePersonMergeLog(PersonMergeLog)
+	 * @verifies require loser
+	 */
+	@Test(expected = APIException.class)
+	public void savePersonMergeLog_shouldRequireLoser() throws Exception {
+		PersonMergeLog personMergeLog = getTestPersonMergeLog();
+		personMergeLog.setLoser(null);
+		Context.getPersonService().savePersonMergeLog(personMergeLog);
+	}
+	
+	/**
+	 * @see PersonService#savePersonMergeLog(PersonMergeLog)
+	 * @verifies require winner
+	 */
+	@Test(expected = APIException.class)
+	public void savePersonMergeLog_shouldRequireWinner() throws Exception {
+		PersonMergeLog personMergeLog = getTestPersonMergeLog();
+		personMergeLog.setWinner(null);
+		Context.getPersonService().savePersonMergeLog(personMergeLog);
+	}
+	
+	/**
+	 * @see PersonService#savePersonMergeLog(PersonMergeLog)
+	 * @verifies require PersonMergeLogData
+	 */
+	@Test(expected = APIException.class)
+	public void savePersonMergeLog_shouldRequirePersonMergeLogData() throws Exception {
+		PersonMergeLog personMergeLog = new PersonMergeLog();
+		personMergeLog.setPersonMergeLogData(null);
+		Context.getPersonService().savePersonMergeLog(personMergeLog);
+	}
+	
+	/**
+	 * @see PersonService#savePersonMergeLog(PersonMergeLog)
+	 * @verifies save PersonMergeLog
+	 */
+	@Test
+	public void savePersonMergeLog_shouldSavePersonMergeLog() throws Exception {
+		PersonMergeLog personMergeLog = getTestPersonMergeLog();
+		try {
+			PersonMergeLog persisted = Context.getPersonService().savePersonMergeLog(personMergeLog);
+			Assert.assertNotNull("patientMergeLogId has not been set which indicates a problem saving the object", persisted
+			        .getPersonMergeLogId());
+		}
+		catch (Exception ex) {
+			Assert.fail("should not fail when all required fields are set. " + ex.getMessage());
+		}
+	}
+	
+	/**
+	 * @see PersonService#savePersonMergeLog(PersonMergeLog)
+	 * @verifies serialize PersonMergeLogData
+	 */
+	@Test
+	public void savePersonMergeLog_shouldSerializePersonMergeLogData() throws Exception {
+		PersonMergeLog personMergeLog = getTestPersonMergeLog();
+		personMergeLog.setSerializedMergedData(null);
+		PersonMergeLog persisted = Context.getPersonService().savePersonMergeLog(personMergeLog);
+		Assert.assertNotNull("PatientMergeLogData has not been serialized", persisted.getSerializedMergedData());
+	}
+	
+	/**
+	 * @see PersonService#savePersonMergeLog(PersonMergeLog)
+	 * @verifies set date created if null
+	 */
+	@Test
+	public void savePersonMergeLog_shouldSetDateCreatedIfNull() throws Exception {
+		PersonMergeLog personMergeLog = getTestPersonMergeLog();
+		personMergeLog.setDateCreated(null);
+		PersonMergeLog persisted = Context.getPersonService().savePersonMergeLog(personMergeLog);
+		Assert.assertNotNull("dateCreated has not been set", persisted.getDateCreated());
+	}
+	
+	/**
+	 * @see PersonService#savePersonMergeLog(PersonMergeLog)
+	 * @verifies set creator if null
+	 */
+	@Test
+	public void savePersonMergeLog_shouldSetCreatorIfNull() throws Exception {
+		PersonMergeLog personMergeLog = getTestPersonMergeLog();
+		personMergeLog.setCreator(null);
+		PersonMergeLog persisted = Context.getPersonService().savePersonMergeLog(personMergeLog);
+		Assert.assertEquals("creator has not been correctly set", Context.getAuthenticatedUser().getUserId(), persisted
+		        .getCreator().getUserId());
+	}
+	
+	/**
+	 * @see PersonService#getLosingPersonMergeLog(Person)
+	 * @verifies find PersonMergeLog by loser
+	 */
+	@Test
+	public void getLosingPersonMergeLog_shouldFindPersonMergeLogByLoser() throws Exception {
+		//log merge 1 >> 2
+		PersonMergeLog personMergeLog12 = getTestPersonMergeLog();
+		personMergeLog12.setLoser(new Person(1));
+		personMergeLog12.setWinner(new Person(2));
+		Context.getPersonService().savePersonMergeLog(personMergeLog12);
+		//log merge 2 >> 6
+		PersonMergeLog personMergeLog26 = getTestPersonMergeLog();
+		personMergeLog26.setLoser(new Person(2));
+		personMergeLog26.setWinner(new Person(6));
+		Context.getPersonService().savePersonMergeLog(personMergeLog26);
+		//find where loser is 2
+		PersonMergeLog l = Context.getPersonService().getLosingPersonMergeLog(new Person(2), true);
+		Assert.assertEquals("Incorrect PersonMergeLog found by loser", l.getUuid(), personMergeLog26.getUuid());
+	}
+	
+	/**
+	 * @see PersonService#getWinningPersonMergeLogs(Person)
+	 * @verifies retrieve PersonMergeLogs by winner
+	 */
+	@Test
+	public void getWinningPersonMergeLogs_shouldRetrievePersonMergeLogsByWinner() throws Exception {
+		//log merge 1 >> 2
+		PersonMergeLog personMergeLog12 = getTestPersonMergeLog();
+		personMergeLog12.setLoser(new Person(1));
+		personMergeLog12.setWinner(new Person(2));
+		Context.getPersonService().savePersonMergeLog(personMergeLog12);
+		//log merge 1 >> 6
+		PersonMergeLog personMergeLog16 = getTestPersonMergeLog();
+		personMergeLog16.setLoser(new Person(1));
+		personMergeLog16.setWinner(new Person(6));
+		Context.getPersonService().savePersonMergeLog(personMergeLog16);
+		//log merge 2 >> 6
+		PersonMergeLog personMergeLog26 = getTestPersonMergeLog();
+		personMergeLog26.setLoser(new Person(2));
+		personMergeLog26.setWinner(new Person(6));
+		Context.getPersonService().savePersonMergeLog(personMergeLog26);
+		//find where winner is 6
+		List<PersonMergeLog> lst = Context.getPersonService().getWinningPersonMergeLogs(new Person(6), true);
+		Assert.assertEquals("Incorrect number of PersonMergeLog objects found by winner", 2, lst.size());
+		for (PersonMergeLog l : lst) {
+			if (!l.getUuid().equals(personMergeLog16.getUuid()) && !l.getUuid().equals(personMergeLog26.getUuid())) {
+				fail("Unexpected PersonMergeLog found by winner");
+			}
+		}
+	}
+	
+	private PersonMergeLog getTestPersonMergeLog() {
+		PersonMergeLog personMergeLog = new PersonMergeLog();
+		personMergeLog.setLoser(new Person(1));
+		personMergeLog.setWinner(new Person(2));
+		PersonMergeLogData data = new PersonMergeLogData();
+		data.addCreatedAddress("1");
+		data.addCreatedAttribute("2");
+		data.addCreatedIdentifier("3");
+		data.addCreatedName("4");
+		data.addCreatedOrder("5");
+		data.addCreatedProgram("6");
+		data.addCreatedRelationship("7");
+		data.addMovedEncounter("8");
+		data.addMovedIndependentObservation("9");
+		data.addMovedUser("10");
+		data.addVoidedRelationship("11");
+		data.setPriorCauseOfDeath("test");
+		data.setPriorDateOfBirth(new Date());
+		data.setPriorDateOfBirthEstimated(true);
+		data.setPriorDateOfDeath(new Date());
+		data.setPriorGender("F");
+		personMergeLog.setPersonMergeLogData(data);
+		return personMergeLog;
+	}
+	
+	/**
+	 * @see PersonService#getPersonMergeLogByUuid(String,boolean)
+	 * @verifies require uuid
+	 */
+	@Test(expected = APIException.class)
+	public void getPersonMergeLogByUuid_shouldRequireUuid() throws Exception {
+		Context.getPersonService().getPersonMergeLogByUuid(null, false);
+	}
+	
+	/**
+	 * @see PersonService#getPersonMergeLogByUuid(String,boolean)
+	 * @verifies retrieve personMergeLog and deserialize data
+	 */
+	@Test
+	public void getPersonMergeLogByUuid_shouldRetrievePersonMergeLogAndDeserializeData() throws Exception {
+		PersonMergeLog personMergeLog = getTestPersonMergeLog();
+		int originalHashValue = personMergeLog.getPersonMergeLogData().computeHashValue();
+		PersonMergeLog persisted = Context.getPersonService().savePersonMergeLog(personMergeLog);
+		PersonMergeLog retrieved = Context.getPersonService().getPersonMergeLogByUuid(persisted.getUuid(), true);
+		Assert.assertNotNull("problem retrieving PersonMergeLog by UUID", retrieved);
+		Assert.assertEquals("deserialized data is not identical to original data", originalHashValue, retrieved
+		        .getPersonMergeLogData().computeHashValue());
+	}
+	
+	/**
+	 * @see PersonService#getPersonMergeLogByUuid(String,boolean)
+	 * @verifies retrieve personMergeLog without deserializing data
+	 */
+	@Test
+	public void getPersonMergeLogByUuid_shouldRetrievePersonMergeLogWithoutDeserializingData() throws Exception {
+		PersonMergeLog personMergeLog = getTestPersonMergeLog();
+		PersonMergeLog persisted = Context.getPersonService().savePersonMergeLog(personMergeLog);
+		PersonMergeLog retrieved = Context.getPersonService().getPersonMergeLogByUuid(persisted.getUuid(), false);
+		Assert.assertNotNull("problem retrieving PersonMergeLog by UUID", retrieved);
+		
+	}
+	
+	/**
+	 * @see PersonService#getAllPersonMergeLogs(boolean)
+	 * @verifies retrieve all PersonMergeLogs and deserialize them
+	 */
+	@Test
+	public void getAllPersonMergeLogs_shouldRetrieveAllPersonMergeLogsAndDeserializeThem() throws Exception {
+		PersonMergeLog personMergeLog = getTestPersonMergeLog();
+		Context.getPersonService().savePersonMergeLog(personMergeLog);
+		List<PersonMergeLog> result = Context.getPersonService().getAllPersonMergeLogs(true);
+		Assert.assertEquals("could not retrieve expected number of PersonMergeLog objects", 1, result.size());
+		Assert.assertNotNull("PersonMergeLog at index 0 is null", result.get(0));
+		Assert.assertNotNull("PersonMergeLog data has not been deserialized", result.get(0).getPersonMergeLogData());
+	}
+	
+	/**
+	 * @see PersonService#getAllPersonMergeLogs(boolean)
+	 * @verifies retrieve all PersonMergeLogs from the model
+	 */
+	@Test
+	public void getAllPersonMergeLogs_shouldRetrieveAllPersonMergeLogsFromTheModel() throws Exception {
+		PersonMergeLog personMergeLog = getTestPersonMergeLog();
+		Context.getPersonService().savePersonMergeLog(personMergeLog);
+		List<PersonMergeLog> result = Context.getPersonService().getAllPersonMergeLogs(false);
+		Assert.assertEquals("could not retrieve expected number of PersonMergeLog objects", 1, result.size());
+	}
+	
+	/**
 	 * @see {@link PersonService#purgeRelationship(Relationship)}
-	 * 
 	 */
 	@Test
 	@Verifies(value = "should delete relationship from the database", method = "purgeRelationship(Relationship)")
@@ -877,23 +1480,27 @@ public class PersonServiceTest extends BaseContextSensitiveTest {
 	
 	/**
 	 * @see {@link PersonService#purgeRelationshipType(RelationshipType)}
-	 * 
 	 */
 	@Test
 	@Verifies(value = "should delete relationship type from the database", method = "purgeRelationshipType(RelationshipType)")
 	public void purgeRelationshipType_shouldDeleteRelationshipTypeFromTheDatabase() throws Exception {
 		PersonService personService = Context.getPersonService();
 		
-		RelationshipType relationshipType = personService.getRelationshipType(1);
+		RelationshipType relationshipType = new RelationshipType();
+		relationshipType.setDescription("Test relationship");
+		relationshipType.setaIsToB("Sister");
+		relationshipType.setbIsToA("Brother");
+		relationshipType = personService.saveRelationshipType(relationshipType);
+		assertNotNull(relationshipType.getId());
+		
 		personService.purgeRelationshipType(relationshipType);
 		
-		RelationshipType deletedRelationshipType = personService.getRelationshipType(1);
+		RelationshipType deletedRelationshipType = personService.getRelationshipType(relationshipType.getId());
 		Assert.assertNull(deletedRelationshipType);
 	}
 	
 	/**
 	 * @see {@link PersonService#savePerson(Person)}
-	 * 
 	 */
 	@Test
 	@Verifies(value = "should create new object when person id is null", method = "savePerson(Person)")
@@ -906,13 +1513,13 @@ public class PersonServiceTest extends BaseContextSensitiveTest {
 		person.setPersonDateChanged(new Date());
 		person.setGender("F");
 		Assert.assertNull(person.getId());
+		person.addName(new PersonName("givenName", "middleName", "familyName"));
 		Person personSaved = Context.getPersonService().savePerson(person);
 		Assert.assertNotNull(personSaved.getId());
 	}
 	
 	/**
 	 * @see {@link PersonService#savePerson(Person)}
-	 * 
 	 */
 	@Test
 	@Verifies(value = "should update existing object when person id is not null", method = "savePerson(Person)")
@@ -926,7 +1533,6 @@ public class PersonServiceTest extends BaseContextSensitiveTest {
 	
 	/**
 	 * @see {@link PersonService#saveRelationship(Relationship)}
-	 * 
 	 */
 	@Test
 	@Verifies(value = "should create new object when relationship id is null", method = "saveRelationship(Relationship)")
@@ -944,7 +1550,6 @@ public class PersonServiceTest extends BaseContextSensitiveTest {
 	
 	/**
 	 * @see {@link PersonService#saveRelationship(Relationship)}
-	 * 
 	 */
 	@Test
 	@Verifies(value = "should update existing object when relationship id is not null", method = "saveRelationship(Relationship)")
@@ -961,7 +1566,6 @@ public class PersonServiceTest extends BaseContextSensitiveTest {
 	
 	/**
 	 * @see {@link PersonService#saveRelationshipType(RelationshipType)}
-	 * 
 	 */
 	@Test
 	@Verifies(value = "should create new object when relationship type id is null", method = "saveRelationshipType(RelationshipType)")
@@ -977,7 +1581,6 @@ public class PersonServiceTest extends BaseContextSensitiveTest {
 	
 	/**
 	 * @see {@link PersonService#saveRelationshipType(RelationshipType)}
-	 * 
 	 */
 	@Test
 	@Verifies(value = "should update existing object when relationship type id is not null", method = "saveRelationshipType(RelationshipType)")
@@ -991,10 +1594,9 @@ public class PersonServiceTest extends BaseContextSensitiveTest {
 	}
 	
 	/**
-	 * @see {@link PersonService#unvoidPerson(Person)}
-	 * TODO NullPointerException during RequiredDataAdvice.before()
-	 * TODO Should we be able to unvoid an already not voided record?  This test assumes yes. 
-	 * 
+	 * @see {@link PersonService#unvoidPerson(Person)} TODO NullPointerException during
+	 *      RequiredDataAdvice.before() TODO Should we be able to unvoid an already not voided
+	 *      record? This test assumes yes.
 	 */
 	@Test
 	@Ignore
@@ -1016,7 +1618,6 @@ public class PersonServiceTest extends BaseContextSensitiveTest {
 	
 	/**
 	 * @see {@link PersonService#unvoidRelationship(Relationship)}
-	 * 
 	 */
 	@Test
 	@Verifies(value = "should unvoid voided relationship", method = "unvoidRelationship(Relationship)")
@@ -1040,7 +1641,6 @@ public class PersonServiceTest extends BaseContextSensitiveTest {
 	
 	/**
 	 * @see {@link PersonService#voidPerson(Person,String)}
-	 * 
 	 */
 	@Test
 	@Ignore
@@ -1060,7 +1660,6 @@ public class PersonServiceTest extends BaseContextSensitiveTest {
 	
 	/**
 	 * @see {@link PersonService#voidRelationship(Relationship,String)}
-	 * 
 	 */
 	@Test
 	@Verifies(value = "should void relationship with the given reason", method = "voidRelationship(Relationship,String)")
@@ -1078,7 +1677,6 @@ public class PersonServiceTest extends BaseContextSensitiveTest {
 	
 	/**
 	 * @see {@link PersonService#getPersonAddressByUuid(String)}
-	 * 
 	 */
 	@Test
 	@Verifies(value = "should find object given valid uuid", method = "getPersonAddressByUuid(String)")
@@ -1090,7 +1688,6 @@ public class PersonServiceTest extends BaseContextSensitiveTest {
 	
 	/**
 	 * @see {@link PersonService#getPersonAddressByUuid(String)}
-	 * 
 	 */
 	@Test
 	@Verifies(value = "should return null if no object found with given uuid", method = "getPersonAddressByUuid(String)")
@@ -1100,7 +1697,6 @@ public class PersonServiceTest extends BaseContextSensitiveTest {
 	
 	/**
 	 * @see {@link PersonService#getPersonAttributeByUuid(String)}
-	 * 
 	 */
 	@Test
 	@Verifies(value = "should find object given valid uuid", method = "getPersonAttributeByUuid(String)")
@@ -1112,7 +1708,6 @@ public class PersonServiceTest extends BaseContextSensitiveTest {
 	
 	/**
 	 * @see {@link PersonService#getPersonAttributeByUuid(String)}
-	 * 
 	 */
 	@Test
 	@Verifies(value = "should return null if no object found with given uuid", method = "getPersonAttributeByUuid(String)")
@@ -1122,7 +1717,6 @@ public class PersonServiceTest extends BaseContextSensitiveTest {
 	
 	/**
 	 * @see {@link PersonService#getPersonAttributeTypeByUuid(String)}
-	 * 
 	 */
 	@Test
 	@Verifies(value = "should find object given valid uuid", method = "getPersonAttributeTypeByUuid(String)")
@@ -1134,7 +1728,6 @@ public class PersonServiceTest extends BaseContextSensitiveTest {
 	
 	/**
 	 * @see {@link PersonService#getPersonAttributeTypeByUuid(String)}
-	 * 
 	 */
 	@Test
 	@Verifies(value = "should return null if no object found with given uuid", method = "getPersonAttributeTypeByUuid(String)")
@@ -1144,7 +1737,6 @@ public class PersonServiceTest extends BaseContextSensitiveTest {
 	
 	/**
 	 * @see {@link PersonService#getPersonByUuid(String)}
-	 * 
 	 */
 	@Test
 	@Verifies(value = "should find object given valid uuid", method = "getPersonByUuid(String)")
@@ -1156,7 +1748,6 @@ public class PersonServiceTest extends BaseContextSensitiveTest {
 	
 	/**
 	 * @see {@link PersonService#getPersonByUuid(String)}
-	 * 
 	 */
 	@Test
 	@Verifies(value = "should return null if no object found with given uuid", method = "getPersonByUuid(String)")
@@ -1166,7 +1757,6 @@ public class PersonServiceTest extends BaseContextSensitiveTest {
 	
 	/**
 	 * @see {@link PersonService#getPersonNameByUuid(String)}
-	 * 
 	 */
 	@Test
 	@Verifies(value = "should find object given valid uuid", method = "getPersonNameByUuid(String)")
@@ -1178,7 +1768,6 @@ public class PersonServiceTest extends BaseContextSensitiveTest {
 	
 	/**
 	 * @see {@link PersonService#getPersonNameByUuid(String)}
-	 * 
 	 */
 	@Test
 	@Verifies(value = "should return null if no object found with given uuid", method = "getPersonNameByUuid(String)")
@@ -1186,9 +1775,22 @@ public class PersonServiceTest extends BaseContextSensitiveTest {
 		Assert.assertNull(Context.getPersonService().getPersonNameByUuid("some invalid uuid"));
 	}
 	
+	@Test
+	@Verifies(value = "should find PersonName given a valid person id", method = "getPersonName(Integer)")
+	public void getPersonNameById_shouldFindObjectGivenValidId() throws Exception {
+		PersonName personName = Context.getPersonService().getPersonName(2);
+		Assert.assertEquals(2, (int) personName.getId());
+	}
+	
+	@Test
+	@Verifies(value = "should not find any PersonName given invalid person id", method = "getPersonName(Integer)")
+	public void getPersonNameById_shouldNotFindAnyObjectGivenInvalidId() throws Exception {
+		PersonName personName = Context.getPersonService().getPersonName(-1);
+		Assert.assertNull(personName);
+	}
+	
 	/**
 	 * @see {@link PersonService#getRelationshipByUuid(String)}
-	 * 
 	 */
 	@Test
 	@Verifies(value = "should find object given valid uuid", method = "getRelationshipByUuid(String)")
@@ -1200,7 +1802,6 @@ public class PersonServiceTest extends BaseContextSensitiveTest {
 	
 	/**
 	 * @see {@link PersonService#getRelationshipByUuid(String)}
-	 * 
 	 */
 	@Test
 	@Verifies(value = "should return null if no object found with given uuid", method = "getRelationshipByUuid(String)")
@@ -1210,7 +1811,6 @@ public class PersonServiceTest extends BaseContextSensitiveTest {
 	
 	/**
 	 * @see {@link PersonService#getRelationshipTypeByUuid(String)}
-	 * 
 	 */
 	@Test
 	@Verifies(value = "should find object given valid uuid", method = "getRelationshipTypeByUuid(String)")
@@ -1222,7 +1822,6 @@ public class PersonServiceTest extends BaseContextSensitiveTest {
 	
 	/**
 	 * @see {@link PersonService#getRelationshipTypeByUuid(String)}
-	 * 
 	 */
 	@Test
 	@Verifies(value = "should return null if no object found with given uuid", method = "getRelationshipTypeByUuid(String)")
@@ -1262,6 +1861,183 @@ public class PersonServiceTest extends BaseContextSensitiveTest {
 		assertEquals("David", pname.getMiddleName());
 		assertEquals("Alex", pname.getFamilyName());
 		assertEquals("Smith", pname.getFamilyName2());
+	}
+	
+	/**
+	 * @see {@link PersonService#voidPersonName(org.openmrs.PersonName, String)}
+	 */
+	@Test
+	@Verifies(value = "should void personName with the given reason", method = "voidPersonName(PersonName)")
+	public void voidPersonName_shouldVoidPersonNameWithTheGivenReason() throws Exception {
+		executeDataSet("org/openmrs/api/include/PersionServiceTest-voidUnvoidPersonName.xml");
+		PersonName personName = Context.getPersonService().getPersonNameByUuid("5e6571cc-c7f2-41de-b289-f55f8fe79c6f");
+		
+		Assert.assertFalse(personName.isVoided());
+		
+		PersonName voidedPersonName = Context.getPersonService().voidPersonName(personName, "Test Voiding PersonName");
+		
+		Assert.assertTrue(voidedPersonName.isVoided());
+		Assert.assertNotNull(voidedPersonName.getVoidedBy());
+		Assert.assertNotNull(voidedPersonName.getDateVoided());
+		Assert.assertEquals(voidedPersonName.getVoidReason(), "Test Voiding PersonName");
+	}
+	
+	/**
+	 * @see {@link PersonService#unvoidPersonName(org.openmrs.PersonName)}
+	 */
+	@Test
+	@Verifies(value = "should unvoid voided personName", method = "unvoidPersonName(PersonName)")
+	public void unvoidPersonName_shouldUnvoidVoidedPersonName() throws Exception {
+		executeDataSet("org/openmrs/api/include/PersionServiceTest-voidUnvoidPersonName.xml");
+		PersonName voidedPersonName = Context.getPersonService().getPersonNameByUuid("a6ghgh7e-1384-493a-a55b-d325924acd94");
+		
+		Assert.assertTrue(voidedPersonName.isVoided());
+		
+		PersonName unvoidedPersonName = Context.getPersonService().unvoidPersonName(voidedPersonName);
+		
+		Assert.assertFalse(unvoidedPersonName.isVoided());
+		Assert.assertNull(unvoidedPersonName.getVoidedBy());
+		Assert.assertNull(unvoidedPersonName.getDateVoided());
+		Assert.assertNull(unvoidedPersonName.getVoidReason());
+		
+	}
+	
+	/**
+	 * @throws APIException
+	 * @see {@link PersonService#savePersonName(org.openmrs.PersonName)}
+	 */
+	@Test(expected = APIException.class)
+	@Verifies(value = "should fail if you try to void the last non voided name", method = "savePersonName(PersonName)")
+	public void savePersonName_shouldFailIfYouTryToVoidTheLastNonVoidedName() throws Exception {
+		executeDataSet("org/openmrs/api/include/PersionServiceTest-voidUnvoidPersonName.xml");
+		PersonName personName = Context.getPersonService().getPersonNameByUuid("39ghgh7b-6482-487d-94ce-c07bb3ca3cc1");
+		Assert.assertFalse(personName.isVoided());
+		Context.getPersonService().voidPersonName(personName, "Test Voiding PersonName");
+	}
+	
+	/**
+	 * @see {@link PersonService#voidPersonAddress(org.openmrs.PersonAddress, String)}
+	 */
+	@Test
+	@Verifies(value = "should void personAddress with the given reason", method = "voidPersonAddress(PersonAddress,String)")
+	public void voidPersonAddress_shouldVoidPersonAddressWithTheGivenReason() throws Exception {
+		executeDataSet("org/openmrs/api/include/PersionServiceTest-voidUnvoidPersonAddress.xml");
+		PersonAddress personAddress = Context.getPersonService().getPersonAddressByUuid(
+		    "33ghd0b5-821c-4e5e-ad1d-a9bce331e118");
+		
+		Assert.assertFalse(personAddress.isVoided());
+		
+		PersonAddress voidedPersonAddress = Context.getPersonService().voidPersonAddress(personAddress,
+		    "Test Voiding PersonAddress");
+		
+		Assert.assertTrue(voidedPersonAddress.isVoided());
+		Assert.assertNotNull(voidedPersonAddress.getVoidedBy());
+		Assert.assertNotNull(voidedPersonAddress.getDateVoided());
+		Assert.assertEquals(voidedPersonAddress.getVoidReason(), "Test Voiding PersonAddress");
+	}
+	
+	/**
+	 * @see {@link PersonService#unvoidPersonAddress(org.openmrs.PersonAddress)}
+	 */
+	@Test
+	@Verifies(value = "should unvoid voided personAddress", method = "unvoidPersonAddress(PersonAddress)")
+	public void unvoidPersonAddress_shouldUnvoidVoidedpersonAddress() throws Exception {
+		executeDataSet("org/openmrs/api/include/PersionServiceTest-voidUnvoidPersonAddress.xml");
+		PersonAddress voidedPersonAddress = Context.getPersonService().getPersonAddressByUuid(
+		    "33ghghb5-821c-4e5e-ad1d-a9bce331e777");
+		
+		Assert.assertTrue(voidedPersonAddress.isVoided());
+		
+		PersonAddress unvoidedPersonAddress = Context.getPersonService().unvoidPersonAddress(voidedPersonAddress);
+		
+		Assert.assertFalse(unvoidedPersonAddress.isVoided());
+		Assert.assertNull(unvoidedPersonAddress.getVoidedBy());
+		Assert.assertNull(unvoidedPersonAddress.getDateVoided());
+		Assert.assertNull(unvoidedPersonAddress.getVoidReason());
+		
+	}
+	
+	/**
+	 * @see PersonService#unvoidPerson(Person)
+	 * @verifies not unretire users
+	 */
+	@Test
+	public void unvoidPerson_shouldNotUnretireUsers() throws Exception {
+		//given
+		Person person = personService.getPerson(2);
+		User user = new User(person);
+		Context.getUserService().saveUser(user, "Admin123");
+		personService.voidPerson(person, "reason");
+		
+		//when
+		personService.unvoidPerson(person);
+		
+		//then
+		Assert.assertTrue(Context.getUserService().getUsersByPerson(person, false).isEmpty());
+	}
+	
+	/**
+	 * @see PersonService#unvoidPerson(Person)
+	 * @verifies unvoid patient
+	 */
+	@Test
+	public void unvoidPerson_shouldUnvoidPatient() throws Exception {
+		//given
+		Person person = personService.getPerson(2);
+		personService.voidPerson(person, "reason");
+		
+		//when
+		personService.unvoidPerson(person);
+		
+		//then
+		Assert.assertFalse(person.isVoided());
+	}
+	
+	/**
+	 * @see PersonService#voidPerson(Person,String)
+	 * @verifies retire users
+	 */
+	@Test
+	public void voidPerson_shouldRetireUsers() throws Exception {
+		//given
+		Person person = personService.getPerson(2);
+		User user = new User(person);
+		Context.getUserService().saveUser(user, "Admin123");
+		Assert.assertFalse(Context.getUserService().getUsersByPerson(person, false).isEmpty());
+		
+		//when
+		personService.voidPerson(person, "reason");
+		
+		//then
+		Assert.assertTrue(Context.getUserService().getUsersByPerson(person, false).isEmpty());
+	}
+	
+	/**
+	 * @see PersonService#voidPerson(Person,String)
+	 * @verifies void patient
+	 */
+	@Test
+	public void voidPerson_shouldVoidPatient() throws Exception {
+		//given
+		Person person = personService.getPerson(2);
+		
+		//when
+		personService.voidPerson(person, "reason");
+		
+		//then
+		Assert.assertTrue(person.isVoided());
+	}
+	
+	/**
+	 * @see {@link PersonService#saveRelationshipType(RelationshipType)}
+	 */
+	@Test(expected = APIException.class)
+	@Verifies(value = "should fail if the description is not specified", method = "saveRelationshipType(RelationshipType)")
+	public void saveRelationshipType_shouldFailIfTheDescriptionIsNotSpecified() throws Exception {
+		RelationshipType relationshipType = new RelationshipType();
+		relationshipType.setaIsToB("Sister");
+		relationshipType.setbIsToA("Brother");
+		personService.saveRelationshipType(relationshipType);
 	}
 	
 }

@@ -61,6 +61,7 @@ public class ObsValidator implements Validator {
 	 * @should fail validation if concept datatype is text and valueText is null
 	 * @should fail validation if obs ancestors contains obs
 	 * @should pass validation if all values present
+	 * @should fail validation if the parent obs has values
 	 */
 	public void validate(Object obj, Errors errors) {
 		Obs obs = (Obs) obj;
@@ -84,67 +85,110 @@ public class ObsValidator implements Validator {
 			errors.rejectValue("person", "error.null");
 		if (obs.getObsDatetime() == null)
 			errors.rejectValue("obsDatetime", "error.null");
+		
+		// if this is an obs group (i.e., parent) make sure that it has no values (other than valueGroupId) set
+		if (obs.hasGroupMembers()) {
+			if (obs.getValueCoded() != null)
+				errors.rejectValue("valueCoded", "error.not.null");
+			
+			if (obs.getValueDrug() != null)
+				errors.rejectValue("valueDrug", "error.not.null");
+			
+			if (obs.getValueDatetime() != null)
+				errors.rejectValue("valueDatetime", "error.not.null");
+			
+			if (obs.getValueNumeric() != null)
+				errors.rejectValue("valueNumeric", "error.not.null");
+			
+			if (obs.getValueModifier() != null)
+				errors.rejectValue("valueModifier", "error.not.null");
+			
+			if (obs.getValueText() != null)
+				errors.rejectValue("valueText", "error.not.null");
+			
+			if (obs.getValueBoolean() != null)
+				errors.rejectValue("valueBoolean", "error.not.null");
+			
+			if (obs.getValueComplex() != null)
+				errors.rejectValue("valueComplex", "error.not.null");
+			
+		}
+		// if this is NOT an obs group, make sure that it has at least one value set (not counting obsGroupId)
+		else if (obs.getValueBoolean() == null && obs.getValueCoded() == null && obs.getValueCodedName() == null
+		        && obs.getValueComplex() == null && obs.getValueDatetime() == null && obs.getValueDrug() == null
+		        && obs.getValueModifier() == null && obs.getValueNumeric() == null && obs.getValueText() == null
+		        && obs.getComplexData() == null) {
+			errors.reject("error.noValue");
+		}
+		
+		// make sure there is a concept associated with the obs
 		Concept c = obs.getConcept();
 		if (c == null) {
 			errors.rejectValue("concept", "error.null");
-		} else {
+		}
+		// if there is a concept, and this isn't a group, perform validation tests specific to the concept datatype
+		else if (!obs.hasGroupMembers()) {
 			ConceptDatatype dt = c.getDatatype();
-			if (dt.isBoolean() && obs.getValueBoolean() == null) {
-				if (atRootNode)
-					errors.rejectValue("valueBoolean", "error.null");
-				else
-					errors.rejectValue("groupMembers", "Obs.error.inGroupMember");
-			} else if (dt.isCoded() && obs.getValueCoded() == null) {
-				if (atRootNode)
-					errors.rejectValue("valueCoded", "error.null");
-				else
-					errors.rejectValue("groupMembers", "Obs.error.inGroupMember");
-			} else if ((dt.isDateTime() || dt.isDate() || dt.isTime()) && obs.getValueDatetime() == null) {
-				if (atRootNode)
-					errors.rejectValue("valueDatetime", "error.null");
-				else
-					errors.rejectValue("groupMembers", "Obs.error.inGroupMember");
-			} else if (dt.isNumeric() && obs.getValueNumeric() == null) {
-				if (atRootNode)
-					errors.rejectValue("valueNumeric", "error.null");
-				else
-					errors.rejectValue("groupMembers", "Obs.error.inGroupMember");
-			} else if (dt.isNumeric()) {
-				ConceptNumeric cn = Context.getConceptService().getConceptNumeric(c.getConceptId());
-				// If the concept numeric is not precise, the value cannot be a float, so raise an error 
-				if (!cn.isPrecise() && Math.ceil(obs.getValueNumeric()) != obs.getValueNumeric()) {
+			if (dt != null) {
+				if (dt.isBoolean() && obs.getValueBoolean() == null) {
 					if (atRootNode)
-						errors.rejectValue("valueNumeric", "error.precision");
+						errors.rejectValue("valueBoolean", "error.null");
+					else
+						errors.rejectValue("groupMembers", "Obs.error.inGroupMember");
+				} else if (dt.isCoded() && obs.getValueCoded() == null) {
+					if (atRootNode)
+						errors.rejectValue("valueCoded", "error.null");
+					else
+						errors.rejectValue("groupMembers", "Obs.error.inGroupMember");
+				} else if ((dt.isDateTime() || dt.isDate() || dt.isTime()) && obs.getValueDatetime() == null) {
+					if (atRootNode)
+						errors.rejectValue("valueDatetime", "error.null");
+					else
+						errors.rejectValue("groupMembers", "Obs.error.inGroupMember");
+				} else if (dt.isNumeric() && obs.getValueNumeric() == null) {
+					if (atRootNode)
+						errors.rejectValue("valueNumeric", "error.null");
+					else
+						errors.rejectValue("groupMembers", "Obs.error.inGroupMember");
+				} else if (dt.isNumeric()) {
+					ConceptNumeric cn = Context.getConceptService().getConceptNumeric(c.getConceptId());
+					// If the concept numeric is not precise, the value cannot be a float, so raise an error 
+					if (!cn.isPrecise() && Math.ceil(obs.getValueNumeric()) != obs.getValueNumeric()) {
+						if (atRootNode)
+							errors.rejectValue("valueNumeric", "error.precision");
+						else
+							errors.rejectValue("groupMembers", "Obs.error.inGroupMember");
+					}
+					// If the number is higher than the absolute range, raise an error 
+					if (cn.getHiAbsolute() != null && cn.getHiAbsolute() < obs.getValueNumeric()) {
+						if (atRootNode)
+							errors.rejectValue("valueNumeric", "error.outOfRange.high");
+						else
+							errors.rejectValue("groupMembers", "Obs.error.inGroupMember");
+					}
+					// If the number is lower than the absolute range, raise an error as well 
+					if (cn.getLowAbsolute() != null && cn.getLowAbsolute() > obs.getValueNumeric()) {
+						if (atRootNode)
+							errors.rejectValue("valueNumeric", "error.outOfRange.low");
+						else
+							errors.rejectValue("groupMembers", "Obs.error.inGroupMember");
+					}
+				} else if (dt.isText() && obs.getValueText() == null) {
+					if (atRootNode)
+						errors.rejectValue("valueText", "error.null");
 					else
 						errors.rejectValue("groupMembers", "Obs.error.inGroupMember");
 				}
-				// If the number is higher than the absolute range, raise an error 
-				if (cn.getHiAbsolute() != null && cn.getHiAbsolute() < obs.getValueNumeric()) {
+				
+				//If valueText is longer than the maxlength, raise an error as well.
+				if (dt.isText() && obs.getValueText() != null && obs.getValueText().length() > VALUE_TEXT_MAX_LENGTH) {
 					if (atRootNode)
-						errors.rejectValue("valueNumeric", "error.outOfRange.high");
+						errors.rejectValue("valueText", "error.exceededMaxLengthOfField");
 					else
 						errors.rejectValue("groupMembers", "Obs.error.inGroupMember");
 				}
-				// If the number is lower than the absolute range, raise an error as well 
-				if (cn.getLowAbsolute() != null && cn.getLowAbsolute() > obs.getValueNumeric()) {
-					if (atRootNode)
-						errors.rejectValue("valueNumeric", "error.outOfRange.low");
-					else
-						errors.rejectValue("groupMembers", "Obs.error.inGroupMember");
-				}
-			} else if (dt.isText() && obs.getValueText() == null) {
-				if (atRootNode)
-					errors.rejectValue("valueText", "error.null");
-				else
-					errors.rejectValue("groupMembers", "Obs.error.inGroupMember");
-			}
-			
-			//If valueText is longer than the maxlength, raise an error as well.
-			if (dt.isText() && obs.getValueText() != null && obs.getValueText().length() > VALUE_TEXT_MAX_LENGTH) {
-				if (atRootNode)
-					errors.rejectValue("valueText", "error.exceededMaxLengthOfField");
-				else
-					errors.rejectValue("groupMembers", "Obs.error.inGroupMember");
+			} else { // dt is null
+				errors.rejectValue("concept", "must have a datatype");
 			}
 		}
 		

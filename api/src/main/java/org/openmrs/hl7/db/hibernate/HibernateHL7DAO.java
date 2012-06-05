@@ -118,6 +118,12 @@ public class HibernateHL7DAO implements HL7DAO {
 		return (HL7InQueue) sessionFactory.getCurrentSession().get(HL7InQueue.class, hl7InQueueId);
 	}
 	
+	@Override
+	public HL7InQueue getHL7InQueueByUuid(String uuid) throws DAOException {
+		return (HL7InQueue) sessionFactory.getCurrentSession().createCriteria(HL7InQueue.class).add(
+		    Restrictions.eq("uuid", uuid)).uniqueResult();
+	}
+	
 	/**
 	 * @see org.openmrs.hl7.db.HL7DAO#getAllHL7InQueues()
 	 */
@@ -157,11 +163,12 @@ public class HibernateHL7DAO implements HL7DAO {
 	}
 	
 	/**
-	 * @see org.openmrs.hl7.db.HL7DAO#getHL7InQueueBatch(java.lang.Class, int, int, java.lang.Integer, java.lang.String)
+	 * @see org.openmrs.hl7.db.HL7DAO#getHL7InQueueBatch(java.lang.Class, int, int,
+	 *      java.lang.Integer, java.lang.String)
 	 */
 	@SuppressWarnings( { "rawtypes", "unchecked" })
 	public <T> List<T> getHL7Batch(Class clazz, int start, int length, Integer messageState, String query)
-	                                                                                                      throws DAOException {
+	        throws DAOException {
 		Criteria crit = getHL7SearchCriteria(clazz, messageState, query);
 		crit.setFirstResult(start);
 		crit.setMaxResults(length);
@@ -170,7 +177,8 @@ public class HibernateHL7DAO implements HL7DAO {
 	}
 	
 	/**
-	 * @see org.openmrs.hl7.db.HL7DAO#countHL7s(java.lang.Class, java.lang.Integer, java.lang.String)
+	 * @see org.openmrs.hl7.db.HL7DAO#countHL7s(java.lang.Class, java.lang.Integer,
+	 *      java.lang.String)
 	 */
 	@SuppressWarnings("rawtypes")
 	public Integer countHL7s(Class clazz, Integer messageState, String query) {
@@ -279,6 +287,12 @@ public class HibernateHL7DAO implements HL7DAO {
 	 */
 	public HL7InError getHL7InError(Integer hl7InErrorId) throws DAOException {
 		return (HL7InError) sessionFactory.getCurrentSession().get(HL7InError.class, hl7InErrorId);
+	}
+	
+	@Override
+	public HL7InError getHL7InErrorByUuid(String uuid) throws DAOException {
+		return (HL7InError) sessionFactory.getCurrentSession().createCriteria(HL7InError.class).add(
+		    Restrictions.eq("uuid", uuid)).uniqueResult();
 	}
 	
 	/**

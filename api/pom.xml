@@ -2,7 +2,7 @@
    <parent>
       <groupId>org.openmrs</groupId>
       <artifactId>openmrs</artifactId>
-      <version>1.8.2</version>
+      <version>1.9.0</version>
    </parent>
    <modelVersion>4.0.0</modelVersion>
    <groupId>org.openmrs.api</groupId>
@@ -20,6 +20,10 @@
       <dependency>
          <groupId>commons-collections</groupId>
          <artifactId>commons-collections</artifactId>
+      </dependency>
+      <dependency>
+         <groupId>org.apache.commons</groupId>
+         <artifactId>commons-lang3</artifactId>
       </dependency>
       <dependency>
          <groupId>commons-beanutils</groupId>
@@ -102,8 +106,28 @@
          <artifactId>stax-api</artifactId>
       </dependency>
       <dependency>
+        <groupId>javassist</groupId>
+        <artifactId>javassist</artifactId>
+      </dependency>
+      <dependency>
          <groupId>org.openmrs.hibernate</groupId>
-         <artifactId>hibernate</artifactId>
+         <artifactId>hibernate-core</artifactId>
+      </dependency>
+      <dependency>
+         <groupId>org.hibernate</groupId>
+         <artifactId>hibernate-c3p0</artifactId>
+      </dependency>
+      <dependency>
+         <groupId>org.hibernate</groupId>
+         <artifactId>hibernate-ehcache</artifactId>
+      </dependency>
+      <dependency>
+         <groupId>org.hibernate</groupId>
+         <artifactId>hibernate-search</artifactId>
+      </dependency>
+      <dependency>
+         <groupId>org.hibernate</groupId>
+         <artifactId>hibernate-search-analyzers</artifactId>
       </dependency>
       <dependency>
          <groupId>dom4j</groupId>
@@ -138,8 +162,23 @@
          <artifactId>mail</artifactId>
       </dependency>
       <dependency>
-         <groupId>org.openmrs.liquibase</groupId>
+         <groupId>org.liquibase</groupId>
          <artifactId>liquibase-core</artifactId>
+      </dependency>
+      <dependency>
+         <groupId>org.openmrs.liquibase.ext</groupId>
+         <artifactId>modify-column</artifactId>
+         <version>2.0.2</version>
+      </dependency>
+      <dependency>
+         <groupId>org.openmrs.liquibase.ext</groupId>
+         <artifactId>identity-insert</artifactId>
+         <version>1.2.1</version>
+      </dependency>
+       <dependency>
+         <groupId>org.openmrs.liquibase.ext</groupId>
+         <artifactId>type-converter</artifactId>
+         <version>1.0.1</version>
       </dependency>
       <dependency>
          <groupId>xerces</groupId>

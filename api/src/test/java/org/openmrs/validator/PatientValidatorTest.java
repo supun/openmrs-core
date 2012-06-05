@@ -13,105 +13,61 @@
  */
 package org.openmrs.validator;
 
-import java.util.Calendar;
-import java.util.Date;
-
 import org.junit.Assert;
 import org.junit.Test;
 import org.openmrs.Patient;
+import org.openmrs.PatientIdentifier;
 import org.openmrs.api.context.Context;
-import org.openmrs.test.BaseContextSensitiveTest;
 import org.openmrs.test.Verifies;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.validation.BindException;
 import org.springframework.validation.Errors;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.validation.Validator;
 
 /**
  * Tests methods on the {@link PatientValidator} class.
  */
-public class PatientValidatorTest extends BaseContextSensitiveTest {
+public class PatientValidatorTest extends PersonValidatorTest {
 	
 	@Autowired
-	PatientValidator validator;
-	
-	/**
-	 * @see PatientValidator#validate(Object,Errors)
-	 * @verifies fail validation if birthdate is a future date
-	 */
-	@Test
-	@Verifies(value = "should fail validation if birthdate is a future date", method = "validate(Object,Errors)")
-	public void validate_shouldFailValidationIfBirthdateIsAFutureDate() throws Exception {
-		Patient pa = new Patient(1);
-		Calendar birth = Calendar.getInstance();
-		birth.setTime(new Date());
-		birth.add(Calendar.YEAR, 20);
-		pa.setBirthdate(birth.getTime());
-		Errors errors = new BindException(pa, "patient");
-		validator.validate(pa, errors);
-		
-		Assert.assertTrue(errors.hasFieldErrors("birthdate"));
+	@Qualifier("patientValidator")
+	@Override
+	public void setValidator(Validator validator) {
+		super.setValidator(validator);
 	}
 	
 	/**
-	 * @see PatientValidator#validate(Object,Errors)
-	 * @verifies fail validation if birthdate makes patient older that 120 years old
+	 * @see {@link PatientValidator#validate(Object,Errors)}
 	 */
 	@Test
-	@Verifies(value = "should fail validation if birthdate makes patient older that 120 years old", method = "validate(Object,Errors)")
-	public void validate_shouldFailValidationIfBirthdateMakesPatientOlderThat120YearsOld() throws Exception {
-		Patient pa = new Patient(1);
-		Calendar birth = Calendar.getInstance();
-		birth.setTime(new Date());
-		birth.add(Calendar.YEAR, -125);
-		pa.setBirthdate(birth.getTime());
-		Errors errors = new BindException(pa, "patient");
-		validator.validate(pa, errors);
-		
-		Assert.assertTrue(errors.hasFieldErrors("birthdate"));
-	}
-	
-	/**
-	 * @see PatientValidator#validate(Object,Errors)
-	 * @verifies fail validation if causeOfDeath is blank when patient is dead
-	 */
-	@Test
-	@Verifies(value = "should fail validation if causeOfDeath is blank when patient is dead", method = "validate(Object,Errors)")
-	public void validate_shouldFailValidationIfCauseOfDeathIsBlankWhenPatientIsDead() throws Exception {
-		Patient pa = new Patient(1);
-		pa.setDead(true);
-		
-		Errors errors = new BindException(pa, "patient");
-		validator.validate(pa, errors);
-		
-		Assert.assertTrue(errors.hasFieldErrors("causeOfDeath"));
-	}
-	
-	/**
-	 * @see PatientValidator#validate(Object,Errors)
-	 * @verifies fail validation if gender is blank
-	 */
-	@Test
-	@Verifies(value = "should fail validation if gender is blank", method = "validate(Object,Errors)")
-	public void validate_shouldFailValidationIfGenderIsBlank() throws Exception {
-		Patient pa = new Patient(1);
-		Errors errors = new BindException(pa, "patient");
-		validator.validate(pa, errors);
-		
-		Assert.assertTrue(errors.hasFieldErrors("gender"));
-		
-	}
-	
-	/**
-	 * @see PatientValidator#validate(Object,Errors)
-	 * @verifies fail validation if voidReason is blank when patient is voided
-	 */
-	@Test
-	@Verifies(value = "should fail validation if voidReason is blank when patient is voided", method = "validate(Object,Errors)")
-	public void validate_shouldFailValidationIfVoidReasonIsBlankWhenPatientIsVoided() throws Exception {
+	@Verifies(value = "should fail validation if a preferred patient identifier is not chosen", method = "validate(Object,Errors)")
+	public void validate_shouldFailValidationIfAPreferredPatientIdentifierIsNotChosen() throws Exception {
 		Patient pa = Context.getPatientService().getPatient(2);
-		pa.setVoided(true);
+		Assert.assertNotNull(pa.getPatientIdentifier());
+		//set all identifiers to be non-preferred
+		for (PatientIdentifier id : pa.getIdentifiers())
+			id.setPreferred(false);
+		
 		Errors errors = new BindException(pa, "patient");
 		validator.validate(pa, errors);
-		Assert.assertTrue(errors.hasFieldErrors("voidReason"));
+		Assert.assertTrue(errors.hasErrors());
+	}
+	
+	/**
+	 * @see {@link PatientValidator#validate(Object,Errors)}
+	 */
+	@Test
+	@Verifies(value = "should fail validation if a preferred patient identifier is not chosen for voided patients", method = "validate(Object,Errors)")
+	public void validate_shouldFailValidationIfAPreferredPatientIdentifierIsNotChosenForVoidedPatients() throws Exception {
+		Patient pa = Context.getPatientService().getPatient(999);
+		Assert.assertTrue(pa.isVoided());//sanity check
+		Assert.assertNotNull(pa.getPatientIdentifier());
+		for (PatientIdentifier id : pa.getIdentifiers())
+			id.setPreferred(false);
+		
+		Errors errors = new BindException(pa, "patient");
+		validator.validate(pa, errors);
+		Assert.assertTrue(errors.hasErrors());
 	}
 }

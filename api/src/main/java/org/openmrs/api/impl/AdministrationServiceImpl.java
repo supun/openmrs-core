@@ -17,13 +17,17 @@ import java.io.StringWriter;
 import java.io.UnsupportedEncodingException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Properties;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
@@ -41,6 +45,7 @@ import org.openmrs.GlobalProperty;
 import org.openmrs.ImplementationId;
 import org.openmrs.Location;
 import org.openmrs.MimeType;
+import org.openmrs.OpenmrsObject;
 import org.openmrs.PatientIdentifierType;
 import org.openmrs.Privilege;
 import org.openmrs.Role;
@@ -53,6 +58,9 @@ import org.openmrs.api.EventListeners;
 import org.openmrs.api.GlobalPropertyListener;
 import org.openmrs.api.context.Context;
 import org.openmrs.api.db.AdministrationDAO;
+import org.openmrs.customdatatype.CustomDatatypeUtil;
+import org.openmrs.module.Module;
+import org.openmrs.module.ModuleFactory;
 import org.openmrs.module.ModuleUtil;
 import org.openmrs.reporting.AbstractReportObject;
 import org.openmrs.reporting.Report;
@@ -61,6 +69,7 @@ import org.openmrs.util.OpenmrsConstants;
 import org.openmrs.util.OpenmrsUtil;
 import org.openmrs.util.PrivilegeConstants;
 import org.springframework.util.StringUtils;
+import org.springframework.validation.Errors;
 
 /**
  * Default implementation of the administration services. This class should not be used on its own.
@@ -410,7 +419,7 @@ public class AdministrationServiceImpl extends BaseOpenmrsService implements Adm
 	
 	/**
 	 * Update Report
-	 *
+	 * 
 	 * @param report Report to update
 	 * @deprecated see reportingcompatibility module
 	 * @throws APIException
@@ -425,7 +434,7 @@ public class AdministrationServiceImpl extends BaseOpenmrsService implements Adm
 	
 	/**
 	 * Delete Report
-	 *
+	 * 
 	 * @param report Report to delete
 	 * @deprecated see reportingcompatibility module
 	 * @throws APIException
@@ -440,7 +449,7 @@ public class AdministrationServiceImpl extends BaseOpenmrsService implements Adm
 	
 	/**
 	 * Create a new Report Object
-	 *
+	 * 
 	 * @param reportObject Report Object to create
 	 * @deprecated see reportingcompatibility module
 	 * @throws APIException
@@ -455,7 +464,7 @@ public class AdministrationServiceImpl extends BaseOpenmrsService implements Adm
 	
 	/**
 	 * Update Report Object
-	 *
+	 * 
 	 * @param reportObject Report Object to update
 	 * @deprecated see reportingcompatibility module
 	 * @throws APIException
@@ -470,7 +479,7 @@ public class AdministrationServiceImpl extends BaseOpenmrsService implements Adm
 	
 	/**
 	 * Delete Report Object
-	 *
+	 * 
 	 * @param reportObjectId Internal Integer identifier of Report Object to delete
 	 * @deprecated see reportingcompatibility module
 	 * @throws APIException
@@ -616,7 +625,6 @@ public class AdministrationServiceImpl extends BaseOpenmrsService implements Adm
 			systemVariables.put("OBSCURE_PATIENTS_FAMILY_NAME", OpenmrsConstants.OBSCURE_PATIENTS_FAMILY_NAME);
 			systemVariables.put("OBSCURE_PATIENTS_GIVEN_NAME", OpenmrsConstants.OBSCURE_PATIENTS_GIVEN_NAME);
 			systemVariables.put("OBSCURE_PATIENTS_MIDDLE_NAME", OpenmrsConstants.OBSCURE_PATIENTS_MIDDLE_NAME);
-			systemVariables.put("STOP_WORDS", OpenmrsConstants.STOP_WORDS().toString());
 			systemVariables.put("MODULE_REPOSITORY_PATH", ModuleUtil.getModuleRepository().getAbsolutePath());
 			systemVariables.put("OPERATING_SYSTEM_KEY", String.valueOf(OpenmrsConstants.OPERATING_SYSTEM_KEY));
 			systemVariables.put("OPERATING_SYSTEM", String.valueOf(OpenmrsConstants.OPERATING_SYSTEM));
@@ -755,16 +763,10 @@ public class AdministrationServiceImpl extends BaseOpenmrsService implements Adm
 	public List<GlobalProperty> saveGlobalProperties(List<GlobalProperty> props) throws APIException {
 		log.debug("saving a list of global properties");
 		
-		// delete all properties not in this new list
-		for (GlobalProperty gp : getAllGlobalProperties()) {
-			if (!props.contains(gp))
-				purgeGlobalProperty(gp);
-		}
-		
 		// add all of the new properties
 		for (GlobalProperty prop : props) {
 			if (prop.getProperty() != null && prop.getProperty().length() > 0) {
-				saveGlobalProperty(prop);
+				Context.getAdministrationService().saveGlobalProperty(prop);
 			}
 		}
 		
@@ -775,9 +777,9 @@ public class AdministrationServiceImpl extends BaseOpenmrsService implements Adm
 	 * @see org.openmrs.api.AdministrationService#saveGlobalProperty(org.openmrs.GlobalProperty)
 	 */
 	public GlobalProperty saveGlobalProperty(GlobalProperty gp) throws APIException {
-		
 		// only try to save it if the global property has a key
 		if (gp.getProperty() != null && gp.getProperty().length() > 0) {
+			CustomDatatypeUtil.saveIfDirty(gp);
 			dao.saveGlobalProperty(gp);
 			notifyGlobalPropertyChange(gp);
 			return gp;
@@ -927,7 +929,7 @@ public class AdministrationServiceImpl extends BaseOpenmrsService implements Adm
 	 * @throws UnsupportedEncodingException
 	 */
 	private String checkImplementationIdValidity(String implementationId, String description, String passphrase)
-	                                                                                                            throws APIException {
+	        throws APIException {
 		
 		if (!StringUtils.hasLength(implementationId))
 			throw new APIException("The implementationid cannot be empty");
@@ -993,7 +995,9 @@ public class AdministrationServiceImpl extends BaseOpenmrsService implements Adm
 	
 	/**
 	 * Used by spring to set the GlobalLocaleList on this implementation
-	 * @param gll the GlobalLocaleList object that is registered to the GlobalPropertyListeners as well
+	 * 
+	 * @param gll the GlobalLocaleList object that is registered to the GlobalPropertyListeners as
+	 *            well
 	 */
 	public void setGlobalLocaleList(GlobalLocaleList gll) {
 		globalLocaleList = gll;
@@ -1086,4 +1090,136 @@ public class AdministrationServiceImpl extends BaseOpenmrsService implements Adm
 		}
 	}
 	
+	/**
+	 * @see org.openmrs.api.AdministrationService#getSystemInformation()
+	 */
+	public Map<String, Map<String, String>> getSystemInformation() throws APIException {
+		Map<String, Map<String, String>> systemInfoMap = new LinkedHashMap<String, Map<String, String>>();
+		
+		systemInfoMap.put("SystemInfo.title.openmrsInformation", new LinkedHashMap<String, String>() {
+			
+			private static final long serialVersionUID = 1L;
+			
+			{
+				put("SystemInfo.OpenMRSInstallation.systemDate", new SimpleDateFormat("yyyy-MM-dd").format(Calendar
+				        .getInstance().getTime()));
+				put("SystemInfo.OpenMRSInstallation.systemTime", new SimpleDateFormat("HH:mm:ss").format(Calendar
+				        .getInstance().getTime()));
+				put("SystemInfo.OpenMRSInstallation.openmrsVersion", OpenmrsConstants.OPENMRS_VERSION);
+				try {
+					put("SystemInfo.hostname", InetAddress.getLocalHost().getCanonicalHostName());
+				}
+				catch (UnknownHostException e) {
+					put("SystemInfo.hostname", "Unknown host: " + e.getMessage());
+				}
+			}
+		});
+		
+		systemInfoMap.put("SystemInfo.title.javaRuntimeEnvironmentInformation", new LinkedHashMap<String, String>() {
+			
+			Properties properties = System.getProperties();
+			
+			private static final long serialVersionUID = 1L;
+			
+			{
+				put("SystemInfo.JavaRuntimeEnv.operatingSystem", properties.getProperty("os.name"));
+				put("SystemInfo.JavaRuntimeEnv.operatingSystemArch", properties.getProperty("os.arch"));
+				put("SystemInfo.JavaRuntimeEnv.operatingSystemVersion", properties.getProperty("os.version"));
+				put("SystemInfo.JavaRuntimeEnv.javaVersion", properties.getProperty("java.version"));
+				put("SystemInfo.JavaRuntimeEnv.javaVendor", properties.getProperty("java.vendor"));
+				put("SystemInfo.JavaRuntimeEnv.jvmVersion", properties.getProperty("java.vm.version"));
+				put("SystemInfo.JavaRuntimeEnv.jvmVendor", properties.getProperty("java.vm.vendor"));
+				put("SystemInfo.JavaRuntimeEnv.javaRuntimeName", properties.getProperty("java.runtime.name"));
+				put("SystemInfo.JavaRuntimeEnv.javaRuntimeVersion", properties.getProperty("java.runtime.version"));
+				put("SystemInfo.JavaRuntimeEnv.userName", properties.getProperty("user.name"));
+				put("SystemInfo.JavaRuntimeEnv.systemLanguage", properties.getProperty("user.language"));
+				put("SystemInfo.JavaRuntimeEnv.systemTimezone", properties.getProperty("user.timezone"));
+				put("SystemInfo.JavaRuntimeEnv.fileSystemEncoding", properties.getProperty("sun.jnu.encoding"));
+				put("SystemInfo.JavaRuntimeEnv.userDirectory", properties.getProperty("user.dir"));
+				put("SystemInfo.JavaRuntimeEnv.tempDirectory", properties.getProperty("java.io.tmpdir"));
+			}
+		});
+		
+		systemInfoMap.put("SystemInfo.title.memoryInformation", new LinkedHashMap<String, String>() {
+			
+			private static final long serialVersionUID = 1L;
+			
+			Runtime runtime = Runtime.getRuntime();
+			
+			{
+				put("SystemInfo.Memory.totalMemory", convertToMegaBytes(runtime.totalMemory()));
+				put("SystemInfo.Memory.freeMemory", convertToMegaBytes(runtime.freeMemory()));
+				put("SystemInfo.Memory.maximumHeapSize", convertToMegaBytes(runtime.maxMemory()));
+				
+			}
+		});
+		
+		systemInfoMap.put("SystemInfo.title.dataBaseInformation", new LinkedHashMap<String, String>() {
+			
+			Properties properties = Context.getRuntimeProperties();
+			
+			private static final long serialVersionUID = 1L;
+			
+			{
+				put("SystemInfo.Database.name", OpenmrsConstants.DATABASE_NAME);
+				put("SystemInfo.Database.connectionURL", properties.getProperty("connection.url"));
+				put("SystemInfo.Database.userName", properties.getProperty("connection.username"));
+				put("SystemInfo.Database.driver", properties.getProperty("hibernate.connection.driver_class"));
+				put("SystemInfo.Database.dialect", properties.getProperty("hibernate.dialect"));
+				
+			}
+		});
+		
+		systemInfoMap.put("SystemInfo.title.moduleInformation", new LinkedHashMap<String, String>() {
+			
+			private static final long serialVersionUID = 1L;
+			
+			{
+				put("SystemInfo.Module.repositoryPath", ModuleUtil.getModuleRepository().getAbsolutePath());
+				Collection<Module> loadedModules = ModuleFactory.getLoadedModules();
+				for (Module module : loadedModules) {
+					String moduleInfo = module.getVersion() + " "
+					        + (module.isStarted() ? "" : Context.getMessageSourceService().getMessage("Module.notStarted"));
+					put(module.getName(), moduleInfo);
+				}
+			}
+		});
+		
+		return systemInfoMap;
+	}
+	
+	/**
+	 * @param bytes to be converted into mega bytes
+	 * @return memory in mega bytes
+	 */
+	private String convertToMegaBytes(long bytes) {
+		int ONE_KILO_BYTE = 1024;
+		return String.valueOf(bytes / ONE_KILO_BYTE / ONE_KILO_BYTE) + " MB";
+	}
+	
+	/**
+	 * @see org.openmrs.api.AdministrationService#purgeGlobalProperties(java.util.List)
+	 */
+	@Override
+	public void purgeGlobalProperties(List<GlobalProperty> globalProperties) throws APIException {
+		for (GlobalProperty globalProperty : globalProperties) {
+			Context.getAdministrationService().purgeGlobalProperty(globalProperty);
+		}
+	}
+	
+	/**
+	 * @see AdministrationService#getMaximumPropertyLength(Class, String)
+	 */
+	@Override
+	public int getMaximumPropertyLength(Class<? extends OpenmrsObject> aClass, String fieldName) {
+		return dao.getMaximumPropertyLength(aClass, fieldName);
+	}
+	
+	/**
+	 * @see org.openmrs.api.AdministrationService#validate(java.lang.Object, Errors)
+	 */
+	@Override
+	public void validate(Object object, Errors errors) throws APIException {
+		dao.validate(object, errors);
+	}
 }

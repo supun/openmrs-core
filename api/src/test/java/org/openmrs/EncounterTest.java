@@ -18,12 +18,19 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.Date;
 import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
+import org.apache.commons.lang3.reflect.FieldUtils;
 import org.junit.Assert;
 import org.junit.Test;
+import org.openmrs.api.context.Context;
+import org.openmrs.test.BaseContextSensitiveTest;
 import org.openmrs.test.Verifies;
 
 /**
@@ -31,109 +38,7 @@ import org.openmrs.test.Verifies;
  * 
  * @see Encounter
  */
-public class EncounterTest {
-	
-	/**
-	 * @see {@link Encounter#equals(Object)}
-	 */
-	@Test
-	@Verifies(value = "should equal encounter with same encounter id", method = "equals(Object)")
-	public void equals_shouldEqualEncounterWithSameEncounterId() throws Exception {
-		Encounter encounter1 = new Encounter(1);
-		// another encounter with the same encounter id
-		Encounter encounter2 = new Encounter(1);
-		
-		Assert.assertTrue(encounter1.equals(encounter2));
-	}
-	
-	/**
-	 * @see {@link Encounter#equals(Object)}
-	 */
-	@Test
-	@Verifies(value = "should not equal encounter with different encounter id", method = "equals(Object)")
-	public void equals_shouldNotEqualEncounterWithDifferentEncounterId() throws Exception {
-		Encounter encounter1 = new Encounter(1);
-		// another encounter with a different encounter id
-		Encounter encounter2 = new Encounter(2);
-		
-		Assert.assertFalse(encounter1.equals(encounter2));
-	}
-	
-	/**
-	 * @see {@link Encounter#equals(Object)}
-	 */
-	@Test
-	@Verifies(value = "should not equal on null", method = "equals(Object)")
-	public void equals_shouldNotEqualOnNull() throws Exception {
-		Assert.assertFalse(new Encounter(1).equals(null));
-	}
-	
-	/**
-	 * @see {@link Encounter#hashCode()}
-	 */
-	@Test
-	@Verifies(value = "should have different hash code when not equal", method = "hashCode()")
-	public void hashCode_shouldHaveDifferentHashCodeWhenNotEqual() throws Exception {
-		Encounter encounter1 = new Encounter(1);
-		// another encounter with a different encounter id
-		Encounter encounter2 = new Encounter(2);
-		
-		Assert.assertNotSame(encounter1.hashCode(), encounter2.hashCode());
-	}
-	
-	/**
-	 * @see {@link Encounter#hashCode()}
-	 */
-	@Test
-	@Verifies(value = "should have same hashcode when equal", method = "hashCode()")
-	public void hashCode_shouldHaveSameHashcodeWhenEqual() throws Exception {
-		Encounter encounter1 = new Encounter(1);
-		// another encounter with a different encounter id
-		Encounter encounter2 = new Encounter(1);
-		
-		Assert.assertSame(encounter1.hashCode(), encounter2.hashCode());
-	}
-	
-	/**
-	 * @see {@link Encounter#equals(Object)}
-	 */
-	@Test
-	@Verifies(value = "should have equal encounter objects with no encounter ids", method = "equals(Object)")
-	public void equals_shouldHaveEqualEncounterObjectsWithNoEncounterIds() throws Exception {
-		// an encounter object with no encounter id
-		Encounter encounter = new Encounter();
-		
-		Assert.assertTrue(encounter.equals(encounter));
-	}
-	
-	/**
-	 * @see {@link Encounter#equals(Object)}
-	 */
-	@Test
-	@Verifies(value = "should not have equal encounter objects when one has null encounter id", method = "equals(Object)")
-	public void equals_shouldNotHaveEqualEncounterObjectsWhenOneHasNullEncounterId() throws Exception {
-		Encounter encounterWithId = new Encounter(1);
-		// another encounter that doesn't have an encounter id
-		Encounter encounterWithoutId = new Encounter();
-		
-		Assert.assertFalse(encounterWithId.equals(encounterWithoutId));
-		
-		// now test the reverse
-		Assert.assertFalse(encounterWithoutId.equals(encounterWithId));
-		
-		Encounter anotherEncounterWithoutId = new Encounter();
-		// now test with both not having an id
-		Assert.assertFalse(encounterWithoutId.equals(anotherEncounterWithoutId));
-	}
-	
-	/**
-	 * @see {@link Encounter#hashCode()}
-	 */
-	@Test
-	@Verifies(value = "should get hash code with null attributes", method = "hashCode()")
-	public void hashCode_shouldGetHashCodeWithNullAttributes() throws Exception {
-		new Encounter().hashCode();
-	}
+public class EncounterTest extends BaseContextSensitiveTest {
 	
 	/**
 	 * @see {@link Encounter#toString()}
@@ -357,7 +262,7 @@ public class EncounterTest {
 		//obsGroup should recurse and ONLY the child obs should be picked up:
 		assertEquals(1, encounter.getObs().size());
 		// make sure that the obs is the oChild
-		Obs obsInEncounter = encounter.getObs().toArray(new Obs[] {})[0];
+		Obs obsInEncounter = (Obs) encounter.getObs().toArray()[0];
 		assertTrue(childObs.equals(obsInEncounter));
 		assertFalse(obsInEncounter.isObsGrouping());
 	}
@@ -385,7 +290,7 @@ public class EncounterTest {
 		assertEquals(1, encounter.getObsAtTopLevel(false).size());
 		
 		// make sure that the obs is the parent obs
-		Obs obsInEncounter = encounter.getObsAtTopLevel(false).toArray(new Obs[] {})[0];
+		Obs obsInEncounter = (Obs) encounter.getObsAtTopLevel(false).toArray()[0];
 		assertTrue(obsInEncounter.isObsGrouping());
 	}
 	
@@ -410,7 +315,7 @@ public class EncounterTest {
 		assertEquals(1, encounter.getAllObs(true).size());
 		assertNotNull(encounter.getAllObs(false));
 		assertEquals(1, encounter.getAllObs(false).size());
-		Obs obsInEncounter = encounter.getAllObs(false).toArray(new Obs[] {})[0];
+		Obs obsInEncounter = (Obs) encounter.getAllObs(false).toArray()[0];
 		assertTrue(obsInEncounter.isObsGrouping());
 	}
 	
@@ -436,7 +341,7 @@ public class EncounterTest {
 		
 		// do the check
 		assertEquals(1, encounter.getObs().size());
-		Obs obsInEncounter = encounter.getObs().toArray(new Obs[] {})[0];
+		Obs obsInEncounter = (Obs) encounter.getObs().toArray()[0];
 		assertFalse(obsInEncounter.isObsGrouping());
 	}
 	
@@ -462,7 +367,7 @@ public class EncounterTest {
 		
 		// do the check
 		assertEquals(1, encounter.getObsAtTopLevel(false).size());
-		Obs obsInEncounter = encounter.getObsAtTopLevel(false).toArray(new Obs[] {})[0];
+		Obs obsInEncounter = (Obs) encounter.getObsAtTopLevel(false).toArray()[0];
 		assertTrue(obsInEncounter.isObsGrouping());
 	}
 	
@@ -899,6 +804,392 @@ public class EncounterTest {
 	public void removeOrder_shouldNotFailWhenRemovingNonExistentOrder() throws Exception {
 		Encounter encounter = new Encounter();
 		encounter.removeOrder(new Order(123));
+	}
+	
+	/**
+	 * @see Encounter#addProvider(EncounterRole,Provider)
+	 * @verifies add provider for new role
+	 */
+	@Test
+	public void addProvider_shouldAddProviderForNewRole() throws Exception {
+		//given
+		Encounter encounter = new Encounter();
+		EncounterRole encounterRole = new EncounterRole();
+		Provider provider = new Provider();
+		
+		//when
+		encounter.addProvider(encounterRole, provider);
+		
+		//then
+		Assert.assertTrue(encounter.getProvidersByRole(encounterRole).contains(provider));
+	}
+	
+	/**
+	 * @see Encounter#addProvider(EncounterRole,Provider)
+	 * @verifies add second provider for role
+	 */
+	@Test
+	public void addProvider_shouldAddSecondProviderForRole() throws Exception {
+		//given
+		Encounter encounter = new Encounter();
+		EncounterRole role = new EncounterRole();
+		Provider provider1 = new Provider();
+		Provider provider2 = new Provider();
+		
+		//when
+		encounter.addProvider(role, provider1);
+		encounter.addProvider(role, provider2);
+		
+		//then
+		List<Provider> providers = Arrays.asList(provider1, provider2);
+		Assert.assertTrue(encounter.getProvidersByRole(role).containsAll(providers));
+	}
+	
+	/**
+	 * @see Encounter#addProvider(EncounterRole,Provider)
+	 * @verifies not add same provider twice for role
+	 */
+	@Test
+	public void addProvider_shouldNotAddSameProviderTwiceForRole() throws Exception {
+		//given
+		Encounter encounter = new Encounter();
+		EncounterRole role = new EncounterRole();
+		Provider provider1 = new Provider();
+		
+		//when
+		encounter.addProvider(role, provider1);
+		encounter.addProvider(role, provider1);
+		
+		//then
+		// we need to cheat and use reflection to look at the private encounterProviders property; we don't want the getProvidersByRole method hiding duplicates from us
+		Collection<EncounterProvider> providers = (Collection<EncounterProvider>) FieldUtils.readField(encounter,
+		    "encounterProviders", true);
+		Assert.assertEquals(1, providers.size());
+		Assert.assertTrue(encounter.getProvidersByRole(role).contains(provider1));
+	}
+	
+	/**
+	 * @see Encounter#getProvider()
+	 * @verifies return null if there is no provider for person
+	 */
+	@Test
+	public void getProvider_shouldReturnNullIfThereIsNoProviderForPerson() throws Exception {
+		//given
+		Encounter encounter = new Encounter();
+		EncounterRole role = new EncounterRole();
+		Provider provider = new Provider();
+		encounter.addProvider(role, provider);
+		
+		//when
+		Person result = encounter.getProvider();
+		
+		//then
+		Assert.assertNull(result);
+	}
+	
+	/**
+	 * @see Encounter#getProvider()
+	 * @verifies return null if there is no providers
+	 */
+	@Test
+	public void getProvider_shouldReturnNullIfThereIsNoProviders() throws Exception {
+		//given
+		Encounter encounter = new Encounter();
+		
+		//when
+		Person result = encounter.getProvider();
+		
+		//then
+		Assert.assertNull(result);
+	}
+	
+	/**
+	 * @see Encounter#getProvider()
+	 * @verifies return provider for person
+	 */
+	@Test
+	public void getProvider_shouldReturnProviderForPerson() throws Exception {
+		//given
+		Encounter encounter = new Encounter();
+		EncounterRole role = new EncounterRole();
+		Provider provider = new Provider();
+		Person person = new Person();
+		provider.setPerson(person);
+		encounter.addProvider(role, provider);
+		
+		//when
+		Person result = encounter.getProvider();
+		
+		//then
+		Assert.assertEquals(person, result);
+	}
+	
+	/**
+	 * @see Encounter#getProvider()
+	 * @verifies return same provider for person if called twice
+	 */
+	@Test
+	public void getProvider_shouldReturnSameProviderForPersonIfCalledTwice() throws Exception {
+		//given
+		Encounter encounter = new Encounter();
+		EncounterRole role = new EncounterRole();
+		
+		Provider provider = new Provider();
+		Person person = new Person();
+		provider.setPerson(person);
+		encounter.addProvider(role, provider);
+		
+		Provider provider2 = new Provider();
+		Person person2 = new Person();
+		provider2.setPerson(person2);
+		encounter.addProvider(role, provider2);
+		
+		//when
+		Person result = encounter.getProvider();
+		Person result2 = encounter.getProvider();
+		
+		//then
+		Assert.assertEquals(result, result2);
+	}
+	
+	/**
+	 * @see Encounter#getProvidersByRole(EncounterRole)
+	 * @verifies return empty set for no role
+	 */
+	@Test
+	public void getProvidersByRole_shouldReturnEmptySetForNoRole() throws Exception {
+		//given
+		Encounter encounter = new Encounter();
+		EncounterRole role = new EncounterRole();
+		Provider provider = new Provider();
+		encounter.addProvider(role, provider);
+		
+		EncounterRole role2 = new EncounterRole();
+		
+		//when
+		Set<Provider> providers = encounter.getProvidersByRole(role2);
+		
+		//then
+		Assert.assertEquals(0, providers.size());
+	}
+	
+	/**
+	 * @see Encounter#getProvidersByRole(EncounterRole)
+	 * @verifies return empty set for null role
+	 */
+	@Test
+	public void getProvidersByRole_shouldReturnEmptySetForNullRole() throws Exception {
+		//given
+		Encounter encounter = new Encounter();
+		EncounterRole role = new EncounterRole();
+		Provider provider = new Provider();
+		encounter.addProvider(role, provider);
+		
+		//when
+		Set<Provider> providers = encounter.getProvidersByRole(null);
+		
+		//then
+		Assert.assertEquals(0, providers.size());
+	}
+	
+	/**
+	 * @see Encounter#getProvidersByRole(EncounterRole)
+	 * @verifies return providers for role
+	 */
+	@Test
+	public void getProvidersByRole_shouldReturnProvidersForRole() throws Exception {
+		//given
+		Encounter encounter = new Encounter();
+		EncounterRole role = new EncounterRole();
+		
+		Provider provider = new Provider();
+		encounter.addProvider(role, provider);
+		
+		Provider provider2 = new Provider();
+		encounter.addProvider(role, provider2);
+		
+		EncounterRole role2 = new EncounterRole();
+		Provider provider3 = new Provider();
+		encounter.addProvider(role2, provider3);
+		
+		//when
+		Set<Provider> providers = encounter.getProvidersByRole(role);
+		
+		//then
+		Assert.assertEquals(2, providers.size());
+		Assert.assertTrue(providers.containsAll(Arrays.asList(provider, provider2)));
+	}
+	
+	/**
+	 * @see Encounter#getProvidersByRoles()
+	 * @verifies return all roles and providers
+	 */
+	@Test
+	public void getProvidersByRoles_shouldReturnAllRolesAndProviders() throws Exception {
+		//given
+		Encounter encounter = new Encounter();
+		EncounterRole role = new EncounterRole();
+		
+		Provider provider = new Provider();
+		encounter.addProvider(role, provider);
+		
+		Provider provider2 = new Provider();
+		encounter.addProvider(role, provider2);
+		
+		EncounterRole role2 = new EncounterRole();
+		Provider provider3 = new Provider();
+		encounter.addProvider(role2, provider3);
+		
+		//when
+		Map<EncounterRole, Set<Provider>> providersByRoles = encounter.getProvidersByRoles();
+		
+		//then
+		Assert.assertEquals("Roles", 2, providersByRoles.size());
+		Assert.assertTrue("Roles", providersByRoles.keySet().containsAll(Arrays.asList(role, role2)));
+		
+		Assert.assertEquals("Providers for role", 2, providersByRoles.get(role).size());
+		Assert.assertTrue("Providers for role", providersByRoles.get(role).containsAll(Arrays.asList(provider, provider2)));
+		
+		Assert.assertEquals("Provider for role2", 1, providersByRoles.get(role2).size());
+		Assert.assertTrue("Providers for role2", providersByRoles.get(role2).contains(provider3));
+	}
+	
+	/**
+	 * @see Encounter#getProvidersByRoles()
+	 * @verifies return empty map if no providers
+	 */
+	@Test
+	public void getProvidersByRoles_shouldReturnEmptyMapIfNoProviders() throws Exception {
+		//given
+		Encounter encounter = new Encounter();
+		
+		//when
+		Map<EncounterRole, Set<Provider>> providersByRoles = encounter.getProvidersByRoles();
+		
+		//then
+		Assert.assertEquals(0, providersByRoles.size());
+	}
+	
+	/**
+	 * @see Encounter#setProvider(EncounterRole,Provider)
+	 * @verifies clear providers and set provider for role
+	 */
+	@Test
+	public void setProvider_shouldClearProvidersAndSetProviderForRole() throws Exception {
+		//given
+		Encounter encounter = new Encounter();
+		EncounterRole role = new EncounterRole();
+		
+		Provider provider = new Provider();
+		encounter.addProvider(role, provider);
+		
+		Provider provider2 = new Provider();
+		encounter.addProvider(role, provider2);
+		
+		Provider provider3 = new Provider();
+		
+		//when
+		encounter.setProvider(role, provider3);
+		
+		//then
+		Assert.assertEquals(1, encounter.getProvidersByRole(role).size());
+		Assert.assertTrue(encounter.getProvidersByRole(role).contains(provider3));
+	}
+	
+	/**
+	 * @see Encounter#setProvider(EncounterRole,Provider)
+	 * @verifies set provider for new role
+	 */
+	@Test
+	public void setProvider_shouldSetProviderForNewRole() throws Exception {
+		//given
+		Encounter encounter = new Encounter();
+		EncounterRole role = new EncounterRole();
+		Provider provider = new Provider();
+		
+		//when
+		encounter.setProvider(role, provider);
+		
+		//then
+		Assert.assertEquals(1, encounter.getProvidersByRole(role).size());
+		Assert.assertTrue(encounter.getProvidersByRole(role).contains(provider));
+	}
+	
+	/**
+	 * @see Encounter#setProvider(Person)
+	 * @verifies set existing provider for unknown role
+	 */
+	@Test
+	public void setProvider_shouldSetExistingProviderForUnknownRole() throws Exception {
+		//given
+		Encounter encounter = new Encounter();
+		
+		Person person = Context.getPersonService().getPerson(1);
+		Collection<Provider> providers = Context.getProviderService().getProvidersByPerson(person);
+		
+		EncounterRole role = Context.getEncounterService().getEncounterRoleByUuid(EncounterRole.UNKNOWN_ENCOUNTER_ROLE_UUID);
+		Assert.assertNotNull("Unknown role", role);
+		
+		//when
+		encounter.setProvider(person);
+		
+		//then
+		Assert.assertEquals(1, encounter.getProvidersByRole(role).size());
+		Assert.assertTrue(encounter.getProvidersByRole(role).contains(providers.iterator().next()));
+	}
+	
+	/**
+	 * @see Encounter#setProvider(EncounterRole,Provider)
+	 * @verifies void existing EncounterProvider
+	 */
+	@Test
+	public void setProvider_shouldVoidExistingEncounterProvider() throws Exception {
+		Encounter encounter = new Encounter();
+		EncounterRole role = new EncounterRole();
+		Provider provider1 = new Provider();
+		Provider provider2 = new Provider();
+		
+		encounter.setProvider(role, provider1);
+		encounter.setProvider(role, provider2);
+		
+		//the size should be 1 for non voided providers
+		Assert.assertEquals(1, encounter.getProvidersByRole(role, false).size());
+		
+		//should contain the second provider since the first was voided.
+		Assert.assertTrue(encounter.getProvidersByRole(role, false).contains(provider2));
+		
+		//the size should be 2 if we include voided providers
+		Assert.assertEquals(2, encounter.getProvidersByRole(role, true).size());
+		
+		//should contain both the first (voided) and second (non voided) providers
+		Assert.assertTrue(encounter.getProvidersByRole(role, true).containsAll(Arrays.asList(provider1, provider2)));
+	}
+	
+	/**
+	 * @see Encounter#removeProvider(EncounterRole,Provider)
+	 * @verifies void existing EncounterProvider
+	 */
+	@Test
+	public void removeProvider_shouldVoidExistingEncounterProvider() throws Exception {
+		Encounter encounter = new Encounter();
+		EncounterRole role = new EncounterRole();
+		Provider provider = new Provider();
+		
+		encounter.addProvider(role, provider);
+		
+		Assert.assertEquals(1, encounter.getProvidersByRole(role).size());
+		Assert.assertTrue(encounter.getProvidersByRole(role).contains(provider));
+		
+		encounter.removeProvider(role, provider);
+		
+		//the size should be 0 for non voided providers
+		Assert.assertEquals(0, encounter.getProvidersByRole(role).size());
+		
+		//the size should be 1 if we include voided providers
+		Assert.assertEquals(1, encounter.getProvidersByRole(role, true).size());
+		
+		//should contain the voided provider
+		Assert.assertTrue(encounter.getProvidersByRole(role, true).contains(provider));
 	}
 	
 }

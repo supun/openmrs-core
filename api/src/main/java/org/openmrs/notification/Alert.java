@@ -33,6 +33,8 @@ public class Alert extends BaseOpenmrsObject implements Auditable, Serializable 
 	
 	private static final long serialVersionUID = -507111111109152L;
 	
+	public static final int TEXT_MAX_LENGTH = 512;
+	
 	private Integer alertId;
 	
 	private String text;
@@ -87,29 +89,6 @@ public class Alert extends BaseOpenmrsObject implements Auditable, Serializable 
 	public Alert(String text, User user) {
 		setText(text);
 		addRecipient(user);
-	}
-	
-	/**
-	 * @see java.lang.Object#equals(java.lang.Object)
-	 */
-	public boolean equals(Object obj) {
-		if (obj instanceof Alert) {
-			Alert a = (Alert) obj;
-			if (alertId != null && a != null)
-				return (alertId.equals(a.getAlertId()));
-		}
-		return obj == this;
-	}
-	
-	/**
-	 * @see java.lang.Object#hashCode()
-	 */
-	public int hashCode() {
-		if (this.getAlertId() == null)
-			return super.hashCode();
-		int hash = 8;
-		hash = 31 * this.getAlertId().hashCode() + hash;
-		return hash;
 	}
 	
 	/**
@@ -275,7 +254,7 @@ public class Alert extends BaseOpenmrsObject implements Auditable, Serializable 
 		if (this.recipients == null)
 			this.recipients = new HashSet<AlertRecipient>();
 		r.setAlert(this);
-		// duplicates are avoided by depending on the .equals and .hashcode 
+		// duplicates are avoided by depending on the .equals and .hashcode
 		//  methods of Alert
 		recipients.add(r);
 	}
@@ -338,6 +317,7 @@ public class Alert extends BaseOpenmrsObject implements Auditable, Serializable 
 	/**
 	 * @see java.lang.Object#toString()
 	 */
+	@Override
 	public String toString() {
 		return "Alert: #" + alertId;
 	}

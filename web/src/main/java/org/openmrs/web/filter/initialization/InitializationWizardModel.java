@@ -31,6 +31,22 @@ public class InitializationWizardModel {
 	// automatically given to the .vm files and used there
 	public static final String footerTemplate = "org/openmrs/web/filter/initialization/footer.vm";
 	
+	// Values for installMethod field.
+	public static final String INSTALL_METHOD_SIMPLE = "simple";
+	
+	public static final String INSTALL_METHOD_ADVANCED = "advanced";
+	
+	public static final String INSTALL_METHOD_TESTING = "testing";
+	
+	// Default OpenMRS admin password set by the simple installation.
+	public static final String ADMIN_DEFAULT_PASSWORD = "Admin123";
+	
+	/**
+	 * Default database name to use unless user specifies another in the wizard or they are creating
+	 * a test installation
+	 */
+	public static final String DEFAULT_DATABASE_NAME = "openmrs";
+	
 	/**
 	 * Records completed tasks and are displayed at the top of the page upon error
 	 */
@@ -62,6 +78,8 @@ public class InitializationWizardModel {
 	
 	public String runtimePropertiesPath = "";
 	
+	public String installMethod = INSTALL_METHOD_SIMPLE;
+	
 	/**
 	 * True/false marker for the question "Do you currently have an OpenMRS database installed"
 	 */
@@ -76,12 +94,22 @@ public class InitializationWizardModel {
 	/**
 	 * Filled out by the user on the databasesetup.vm page
 	 */
-	public String databaseName = "openmrs";
+	public String databaseName = DEFAULT_DATABASE_NAME;
 	
 	/**
 	 * Filled out by user on the databasesetup.vm page Looks like:
 	 */
 	public String databaseConnection = "jdbc:mysql://localhost:3306/@DBNAME@?autoReconnect=true&sessionVariables=storage_engine=InnoDB&useUnicode=true&characterEncoding=UTF-8";
+	
+	/**
+	 * Optional Database Driver string filled in on databasesetup.vm
+	 */
+	public String databaseDriver = "";
+	
+	/**
+	 * MySQL root account password used for simple installation. Filled in simplesetup.vm.
+	 */
+	public String databaseRootPassword = "";
 	
 	/**
 	 * Filled in on databasesetup.vm
@@ -125,6 +153,11 @@ public class InitializationWizardModel {
 	 * if the user asked us to create the user for openmrs
 	 */
 	public Boolean createDatabaseUser = Boolean.FALSE;
+	
+	/**
+	 * Enables importing test data from the remote server
+	 */
+	public Boolean importTestData = Boolean.FALSE;
 	
 	/**
 	 * Does the user want to add the demo data to the database?
@@ -174,4 +207,31 @@ public class InitializationWizardModel {
 	 * The tasks to be executed that the user selected from the wizard's prompts
 	 */
 	public List<WizardTask> tasksToExecute;
+	
+	public String localeToSave = "";
+	
+	/**
+	 * The url to the remote system
+	 */
+	public String remoteUrl = "";
+	
+	/**
+	 * The username to use to authenticate to the remote system
+	 */
+	public String remoteUsername = "";
+	
+	/**
+	 * The password to use to authenticate to the remote system
+	 */
+	public String remotePassword = "";
+	
+	/**
+	 * The current step. e.g Step 1 of ...
+	 */
+	public Integer currentStepNumber = 1;
+	
+	/**
+	 * The total number of steps. e.g Step ... of 5
+	 */
+	public Integer numberOfSteps = 1;
 }

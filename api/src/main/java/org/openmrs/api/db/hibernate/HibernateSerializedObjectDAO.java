@@ -33,6 +33,7 @@ import org.openmrs.api.db.SerializedObject;
 import org.openmrs.api.db.SerializedObjectDAO;
 import org.openmrs.serialization.OpenmrsSerializer;
 import org.openmrs.serialization.SerializationException;
+import org.openmrs.util.ExceptionUtil;
 
 /**
  * Hibernate specific database access methods for serialized objects
@@ -57,6 +58,7 @@ public class HibernateSerializedObjectDAO implements SerializedObjectDAO {
 	
 	/**
 	 * Singleton Factory method
+	 * 
 	 * @return a singleton instance of this class
 	 */
 	public static HibernateSerializedObjectDAO getInstance() {
@@ -113,7 +115,7 @@ public class HibernateSerializedObjectDAO implements SerializedObjectDAO {
 	 */
 	@SuppressWarnings("unchecked")
 	public List<SerializedObject> getAllSerializedObjectsByName(Class<?> type, String name, boolean exactMatchOnly)
-	                                                                                                               throws DAOException {
+	        throws DAOException {
 		Criteria c = sessionFactory.getCurrentSession().createCriteria(SerializedObject.class);
 		c.add(Expression.or(Expression.eq("type", type.getName()), Expression.eq("subtype", type.getName())));
 		if (exactMatchOnly) {
@@ -128,7 +130,7 @@ public class HibernateSerializedObjectDAO implements SerializedObjectDAO {
 	 * @see SerializedObjectDAO#getAllObjectsByName(Class, String)
 	 */
 	public <T extends OpenmrsMetadata> List<T> getAllObjectsByName(Class<T> type, String name, boolean exactMatchOnly)
-	                                                                                                                  throws DAOException {
+	        throws DAOException {
 		List<T> ret = new ArrayList<T>();
 		List<SerializedObject> objects = getAllSerializedObjectsByName(type, name, exactMatchOnly);
 		for (SerializedObject serializedObject : objects) {
@@ -287,7 +289,7 @@ public class HibernateSerializedObjectDAO implements SerializedObjectDAO {
 	 */
 	@SuppressWarnings("unchecked")
 	public <T extends OpenmrsObject> T convertSerializedObject(Class<T> clazz, SerializedObject serializedObject)
-	                                                                                                             throws DAOException {
+	        throws DAOException {
 		if (serializedObject == null) {
 			return null;
 		}
@@ -298,9 +300,11 @@ public class HibernateSerializedObjectDAO implements SerializedObjectDAO {
 			obj = (T) serializer.deserialize(serializedObject.getSerializedData(), subtype);
 		}
 		catch (Exception e) {
-			// Do nothing here. Handled by null check below
+			ExceptionUtil.rethrowAPIAuthenticationException(e);
+			throw new DAOException("Unable to deserialize object: " + serializedObject, e);
 		}
 		if (obj == null) {
+			// it's probably impossible to reach this code branch
 			throw new DAOException("Unable to deserialize object: " + serializedObject);
 		}
 		obj.setId(serializedObject.getId());

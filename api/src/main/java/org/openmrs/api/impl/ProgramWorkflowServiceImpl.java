@@ -24,6 +24,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.openmrs.Cohort;
 import org.openmrs.Concept;
+import org.openmrs.ConceptAnswer;
 import org.openmrs.ConceptStateConversion;
 import org.openmrs.Patient;
 import org.openmrs.PatientProgram;
@@ -253,8 +254,8 @@ public class ProgramWorkflowServiceImpl extends BaseOpenmrsService implements Pr
 	 *      Date, Date, boolean)
 	 */
 	public List<PatientProgram> getPatientPrograms(Patient patient, Program program, Date minEnrollmentDate,
-	                                               Date maxEnrollmentDate, Date minCompletionDate, Date maxCompletionDate,
-	                                               boolean includeVoided) throws APIException {
+	        Date maxEnrollmentDate, Date minCompletionDate, Date maxCompletionDate, boolean includeVoided)
+	        throws APIException {
 		return dao.getPatientPrograms(patient, program, minEnrollmentDate, maxEnrollmentDate, minCompletionDate,
 		    maxCompletionDate, includeVoided);
 	}
@@ -316,6 +317,32 @@ public class ProgramWorkflowServiceImpl extends BaseOpenmrsService implements Pr
 		return savePatientProgram(patientProgram); // The savePatientProgram method handles all of the unvoiding defaults
 	}
 	
+	/**
+	 * @see org.openmrs.api.ProgramWorkflowService#getPossibleOutcomes(Integer)
+	 */
+	@Override
+	public List<Concept> getPossibleOutcomes(Integer programId) {
+		List<Concept> possibleOutcomes = new ArrayList<Concept>();
+		Program program = getProgram(programId);
+		if (program == null) {
+			return possibleOutcomes;
+		}
+		Concept outcomesConcept = program.getOutcomesConcept();
+		if (outcomesConcept == null) {
+			return possibleOutcomes;
+		}
+		if (!outcomesConcept.getAnswers().isEmpty()) {
+			for (ConceptAnswer conceptAnswer : outcomesConcept.getAnswers()) {
+				possibleOutcomes.add(conceptAnswer.getConcept());
+			}
+			return possibleOutcomes;
+		}
+		if (!outcomesConcept.getSetMembers().isEmpty()) {
+			return outcomesConcept.getSetMembers();
+		}
+		return possibleOutcomes;
+	}
+	
 	// **************************
 	// CONCEPT STATE CONVERSION 
 	// **************************
@@ -356,7 +383,7 @@ public class ProgramWorkflowServiceImpl extends BaseOpenmrsService implements Pr
 	 *      boolean)
 	 */
 	public void purgeConceptStateConversion(ConceptStateConversion conceptStateConversion, boolean cascade)
-	                                                                                                       throws APIException {
+	        throws APIException {
 		dao.deleteConceptStateConversion(conceptStateConversion);
 	}
 	
@@ -586,7 +613,7 @@ public class ProgramWorkflowServiceImpl extends BaseOpenmrsService implements Pr
 	 * @deprecated
 	 */
 	public void enrollPatientInProgram(Patient patient, Program program, Date enrollmentDate, Date completionDate,
-	                                   User creator) {
+	        User creator) {
 		PatientProgram p = new PatientProgram();
 		p.setPatient(patient);
 		p.setProgram(program);
@@ -701,7 +728,7 @@ public class ProgramWorkflowServiceImpl extends BaseOpenmrsService implements Pr
 	 * @deprecated
 	 */
 	public void changeToState(PatientProgram patientProgram, ProgramWorkflow workflow, ProgramWorkflowState state,
-	                          Date onDate) {
+	        Date onDate) {
 		patientProgram.transitionToState(state, onDate);
 		Context.getProgramWorkflowService().savePatientProgram(patientProgram);
 	}

@@ -28,6 +28,7 @@ import org.openmrs.Obs;
 import org.openmrs.Patient;
 import org.openmrs.PatientIdentifier;
 import org.openmrs.PatientIdentifierType;
+import org.openmrs.PatientIdentifierType.LocationBehavior;
 import org.openmrs.Person;
 import org.openmrs.PersonAddress;
 import org.openmrs.PersonAttribute;
@@ -85,21 +86,12 @@ public class ShortPatientFormController {
 	
 	@ModelAttribute("patientModel")
 	public ShortPatientModel getPatientModel(@RequestParam(value = "patientId", required = false) Integer patientId,
-	                                         ModelMap model, WebRequest request) {
-		Patient patient = null;
+	        ModelMap model, WebRequest request) {
+		Patient patient;
 		if (patientId != null) {
-			try {
-				patient = Context.getPatientService().getPatient(patientId);
-			}
-			catch (ClassCastException ex) {
-				// we're promoting an existing Person to a full Patient
-				// this will be handled in the next lines
-			}
+			patient = Context.getPatientService().getPatientOrPromotePerson(patientId);
 			if (patient == null) {
-				Person toPromote = Context.getPersonService().getPerson(patientId);
-				if (toPromote == null)
-					throw new IllegalArgumentException("No patient or person with the given id");
-				patient = new Patient(toPromote);
+				throw new IllegalArgumentException("No patient or person with the given id");
 			}
 		} else {
 			// we may have some details to add to a blank patient
@@ -172,6 +164,18 @@ public class ShortPatientFormController {
 		return Context.getPatientService().getAllPatientIdentifierTypes();
 	}
 	
+	@ModelAttribute("identifierLocationUsed")
+	public boolean getIdentifierLocationUsed() {
+		List<PatientIdentifierType> pits = Context.getPatientService().getAllPatientIdentifierTypes();
+		boolean identifierLocationUsed = false;
+		for (PatientIdentifierType pit : pits) {
+			if (pit.getLocationBehavior() == null || pit.getLocationBehavior() == LocationBehavior.REQUIRED) {
+				identifierLocationUsed = true;
+			}
+		}
+		return identifierLocationUsed;
+	}
+	
 	/**
 	 * Handles the form submission by validating the form fields and saving it to the DB
 	 * 
@@ -196,11 +200,13 @@ public class ShortPatientFormController {
 	 * @should not add a new person attribute with an empty value
 	 * @should void an existing person attribute with an empty value
 	 * @should should replace an existing attribute with a new one when edited
+	 * @should not void address if it was not changed
+	 * @should void address if it was changed
 	 */
 	@RequestMapping(method = RequestMethod.POST, value = SHORT_PATIENT_FORM_URL)
 	public String saveShortPatient(WebRequest request, @ModelAttribute("personNameCache") PersonName personNameCache,
-	                               @ModelAttribute("personAddressCache") PersonAddress personAddressCache,
-	                               @ModelAttribute("patientModel") ShortPatientModel patientModel, BindingResult result) {
+	        @ModelAttribute("personAddressCache") PersonAddress personAddressCache,
+	        @ModelAttribute("patientModel") ShortPatientModel patientModel, BindingResult result) {
 		
 		if (Context.isAuthenticated()) {
 			// First do form validation so that we can easily bind errors to
@@ -347,7 +353,7 @@ public class ShortPatientFormController {
 	 */
 	@ModelAttribute("relationshipsMap")
 	private Map<String, Relationship> getRelationshipsMap(@ModelAttribute("patientModel") ShortPatientModel patientModel,
-	                                                      WebRequest request) {
+	        WebRequest request) {
 		Person person = patientModel.getPatient();
 		Map<String, Relationship> relationshipMap = new LinkedHashMap<String, Relationship>();
 		
@@ -535,7 +541,7 @@ public class ShortPatientFormController {
 	 * @return true if the personName or personAddress was edited otherwise false
 	 */
 	private boolean hasPersonNameOrAddressChanged(Patient patient, PersonName personNameCache,
-	                                              PersonAddress personAddressCache) {
+	        PersonAddress personAddressCache) {
 		boolean foundChanges = false;
 		PersonName personName = patient.getPersonName();
 		if (personNameCache.getId() != null) {
@@ -575,7 +581,7 @@ public class ShortPatientFormController {
 			if (personAddressCache.getId() != null) {
 				// if the existing personAddress has been edited
 				if (!personAddress.isBlank() && !personAddressCache.isBlank()
-				        && !personAddress.toString().equalsIgnoreCase(personAddressCache.toString())) {
+				        && !personAddress.equalsContent(personAddressCache)) {
 					if (log.isDebugEnabled())
 						log.debug("Voiding person address with id: " + personAddress.getId()
 						        + " and replacing it with a new one: " + personAddress.toString());

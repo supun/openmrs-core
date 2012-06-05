@@ -69,6 +69,7 @@ public class ModuleFileParser {
 		validConfigVersions.add("1.1");
 		validConfigVersions.add("1.2");
 		validConfigVersions.add("1.3");
+		validConfigVersions.add("1.4");
 	}
 	
 	/**
@@ -264,6 +265,7 @@ public class ModuleFileParser {
 			module.setRequireOpenmrsVersion(getElement(rootNode, configVersion, "require_version").trim());
 			module.setUpdateURL(getElement(rootNode, configVersion, "updateURL").trim());
 			module.setRequiredModulesMap(getRequiredModules(rootNode, configVersion));
+			module.setAwareOfModulesMap(getAwareOfModules(rootNode, configVersion));
 			
 			module.setAdvicePoints(getAdvice(rootNode, configVersion, module));
 			module.setExtensionNames(getExtensions(rootNode, configVersion));
@@ -344,6 +346,40 @@ public class ModuleFileParser {
 					Node versionNode = attributes.getNamedItem("version");
 					String reqVersion = versionNode == null ? null : versionNode.getNodeValue();
 					packageNamesToVersion.put(n.getTextContent().trim(), reqVersion);
+				}
+				i++;
+			}
+		}
+		return packageNamesToVersion;
+	}
+	
+	/**
+	 * load in list of modules we are aware of.
+	 * 
+	 * @param root element in the xml doc object
+	 * @param version of the config file
+	 * @return map from module package name to aware of version
+	 * @since 1.9
+	 */
+	private Map<String, String> getAwareOfModules(Element root, String version) {
+		NodeList awareOfModulesParents = root.getElementsByTagName("aware_of_modules");
+		
+		Map<String, String> packageNamesToVersion = new HashMap<String, String>();
+		
+		// TODO test aware_of_modules section
+		if (awareOfModulesParents.getLength() > 0) {
+			Node awareOfModulesParent = awareOfModulesParents.item(0);
+			
+			NodeList awareOfModules = awareOfModulesParent.getChildNodes();
+			
+			int i = 0;
+			while (i < awareOfModules.getLength()) {
+				Node n = awareOfModules.item(i);
+				if (n != null && "aware_of_module".equals(n.getNodeName())) {
+					NamedNodeMap attributes = n.getAttributes();
+					Node versionNode = attributes.getNamedItem("version");
+					String awareOfVersion = versionNode == null ? null : versionNode.getNodeValue();
+					packageNamesToVersion.put(n.getTextContent().trim(), awareOfVersion);
 				}
 				i++;
 			}

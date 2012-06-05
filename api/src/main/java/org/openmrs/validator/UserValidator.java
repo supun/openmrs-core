@@ -86,12 +86,10 @@ public class UserValidator implements Validator {
 	/**
 	 * Convenience method to check the given username against the regular expression. <br/>
 	 * <br/>
-	 * A valid username will have following:
-	 * <li>Begins with Alphanumeric characters
-	 * <li>only followed by more alphanumeric characters (may include . - _) 
-	 * <li>can be at most 50 characters
-	 * <li>minimum 2 chars case-insensitive Examples:
-	 * <li>The following username will pass validation: A123_.-XYZ9
+	 * A valid username will have following: <li>Begins with Alphanumeric characters <li>only
+	 * followed by more alphanumeric characters (may include . - _) <li>can be at most 50 characters
+	 * <li>minimum 2 chars case-insensitive Examples: <li>The following username will pass
+	 * validation: A123_.-XYZ9
 	 * 
 	 * @param username the username string to check
 	 * @return true if the username is ok
@@ -107,7 +105,12 @@ public class UserValidator implements Validator {
 	 * @should not validate when username is whitespace only
 	 */
 	public boolean isUserNameValid(String username) {
-		//Initialize reg ex for userName pattern 
+		//Initialize reg ex for userName pattern
+		// ^ = start of line
+		// \w = [a-zA-Z_0-9]
+		// \Q = quote everything until \E 
+		// $ = end of line
+		// complete meaning = 2-50 characters, the first must be a letter, digit, or _, and the rest may also be - or .
 		String expression = "^[\\w][\\Q_\\E\\w-\\.]{1,49}$";
 		
 		// empty usernames are allowed

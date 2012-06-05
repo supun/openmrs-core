@@ -13,16 +13,23 @@
  */
 package org.openmrs.util;
 
+import java.io.IOException;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Properties;
 import java.util.Vector;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.openmrs.GlobalProperty;
 import org.openmrs.api.ConceptService;
+import org.openmrs.api.handler.ExistingVisitAssignmentHandler;
+import org.openmrs.customdatatype.datatype.BooleanDatatype;
+import org.openmrs.customdatatype.datatype.FreeTextDatatype;
 import org.openmrs.hl7.HL7Constants;
 import org.openmrs.module.ModuleConstants;
 import org.openmrs.module.ModuleFactory;
@@ -37,7 +44,7 @@ import org.openmrs.scheduler.SchedulerConstants;
  */
 public final class OpenmrsConstants {
 	
-	//private static Log log = LogFactory.getLog(OpenmrsConstants.class);
+	private static Log log = LogFactory.getLog(OpenmrsConstants.class);
 	
 	/**
 	 * This is the hard coded primary key of the order type for DRUG. This has to be done because
@@ -64,14 +71,79 @@ public final class OpenmrsConstants {
 	 * The format is:<br/>
 	 * <i>major</i>.<i>minor</i>.<i>maintenance</i> <i>suffix</i> Build <i>buildNumber</i>
 	 */
-	public static final String OPENMRS_VERSION = THIS_PACKAGE.getSpecificationVendor();
+	public static final String OPENMRS_VERSION = THIS_PACKAGE.getSpecificationVendor() != null ? THIS_PACKAGE
+	        .getSpecificationVendor() : getBuildVersion();
 	
 	/**
 	 * This holds the current openmrs code version in a short space-less string.<br/>
 	 * The format is:<br/>
-	 * <i>major</i>.<i>minor</i>.<i>maintenance</i>.<i>revision</i>-<i>suffix</i>
+	 * <i>major</i>.<i>minor</i>.<i>maintenance</i>.<i>revision</i>-<i>suffix</i
+	 * >
 	 */
-	public static final String OPENMRS_VERSION_SHORT = THIS_PACKAGE.getSpecificationVersion();
+	public static final String OPENMRS_VERSION_SHORT = THIS_PACKAGE.getSpecificationVersion() != null ? THIS_PACKAGE
+	        .getSpecificationVersion() : getBuildVersionShort();
+	
+	/**
+	 * @return build version with alpha characters (eg:1.10.0 SNAPSHOT Build 24858) 
+	 * defined in MANIFEST.MF(specification-Vendor)
+	 * 
+	 * @see #OPENMRS_VERSION_SHORT
+	 * @see #OPENMRS_VERSION
+	 */
+	private static String getBuildVersion() {
+		
+		Properties props = new Properties();
+		
+		java.net.URL url = OpenmrsConstants.class.getClassLoader().getResource("META-INF/MANIFEST.MF");
+		
+		if (url == null) {
+			log.error("Unable to find MANIFEST.MF file built by maven");
+			return null;
+		}
+		
+		// Load the file
+		try {
+			props.load(url.openStream());
+			
+			return props.getProperty("Specification-Vendor");
+		}
+		catch (IOException e) {
+			log.error("Unable to get MANIFEST.MF file into manifest object");
+		}
+		
+		return null;
+	}
+	
+	/**
+	 * @return build version without alpha characters (eg: 1.10.0.24858) 
+	 * defined in MANIFEST.MF (specification-Version)
+	 * 
+	 * @see #OPENMRS_VERSION_SHORT
+	 * @see #OPENMRS_VERSION
+	 */
+	private static String getBuildVersionShort() {
+		
+		Properties props = new Properties();
+		
+		java.net.URL url = OpenmrsConstants.class.getClassLoader().getResource("META-INF/MANIFEST.MF");
+		
+		if (url == null) {
+			log.error("Unable to find MANIFEST.MF file built by maven");
+			return null;
+		}
+		
+		// Load the file
+		try {
+			props.load(url.openStream());
+			
+			return props.getProperty("Specification-Version");
+		}
+		catch (IOException e) {
+			log.error("Unable to get MANIFEST.MF file into manifest object");
+		}
+		
+		return null;
+	}
 	
 	/**
 	 * See {@link DatabaseUpdater#updatesRequired()} to see what changesets in the
@@ -685,6 +757,8 @@ public final class OpenmrsConstants {
 	
 	public static final String GLOBAL_PROPERTY_DEFAULT_THEME = "default_theme";
 	
+	public static final String GLOBAL_PROPERTY_APPLICATION_NAME = "application.name";
+	
 	/**
 	 * Array of all core global property names that represent comma-separated lists of
 	 * PersonAttributeTypes. (If you rename a PersonAttributeType then these global properties are
@@ -703,6 +777,8 @@ public final class OpenmrsConstants {
 	
 	public static final String GLOBAL_PROPERTY_PATIENT_IDENTIFIER_SEARCH_PATTERN = "patient.identifierSearchPattern";
 	
+	public static final String GLOBAL_PROPERTY_PATIENT_NAME_REGEX = "patient.nameValidationRegex";
+	
 	public static final String GLOBAL_PROPERTY_PERSON_SEARCH_MAX_RESULTS = "person.searchMaxResults";
 	
 	public static final int GLOBAL_PROPERTY_PERSON_SEARCH_MAX_RESULTS_DEFAULT_VALUE = 1000;
@@ -719,6 +795,8 @@ public final class OpenmrsConstants {
 	public static final String GLOBAL_PROPERTY_STANDARD_DRUG_REGIMENS = "dashboard.regimen.standardRegimens";
 	
 	public static final String GLOBAL_PROPERTY_SHOW_PATIENT_NAME = "dashboard.showPatientName";
+	
+	public static final String GLOBAL_PROPERTY_ENABLE_VISITS = "visits.enabled";
 	
 	public static final String GLOBAL_PROPERTY_DEFAULT_PATIENT_IDENTIFIER_VALIDATOR = "patient.defaultPatientIdentifierValidator";
 	
@@ -759,6 +837,31 @@ public final class OpenmrsConstants {
 	public static final String GLOBAL_PROPERTY_LOCATION_WIDGET_TYPE = "location.field.style";
 	
 	public static final String GLOBAL_PROPERTY_REPORT_BUG_URL = "reportProblem.url";
+	
+	public static final String GLOBAL_PROPERTY_ADDRESS_TEMPLATE = "layout.address.format";
+	
+	public static final String DEFAULT_ADDRESS_TEMPLATE = "<org.openmrs.layout.web.address.AddressTemplate>\n"
+	        + "    <nameMappings class=\"properties\">\n"
+	        + "      <property name=\"postalCode\" value=\"Location.postalCode\"/>\n"
+	        + "      <property name=\"longitude\" value=\"Location.longitude\"/>\n"
+	        + "      <property name=\"address2\" value=\"Location.address2\"/>\n"
+	        + "      <property name=\"address1\" value=\"Location.address1\"/>\n"
+	        + "      <property name=\"startDate\" value=\"PersonAddress.startDate\"/>\n"
+	        + "      <property name=\"country\" value=\"Location.country\"/>\n"
+	        + "      <property name=\"endDate\" value=\"personAddress.endDate\"/>\n"
+	        + "      <property name=\"stateProvince\" value=\"Location.stateProvince\"/>\n"
+	        + "      <property name=\"latitude\" value=\"Location.latitude\"/>\n"
+	        + "      <property name=\"cityVillage\" value=\"Location.cityVillage\"/>\n" + "    </nameMappings>\n"
+	        + "    <sizeMappings class=\"properties\">\n" + "      <property name=\"postalCode\" value=\"10\"/>\n"
+	        + "      <property name=\"longitude\" value=\"10\"/>\n" + "      <property name=\"address2\" value=\"40\"/>\n"
+	        + "      <property name=\"address1\" value=\"40\"/>\n" + "      <property name=\"startDate\" value=\"10\"/>\n"
+	        + "      <property name=\"country\" value=\"10\"/>\n" + "      <property name=\"endDate\" value=\"10\"/>\n"
+	        + "      <property name=\"stateProvince\" value=\"10\"/>\n"
+	        + "      <property name=\"latitude\" value=\"10\"/>\n" + "      <property name=\"cityVillage\" value=\"10\"/>\n"
+	        + "    </sizeMappings>\n" + "    <lineByLineFormat>\n" + "      <string>address1</string>\n"
+	        + "      <string>address2</string>\n" + "      <string>cityVillage stateProvince country postalCode</string>\n"
+	        + "      <string>latitude longitude</string>\n" + "      <string>startDate endDate</string>\n"
+	        + "    </lineByLineFormat>\n" + "  </org.openmrs.layout.web.address.AddressTemplate>";
 	
 	/**
 	 * Global property name that allows specification of whether user passwords must contain both
@@ -824,10 +927,85 @@ public final class OpenmrsConstants {
 	public static final String GP_SEARCH_WIDGET_IN_SERIAL_MODE = "searchWidget.runInSerialMode";
 	
 	/**
-	 * Global property name for the time interval in milli seconds between key up and triggering the
+	 * Global property name for the time interval in milliseconds between key up and triggering the
 	 * search off
 	 */
 	public static final String GP_SEARCH_WIDGET_DELAY_INTERVAL = "searchWidget.searchDelayInterval";
+	
+	/**
+	 * Global property name for the maximum number of results to return from a single search in the
+	 * search widgets
+	 */
+	public static final String GP_SEARCH_WIDGET_MAXIMUM_RESULTS = "searchWidget.maximumResults";
+	
+	/**
+	 * Global property name for enabling/disabling concept map type management
+	 */
+	public static final String GP_ENABLE_CONCEPT_MAP_TYPE_MANAGEMENT = "concept_map_type_management.enable";
+	
+	/**
+	 * Global property name for the handler that assigns visits to encounters
+	 */
+	public static final String GP_VISIT_ASSIGNMENT_HANDLER = "visits.assignmentHandler";
+	
+	/**
+	 * Global property name for mapping encounter types to visit types.
+	 */
+	public static final String GP_ENCOUNTER_TYPE_TO_VISIT_TYPE_MAPPING = "visits.encounterTypeToVisitTypeMapping";
+	
+	/**
+	 * Global property name for the encounter roles to display on the provider column of the patient
+	 * dashboard under the encounters tab.
+	 */
+	public static final String GP_DASHBOARD_PROVIDER_DISPLAY_ENCOUNTER_ROLES = "dashboard.encounters.providerDisplayRoles";
+	
+	/**
+	 * Global property name for optional configuration of the maximum number of encounters to
+	 * display on the encounter tab of the patient dashboard
+	 */
+	public static final String GP_DASHBOARD_MAX_NUMBER_OF_ENCOUNTERS_TO_SHOW = "dashboard.encounters.maximumNumberToShow";
+	
+	/**
+	 * Global property name for the default ConceptMapType which is set automatically when no other is set manually.
+	 */
+	public static final String GP_DEFAULT_CONCEPT_MAP_TYPE = "concept.defaultConceptMapType";
+	
+	/**
+	 * Global property name of the allowed concept classes for the dosage form field of the concept drug management form.
+	 */
+	public static final String GP_CONCEPT_DRUG_DOSAGE_FORM_CONCEPT_CLASSES = "conceptDrug.dosageForm.conceptClasses";
+	
+	/**
+	 * Global property name of the allowed concept classes for the route field of the concept drug management form.
+	 */
+	public static final String GP_CONCEPT_DRUG_ROUTE_CONCEPT_CLASSES = "conceptDrug.route.conceptClasses";
+	
+	/**
+	 * Encryption properties; both vector and key are required to utilize a two-way encryption
+	 */
+	public static final String ENCRYPTION_CIPHER_CONFIGURATION = "AES/CBC/PKCS5Padding";
+	
+	public static final String ENCRYPTION_KEY_SPEC = "AES";
+	
+	public static final String ENCRYPTION_VECTOR_RUNTIME_PROPERTY = "encryption.vector";
+	
+	public static final String ENCRYPTION_VECTOR_DEFAULT = "9wyBUNglFCRVSUhMfsTa3Q==";
+	
+	public static final String ENCRYPTION_KEY_RUNTIME_PROPERTY = "encryption.key";
+	
+	public static final String ENCRYPTION_KEY_DEFAULT = "dTfyELRrAICGDwzjHDjuhw==";
+	
+	/**
+	 * Global property name for the visit type(s) to automatically close
+	 */
+	public static final String GP_VISIT_TYPES_TO_AUTO_CLOSE = "autoCloseVisits.visitType";
+	
+	/**
+	 * The name of the scheduled task that automatically stops the active visits
+	 */
+	public static final String AUTO_CLOSE_VISITS_TASK_NAME = "Auto Close Visits Task";
+	
+	public static final String GP_CONCEPT_INDEX_UPDATE_TASK_LAST_UPDATED_CONCEPT = "concept.IndexUpdateTask.lastConceptUpdated";
 	
 	/**
 	 * At OpenMRS startup these global properties/default values/descriptions are inserted into the
@@ -839,26 +1017,33 @@ public final class OpenmrsConstants {
 		List<GlobalProperty> props = new Vector<GlobalProperty>();
 		
 		props.add(new GlobalProperty("use_patient_attribute.healthCenter", "false",
-		        "Indicates whether or not the 'health center' attribute is shown when viewing/searching for patients"));
+		        "Indicates whether or not the 'health center' attribute is shown when viewing/searching for patients",
+		        BooleanDatatype.class, null));
 		props.add(new GlobalProperty("use_patient_attribute.mothersName", "false",
-		        "Indicates whether or not mother's name is able to be added/viewed for a patient"));
+		        "Indicates whether or not mother's name is able to be added/viewed for a patient", BooleanDatatype.class,
+		        null));
 		
 		props.add(new GlobalProperty("new_patient_form.showRelationships", "false",
-		        "true/false whether or not to show the relationship editor on the addPatient.htm screen"));
+		        "true/false whether or not to show the relationship editor on the addPatient.htm screen",
+		        BooleanDatatype.class, null));
 		
 		props.add(new GlobalProperty("dashboard.overview.showConcepts", "",
 		        "Comma delimited list of concepts ids to show on the patient dashboard overview tab"));
-		props.add(new GlobalProperty("dashboard.encounters.showEmptyFields", "true",
-		        "true/false whether or not to show empty fields on the 'View Encounter' window"));
+		props
+		        .add(new GlobalProperty("dashboard.encounters.showEmptyFields", "true",
+		                "true/false whether or not to show empty fields on the 'View Encounter' window",
+		                BooleanDatatype.class, null));
 		props
 		        .add(new GlobalProperty(
 		                "dashboard.encounters.usePages",
 		                "smart",
 		                "true/false/smart on how to show the pages on the 'View Encounter' window.  'smart' means that if > 50% of the fields have page numbers defined, show data in pages"));
 		props.add(new GlobalProperty("dashboard.encounters.showViewLink", "true",
-		        "true/false whether or not to show the 'View Encounter' link on the patient dashboard"));
+		        "true/false whether or not to show the 'View Encounter' link on the patient dashboard",
+		        BooleanDatatype.class, null));
 		props.add(new GlobalProperty("dashboard.encounters.showEditLink", "true",
-		        "true/false whether or not to show the 'Edit Encounter' link on the patient dashboard"));
+		        "true/false whether or not to show the 'Edit Encounter' link on the patient dashboard",
+		        BooleanDatatype.class, null));
 		props
 		        .add(new GlobalProperty(
 		                "dashboard.header.programs_to_show",
@@ -872,9 +1057,10 @@ public final class OpenmrsConstants {
 		props.add(new GlobalProperty("dashboard.relationships.show_types", "",
 		        "Types of relationships separated by commas.  Doctor/Patient,Parent/Child"));
 		props.add(new GlobalProperty("FormEntry.enableDashboardTab", "true",
-		        "true/false whether or not to show a Form Entry tab on the patient dashboard"));
+		        "true/false whether or not to show a Form Entry tab on the patient dashboard", BooleanDatatype.class, null));
 		props.add(new GlobalProperty("FormEntry.enableOnEncounterTab", "false",
-		        "true/false whether or not to show a Enter Form button on the encounters tab of the patient dashboard"));
+		        "true/false whether or not to show a Enter Form button on the encounters tab of the patient dashboard",
+		        BooleanDatatype.class, null));
 		props
 		        .add(new GlobalProperty(
 		                "dashboard.regimen.displayDrugSetIds",
@@ -980,10 +1166,8 @@ public final class OpenmrsConstants {
 		
 		props.add(new GlobalProperty(ModuleConstants.REPOSITORY_FOLDER_PROPERTY,
 		        ModuleConstants.REPOSITORY_FOLDER_PROPERTY_DEFAULT, "Name of the folder in which to store the modules"));
-		
-		props
-		        .add(new GlobalProperty("layout.address.format", "general",
-		                "Format in which to display the person addresses.  Valid values are general, kenya, rwanda, usa, and lesotho"));
+		props.add(new GlobalProperty(GLOBAL_PROPERTY_ADDRESS_TEMPLATE, DEFAULT_ADDRESS_TEMPLATE,
+		        "XML description of address formats"));
 		props.add(new GlobalProperty("layout.name.format", "short",
 		        "Format in which to display the person names.  Valid values are short, long"));
 		
@@ -993,8 +1177,8 @@ public final class OpenmrsConstants {
 		props.add(new GlobalProperty("scheduler.password", SchedulerConstants.SCHEDULER_DEFAULT_PASSWORD,
 		        "Password for the OpenMRS user that will perform the scheduler activities"));
 		
-		props.add(new GlobalProperty(GLOBAL_PROPERTY_CONCEPTS_LOCKED, "false",
-		        "true/false whether or not concepts can be edited in this database."));
+		props.add(new GlobalProperty(GLOBAL_PROPERTY_CONCEPTS_LOCKED, "false", "if true, do not allow editing concepts",
+		        BooleanDatatype.class, null));
 		
 		props.add(new GlobalProperty(GLOBAL_PROPERTY_PATIENT_LISTING_ATTRIBUTES, "",
 		        "A comma delimited list of PersonAttributeType names that should be displayed for patients in _lists_"));
@@ -1038,6 +1222,12 @@ public final class OpenmrsConstants {
 		                "",
 		                "If this is empty, the regex or suffix/prefix search is used.  Comma separated list of identifiers to check.  Allows for faster searching of multiple options rather than the slow regex. e.g. @SEARCH@,0@SEARCH@,@SEARCH-1@-@CHECKDIGIT@,0@SEARCH-1@-@CHECKDIGIT@ would turn a request for \"4127\" into a search for \"in ('4127','04127','412-7','0412-7')\""));
 		
+		props
+		        .add(new GlobalProperty(
+		                GLOBAL_PROPERTY_PATIENT_NAME_REGEX,
+		                "^[a-zA-Z \\-]+$",
+		                "Names of the patients must pass this regex. Eg : ^[a-zA-Z \\-]+$ contains only english alphabet letters, spaces, and hyphens. A value of .* or the empty string means no validation is done."));
+		
 		props.add(new GlobalProperty(GLOBAL_PROPERTY_PERSON_SEARCH_MAX_RESULTS, String
 		        .valueOf(GLOBAL_PROPERTY_PERSON_SEARCH_MAX_RESULTS_DEFAULT_VALUE),
 		        "The maximum number of results returned by patient searches"));
@@ -1046,7 +1236,8 @@ public final class OpenmrsConstants {
 		        .add(new GlobalProperty(
 		                GLOBAL_PROPERTY_GZIP_ENABLED,
 		                "false",
-		                "Set to 'true' to turn on OpenMRS's gzip filter, and have the webapp compress data before sending it to any client that supports it. Generally use this if you are running Tomcat standalone. If you are running Tomcat behind Apache, then you'd want to use Apache to do gzip compression."));
+		                "Set to 'true' to turn on OpenMRS's gzip filter, and have the webapp compress data before sending it to any client that supports it. Generally use this if you are running Tomcat standalone. If you are running Tomcat behind Apache, then you'd want to use Apache to do gzip compression.",
+		                BooleanDatatype.class, null));
 		props
 		        .add(new GlobalProperty(GLOBAL_PROPERTY_REPORT_XML_MACROS, "",
 		                "Macros that will be applied to Report Schema XMLs when they are interpreted. This should be java.util.properties format."));
@@ -1066,8 +1257,8 @@ public final class OpenmrsConstants {
 		props
 		        .add(new GlobalProperty(
 		                GLOBAL_PROPERTY_LOG_LEVEL,
-		                LOG_LEVEL_INFO,
-		                "log level used by the logger 'org.openmrs'. This value will override the log4j.xml value. Valid values are trace, debug, info, warn, error or fatal"));
+		                "org.openmrs.api:" + LOG_LEVEL_INFO,
+		                "Logging levels for log4j.xml. Valid format is class:level,class:level. If class not specified, 'org.openmrs.api' presumed. Valid levels are trace, debug, info, warn, error or fatal"));
 		
 		props
 		        .add(new GlobalProperty(
@@ -1109,7 +1300,7 @@ public final class OpenmrsConstants {
 		                "Specifies the default locale. You can specify both the language code(ISO-639) and the country code(ISO-3166), e.g. 'en_GB' or just country: e.g. 'en'"));
 		
 		props.add(new GlobalProperty(GP_PASSWORD_CANNOT_MATCH_USERNAME_OR_SYSTEMID, "true",
-		        "Configure whether passwords must not match user's username or system id"));
+		        "Configure whether passwords must not match user's username or system id", BooleanDatatype.class, null));
 		
 		props.add(new GlobalProperty(GP_PASSWORD_CUSTOM_REGEX, "",
 		        "Configure a custom regular expression that a password must match"));
@@ -1118,22 +1309,26 @@ public final class OpenmrsConstants {
 		        "Configure the minimum length required of all passwords"));
 		
 		props.add(new GlobalProperty(GP_PASSWORD_REQUIRES_DIGIT, "true",
-		        "Configure whether passwords must contain at least one digit"));
+		        "Configure whether passwords must contain at least one digit", BooleanDatatype.class, null));
 		
 		props.add(new GlobalProperty(GP_PASSWORD_REQUIRES_NON_DIGIT, "true",
-		        "Configure whether passwords must contain at least one non-digit"));
+		        "Configure whether passwords must contain at least one non-digit", BooleanDatatype.class, null));
 		
-		props.add(new GlobalProperty(GP_PASSWORD_REQUIRES_UPPER_AND_LOWER_CASE, "true",
-		        "Configure whether passwords must contain both upper and lower case characters"));
+		props
+		        .add(new GlobalProperty(GP_PASSWORD_REQUIRES_UPPER_AND_LOWER_CASE, "true",
+		                "Configure whether passwords must contain both upper and lower case characters",
+		                BooleanDatatype.class, null));
 		
 		props.add(new GlobalProperty(GLOBAL_PROPERTY_IGNORE_MISSING_NONLOCAL_PATIENTS, "false",
-		        "If true, hl7 messages for patients that are not found and are non-local will silently be dropped/ignored"));
+		        "If true, hl7 messages for patients that are not found and are non-local will silently be dropped/ignored",
+		        BooleanDatatype.class, null));
 		
 		props
 		        .add(new GlobalProperty(
 		                GLOBAL_PROPERTY_SHOW_PATIENT_NAME,
 		                "false",
-		                "Whether or not to display the patient name in the patient dashboard title. Note that enabling this could be security risk if multiple users operate on the same computer."));
+		                "Whether or not to display the patient name in the patient dashboard title. Note that enabling this could be security risk if multiple users operate on the same computer.",
+		                BooleanDatatype.class, null));
 		
 		props.add(new GlobalProperty(GLOBAL_PROPERTY_DEFAULT_THEME, "",
 		        "Default theme for users.  OpenMRS ships with themes of 'green', 'orange', 'purple', and 'legacy'"));
@@ -1151,7 +1346,8 @@ public final class OpenmrsConstants {
 		        .add(new GlobalProperty(
 		                GP_SEARCH_WIDGET_IN_SERIAL_MODE,
 		                "false",
-		                "Specifes whether the search widgets should make ajax requests in serial or parallel order, a value of true is appropriate for implementations running on a slow network connection and vice versa"));
+		                "Specifies whether the search widgets should make ajax requests in serial or parallel order, a value of true is appropriate for implementations running on a slow network connection and vice versa",
+		                BooleanDatatype.class, null));
 		
 		props
 		        .add(new GlobalProperty(
@@ -1161,7 +1357,61 @@ public final class OpenmrsConstants {
 		
 		props.add(new GlobalProperty(GLOBAL_PROPERTY_DEFAULT_LOCATION_NAME, "Unknown Location",
 		        "The name of the location to use as a system default"));
+		props
+		        .add(new GlobalProperty(
+		                GLOBAL_PROPERTY_PATIENT_SEARCH_MATCH_MODE,
+		                "START",
+		                "Specifies how patient names are matched while searching patient. Valid values are 'ANYWHERE' or 'START'. Defaults to start if missing or invalid value is present."));
 		
+		props.add(new GlobalProperty(GP_ENABLE_CONCEPT_MAP_TYPE_MANAGEMENT, "false",
+		        "Enables or disables management of concept map types", BooleanDatatype.class, null));
+		
+		props
+		        .add(new GlobalProperty(
+		                GLOBAL_PROPERTY_ENABLE_VISITS,
+		                "true",
+		                "Set to true to enable the Visits feature. This will replace the 'Encounters' tab with a 'Visits' tab on the dashboard.",
+		                BooleanDatatype.class, null));
+		
+		props.add(new GlobalProperty(GP_VISIT_ASSIGNMENT_HANDLER, ExistingVisitAssignmentHandler.class.getName(),
+		        "Set to the name of the class responsible for assigning encounters to visits."));
+		
+		props.add(new GlobalProperty(GLOBAL_PROPERTY_APPLICATION_NAME, "OpenMRS",
+		        "The name of this application, as presented to the user, for example on the login and welcome pages."));
+		
+		props
+		        .add(new GlobalProperty(
+		                GP_ENCOUNTER_TYPE_TO_VISIT_TYPE_MAPPING,
+		                "",
+		                "Specifies how encounter types are mapped to visit types when automatically assigning encounters to visits. e.g 1:1, 2:1, 3:2 in the format encounterTypeId:visitTypeId"));
+		
+		props
+		        .add(new GlobalProperty(
+		                GP_DASHBOARD_PROVIDER_DISPLAY_ENCOUNTER_ROLES,
+		                "",
+		                "A comma-separated list of encounter roles (by name or id). Providers with these roles in an encounter will be displayed on the encounter tab of the patient dashboard."));
+		
+		props.add(new GlobalProperty(GP_SEARCH_WIDGET_MAXIMUM_RESULTS, "2000",
+		        "Specifies the maximum number of results to return from a single search in the search widgets"));
+		
+		props
+		        .add(new GlobalProperty(
+		                GP_DASHBOARD_MAX_NUMBER_OF_ENCOUNTERS_TO_SHOW,
+		                "",
+		                "An integer which, if specified, would determine the maximum number of encounters to display on the encounter tab of the patient dashboard."));
+		
+		props.add(new GlobalProperty(GP_VISIT_TYPES_TO_AUTO_CLOSE, "",
+		        "comma-separated list of the visit type(s) to automatically close"));
+		
+		props.add(new GlobalProperty(GP_DEFAULT_CONCEPT_MAP_TYPE, "NARROWER-THAN",
+		        "Default concept map type which is used when no other is set"));
+		
+		props.add(new GlobalProperty(GP_CONCEPT_DRUG_DOSAGE_FORM_CONCEPT_CLASSES, "",
+                "A comma-separated list of the allowed concept classes for the dosage form field of the concept drug management form."));
+
+		props.add(new GlobalProperty(GP_CONCEPT_DRUG_ROUTE_CONCEPT_CLASSES, "",
+                "A comma-separated list of the allowed concept classes for the route field of the concept drug management form."));
+
 		for (GlobalProperty gp : ModuleFactory.getGlobalProperties()) {
 			props.add(gp);
 		}
@@ -1355,10 +1605,10 @@ public final class OpenmrsConstants {
 	public static final String SHORT_SERIALIZATION = "isShortSerialization";
 	
 	// Global property key for global logger level
-	public static final String GLOBAL_PROPERTY_LOG_LEVEL = "log.level.openmrs";
+	public static final String GLOBAL_PROPERTY_LOG_LEVEL = "log.level";
 	
 	// Global logger category
-	public static final String LOG_CLASS_DEFAULT = "org.openmrs";
+	public static final String LOG_CLASS_DEFAULT = "org.openmrs.api";
 	
 	// Log levels
 	public static final String LOG_LEVEL_TRACE = "trace";
@@ -1392,4 +1642,6 @@ public final class OpenmrsConstants {
 	
 	public static final String TEXT_VIEW = "TEXT_VIEW";
 	
+	/** The data type to return on failing to load a custom data type. */
+	public static final String DEFAULT_CUSTOM_DATATYPE = FreeTextDatatype.class.getName();
 }

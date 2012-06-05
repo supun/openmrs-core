@@ -14,6 +14,7 @@
 package org.openmrs.layout.web;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -45,6 +46,24 @@ public abstract class LayoutTemplate {
 	protected List<String> lineByLineFormat;
 	
 	protected int maxTokens = 0; // The largest number of tokens on one given line
+	
+	protected String startDate;
+	
+	protected String endDate;
+	
+	public LayoutTemplate() {
+	}
+	
+	/**
+	 * Very crude way of setting just one line of template. This just puts
+	 * something on {@link #setLineByLineFormat(List)} with this string
+	 * 
+	 * @param simpleTemplate
+	 *            first template line
+	 */
+	public LayoutTemplate(String simpleTemplate) {
+		setLineByLineFormat(Arrays.asList(simpleTemplate));
+	}
 	
 	public abstract String getLayoutToken();
 	
@@ -231,10 +250,9 @@ public abstract class LayoutTemplate {
 	}
 	
 	/**
-	 * Get the element regular expressions.
-	 * These can be used to enforce that an element
-	 * matches a regex.
-	 *
+	 * Get the element regular expressions. These can be used to enforce that an element matches a
+	 * regex.
+	 * 
 	 * @return the elementRegex
 	 */
 	public Map<String, String> getElementRegex() {
@@ -242,10 +260,9 @@ public abstract class LayoutTemplate {
 	}
 	
 	/**
-	 * Set the element regular expressions.
-	 * These can be used to enforce that an element
-	 * matches a regex.
-	 *
+	 * Set the element regular expressions. These can be used to enforce that an element matches a
+	 * regex.
+	 * 
 	 * @param elementRegex the elementRegex to set
 	 */
 	public void setElementRegex(Map<String, String> elementRegex) {
@@ -253,10 +270,9 @@ public abstract class LayoutTemplate {
 	}
 	
 	/**
-	 * Get the element formats.
-	 * These can be used to display an example format
-	 * that an element should look like.
-	 *
+	 * Get the element formats. These can be used to display an example format that an element
+	 * should look like.
+	 * 
 	 * @return the elementFormats
 	 */
 	public Map<String, String> getElementRegexFormats() {
@@ -264,10 +280,9 @@ public abstract class LayoutTemplate {
 	}
 	
 	/**
-	 * Set the element formats.
-	 * These can be used to display an example format
-	 * that an element should look like.
-	 *
+	 * Set the element formats. These can be used to display an example format that an element
+	 * should look like.
+	 * 
 	 * @param elementFormats the elementFormats to set
 	 */
 	public void setElementRegexFormats(Map<String, String> elementRegexFormats) {

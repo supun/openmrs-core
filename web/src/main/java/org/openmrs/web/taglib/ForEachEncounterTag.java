@@ -93,6 +93,7 @@ public class ForEachEncounterTag extends BodyTagSupport {
 		if (matchingEncs.isEmpty()) {
 			return SKIP_BODY;
 		} else {
+			pageContext.setAttribute("count", count);
 			pageContext.setAttribute(var, matchingEncs.get(count++));
 			return EVAL_BODY_BUFFERED;
 		}

@@ -67,7 +67,7 @@ public class PatientIdentifierTypeFormController extends SimpleFormController {
 	 *      org.springframework.validation.BindException)
 	 */
 	protected ModelAndView onSubmit(HttpServletRequest request, HttpServletResponse response, Object obj,
-	                                BindException errors) throws Exception {
+	        BindException errors) throws Exception {
 		
 		HttpSession httpSession = request.getSession();
 		
@@ -166,6 +166,8 @@ public class PatientIdentifierTypeFormController extends SimpleFormController {
 		String defaultValidatorName = Context.getPatientService().getDefaultIdentifierValidator().getName();
 		
 		toReturn.put("defaultValidatorName", defaultValidatorName);
+		
+		toReturn.put("locationBehaviors", PatientIdentifierType.LocationBehavior.values());
 		
 		return toReturn;
 	}

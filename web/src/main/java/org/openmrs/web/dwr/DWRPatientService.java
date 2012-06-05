@@ -22,7 +22,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Vector;
 
-import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -99,7 +98,6 @@ public class DWRPatientService implements GlobalPropertyListener {
 	 * @return Collection<Object> of PatientListItem or String
 	 * @since 1.8
 	 */
-	@SuppressWarnings("unchecked")
 	public Collection<Object> findBatchOfPatients(String searchValue, boolean includeVoided, Integer start, Integer length) {
 		if (maximumResults == null)
 			maximumResults = getMaximumSearchResults();
@@ -122,38 +120,10 @@ public class DWRPatientService implements GlobalPropertyListener {
 		
 		patientList = new Vector<Object>(patients.size());
 		for (Patient p : patients)
-			patientList.add(new PatientListItem(p));
-		// if the length wasn't limited to less than 3 or this is the second ajax call
-		// and only 2 results found and a number was not in the
-		// search, then do a decapitated search: trim each word
-		// down to the first three characters and search again
-		if ((length == null || length > 2) && patients.size() < 3 && !searchValue.matches(".*\\d+.*")) {
-			String[] names = searchValue.split(" ");
-			String newSearch = "";
-			for (String name : names) {
-				if (name.length() > 3)
-					name = name.substring(0, 4);
-				newSearch += " " + name;
-			}
-			newSearch = newSearch.trim();
-			
-			if (!newSearch.equals(searchValue)) {
-				Collection<Patient> newPatients = ps.getPatients(newSearch, start, length);
-				patients = CollectionUtils.union(newPatients, patients); // get unique hits
-				//reconstruct the results list
-				if (newPatients.size() > 0) {
-					patientList = new Vector<Object>(patients.size());
-					//patientList.add("Minimal patients returned. Results for <b>" + newSearch + "</b>");
-					for (Patient p : newPatients) {
-						PatientListItem pi = new PatientListItem(p);
-						patientList.add(pi);
-					}
-				}
-			}
-		}
+			patientList.add(new PatientListItem(p, searchValue));
 		//no results found and a number was in the search --
 		//should check whether the check digit is correct.
-		else if (patients.size() == 0 && searchValue.matches(".*\\d+.*")) {
+		if (patients.size() == 0 && searchValue.matches(".*\\d+.*")) {
 			
 			//Looks through all the patient identifier validators to see if this type of identifier
 			//is supported for any of them.  If it isn't, then no need to warn about a bad check
@@ -203,10 +173,12 @@ public class DWRPatientService implements GlobalPropertyListener {
 	 * @return a map of results
 	 * @throws APIException
 	 * @since 1.8
+	 * @should signal for a new search if the new search value has matches and is a first call
+	 * @should not signal for a new search if it is not the first ajax call
+	 * @should not signal for a new search if the new search value has no matches
 	 */
-	@SuppressWarnings("unchecked")
 	public Map<String, Object> findCountAndPatients(String searchValue, Integer start, Integer length, boolean getMatchCount)
-	                                                                                                                         throws APIException {
+	        throws APIException {
 		
 		//Map to return
 		Map<String, Object> resultsMap = new HashMap<String, Object>();
@@ -218,32 +190,28 @@ public class DWRPatientService implements GlobalPropertyListener {
 			if (getMatchCount) {
 				patientCount += ps.getCountOfPatients(searchValue);
 				
-				// if only 2 results found and a number was not in the
-				// search, then do a decapitated search: trim each word
-				// down to the first three characters and search again				
-				if ((length == null || length > 2) && patientCount < 3 && !searchValue.matches(".*\\d+.*")) {
+				// if there are no results found and a number was not in the
+				// search and this is the first call, then do a decapitated search: 
+				//trim each word down to the first three characters and search again				
+				if (patientCount == 0 && start == 0 && !searchValue.matches(".*\\d+.*")) {
 					String[] names = searchValue.split(" ");
 					String newSearch = "";
 					for (String name : names) {
 						if (name.length() > 3)
-							name = name.substring(0, 4);
+							name = name.substring(0, 3);
 						newSearch += " " + name;
 					}
 					
 					newSearch = newSearch.trim();
 					if (!newSearch.equals(searchValue)) {
-						//since we already know that the list is small, it doesn't hurt to load the hits
-						//so that we can remove them from the list of the new search results and get the 
-						//accurate count of matches
-						Collection<Patient> patients = ps.getPatients(searchValue);
 						newSearch = newSearch.trim();
-						Collection<Patient> newPatients = ps.getPatients(newSearch);
-						newPatients = CollectionUtils.union(newPatients, patients);
-						//Re-compute the count of all the unique patient hits
-						patientCount = newPatients.size();
-						if (newPatients.size() > 0) {
+						int newPatientCount = ps.getCountOfPatients(newSearch);
+						if (newPatientCount > 0) {
+							// Send a signal to the core search widget to search again against newSearch
+							resultsMap.put("searchAgain", newSearch);
 							resultsMap.put("notification", Context.getMessageSourceService().getMessage(
-							    "Patient.warning.minimalSearchResults", new Object[] { newSearch }, Context.getLocale()));
+							    "searchWidget.noResultsFoundFor", new Object[] { searchValue, newSearch },
+							    Context.getLocale()));
 						}
 					}
 				}
@@ -457,7 +425,7 @@ public class DWRPatientService implements GlobalPropertyListener {
 	 * @return
 	 */
 	public String exitPatientFromCare(Integer patientId, Integer exitReasonId, String exitDateStr,
-	                                  Integer causeOfDeathConceptId, String otherReason) {
+	        Integer causeOfDeathConceptId, String otherReason) {
 		log.debug("Entering exitfromcare with [" + patientId + "] [" + exitReasonId + "] [" + exitDateStr + "]");
 		String ret = "";
 		
@@ -538,8 +506,9 @@ public class DWRPatientService implements GlobalPropertyListener {
 							ps.processDeath(patient, exitDate, causeOfDeathConcept, otherReason);
 						}
 						catch (Exception e) {
-							log.debug("Caught error", e);
-							ret = "Internal error while trying to process patient death - unable to proceed.";
+							log.warn("Caught error", e);
+							ret = "Internal error while trying to process patient death - unable to proceed. Cause: "
+							        + e.getMessage();
 						}
 					}
 					// cause of death concept does not exist
@@ -554,8 +523,9 @@ public class DWRPatientService implements GlobalPropertyListener {
 						ps.exitFromCare(patient, exitDate, exitReasonConcept);
 					}
 					catch (Exception e) {
-						log.debug("Caught error", e);
-						ret = "Internal error while trying to exit patient from care - unable to exit patient from care at this time.";
+						log.warn("Caught error", e);
+						ret = "Internal error while trying to exit patient from care - unable to exit patient from care at this time. Cause: "
+						        + e.getMessage();
 					}
 				}
 			}
@@ -566,8 +536,9 @@ public class DWRPatientService implements GlobalPropertyListener {
 					ps.exitFromCare(patient, exitDate, exitReasonConcept);
 				}
 				catch (Exception e) {
-					log.debug("Caught error", e);
-					ret = "Internal error while trying to exit patient from care - unable to exit patient from care at this time.";
+					log.warn("Caught error", e);
+					ret = "Internal error while trying to exit patient from care - unable to exit patient from care at this time. Cause: "
+					        + e.getMessage();
 				}
 			}
 			log.debug("Exited from care, it seems");
@@ -615,7 +586,7 @@ public class DWRPatientService implements GlobalPropertyListener {
 	 * @param reactionId
 	 */
 	public void createAllergy(Integer patientId, Integer allergenId, String type, String pStartDate, String severity,
-	                          Integer reactionId) {
+	        Integer reactionId) {
 		Date startDate = parseDate(pStartDate);
 		
 		Patient patient = Context.getPatientService().getPatient(patientId);
@@ -639,7 +610,7 @@ public class DWRPatientService implements GlobalPropertyListener {
 	 * @param reactionId
 	 */
 	public void saveAllergy(Integer activeListItemId, Integer allergenId, String type, String pStartDate, String severity,
-	                        Integer reactionId) {
+	        Integer reactionId) {
 		//get the allergy
 		Allergy allergy = Context.getPatientService().getAllergy(activeListItemId);
 		allergy.setAllergen(Context.getConceptService().getConcept(allergenId));

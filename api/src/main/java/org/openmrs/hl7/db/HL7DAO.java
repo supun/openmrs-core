@@ -19,6 +19,7 @@ import org.openmrs.api.db.DAOException;
 import org.openmrs.hl7.HL7InArchive;
 import org.openmrs.hl7.HL7InError;
 import org.openmrs.hl7.HL7InQueue;
+import org.openmrs.hl7.HL7Service;
 import org.openmrs.hl7.HL7Source;
 
 /**
@@ -69,6 +70,11 @@ public interface HL7DAO {
 	public HL7InQueue getHL7InQueue(Integer hl7InQueueId) throws DAOException;
 	
 	/**
+	 * @see HL7Service#getHL7InQueueByUuid(String)
+	 */
+	public HL7InQueue getHL7InQueueByUuid(String uuid) throws DAOException;
+	
+	/**
 	 * @see org.openmrs.hl7.HL7Service#getAllHL7InQueues()
 	 */
 	public List<HL7InQueue> getAllHL7InQueues() throws DAOException;
@@ -85,8 +91,8 @@ public interface HL7DAO {
 	
 	/**
 	 * Returns hl7s based on batch settings and filtered by a query
-	 * @param <T>
 	 * 
+	 * @param <T>
 	 * @param clazz
 	 * @param start
 	 * @param length
@@ -168,6 +174,11 @@ public interface HL7DAO {
 	 * @see org.openmrs.hl7.HL7Service#getHL7InError(Integer)
 	 */
 	public HL7InError getHL7InError(Integer hl7InErrorId) throws DAOException;
+	
+	/**
+	 * @see HL7Service#getHL7InErrorByUuid(String)
+	 */
+	public HL7InError getHL7InErrorByUuid(String uuid) throws DAOException;
 	
 	/**
 	 * @see org.openmrs.hl7.HL7Service#getAllHL7InErrors()

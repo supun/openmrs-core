@@ -19,6 +19,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 
 import org.aopalliance.aop.Advice;
@@ -30,18 +31,22 @@ import org.openmrs.api.AdministrationService;
 import org.openmrs.api.CohortService;
 import org.openmrs.api.ConceptService;
 import org.openmrs.api.DataSetService;
+import org.openmrs.api.DatatypeService;
 import org.openmrs.api.EncounterService;
 import org.openmrs.api.FormService;
 import org.openmrs.api.LocationService;
 import org.openmrs.api.ObsService;
+import org.openmrs.api.OpenmrsService;
 import org.openmrs.api.OrderService;
 import org.openmrs.api.PatientService;
 import org.openmrs.api.PatientSetService;
 import org.openmrs.api.PersonService;
 import org.openmrs.api.ProgramWorkflowService;
+import org.openmrs.api.ProviderService;
 import org.openmrs.api.ReportService;
 import org.openmrs.api.SerializationService;
 import org.openmrs.api.UserService;
+import org.openmrs.api.VisitService;
 import org.openmrs.arden.ArdenService;
 import org.openmrs.hl7.HL7Service;
 import org.openmrs.logic.LogicService;
@@ -98,6 +103,15 @@ public class ServiceContext implements ApplicationContextAware {
 	// Advice added to services by this service
 	@SuppressWarnings("unchecked")
 	Map<Class, Set<Advice>> addedAdvice = new HashMap<Class, Set<Advice>>();
+	
+	/**
+	 * Services implementing the OpenmrsService interface for each module. The map is keyed by the
+	 * full class name including package.
+	 * 
+	 * @since 1.9
+	 */
+	@SuppressWarnings("unchecked")
+	Map<String, OpenmrsService> moduleOpenmrsServices = new HashMap<String, OpenmrsService>();
 	
 	/**
 	 * The default constructor is private so as to keep only one instance per java vm.
@@ -803,6 +817,12 @@ public class ServiceContext implements ApplicationContextAware {
 		
 		// add this module service to the normal list of services
 		setService(cls, classInstance);
+		
+		//Run onStartup for all services implementing the OpenmrsService interface.
+		if (OpenmrsService.class.isAssignableFrom(classInstance.getClass())) {
+			moduleOpenmrsServices.put(classString, (OpenmrsService) classInstance);
+			runOpenmrsServiceOnStartup((OpenmrsService) classInstance, classString);
+		}
 	}
 	
 	/**
@@ -867,13 +887,15 @@ public class ServiceContext implements ApplicationContextAware {
 	
 	public <T> List<T> getRegisteredComponents(Class<T> type) {
 		Map<String, T> m = getRegisteredComponents(applicationContext, type);
-		log.debug("getRegisteredComponents(" + type + ") = " + m);
+		if (log.isTraceEnabled())
+			log.trace("getRegisteredComponents(" + type + ") = " + m);
 		return new ArrayList<T>(m.values());
 	}
 	
 	/**
-	 * Private method which returns all components registered in a Spring applicationContext of a given type
-	 * This method recurses through each parent ApplicationContext
+	 * Private method which returns all components registered in a Spring applicationContext of a
+	 * given type This method recurses through each parent ApplicationContext
+	 * 
 	 * @param context - The applicationContext to check
 	 * @param type - The type of component to retrieve
 	 * @return all components registered in a Spring applicationContext of a given type
@@ -882,7 +904,8 @@ public class ServiceContext implements ApplicationContextAware {
 	private <T> Map<String, T> getRegisteredComponents(ApplicationContext context, Class<T> type) {
 		Map<String, T> components = new HashMap<String, T>();
 		Map registeredComponents = context.getBeansOfType(type);
-		log.debug("getRegisteredComponents(" + context + ", " + type + ") = " + registeredComponents);
+		if (log.isTraceEnabled())
+			log.trace("getRegisteredComponents(" + context + ", " + type + ") = " + registeredComponents);
 		if (registeredComponents != null) {
 			components.putAll(registeredComponents);
 		}
@@ -898,4 +921,116 @@ public class ServiceContext implements ApplicationContextAware {
 	public void setApplicationContext(ApplicationContext applicationContext) {
 		this.applicationContext = applicationContext;
 	}
+	
+	/**
+	 * Calls the {@link OpenmrsService#onStartup()} method for an instance implementing the
+	 * {@link OpenmrsService} interface.
+	 * 
+	 * @param openmrsService instance implementing the {@link OpenmrsService} interface.
+	 * @param classString the full instance class name including the package name.
+	 * @since 1.9
+	 */
+	private void runOpenmrsServiceOnStartup(final OpenmrsService openmrsService, final String classString) {
+		new Thread() {
+			
+			@Override
+			public void run() {
+				try {
+					synchronized (refreshingContext) {
+						//Need to wait for application context to finish refreshing otherwise we get into trouble.
+						refreshingContext.wait();
+					}
+					
+					Daemon.runStartupForService(openmrsService);
+				}
+				catch (InterruptedException e) {
+					log.warn("Refresh lock was interrupted while waiting to run OpenmrsService.onStartup() for "
+					        + classString, e);
+				}
+			}
+		}.start();
+	}
+	
+	/**
+	 * Gets a list of services implementing the {@link OpenmrsService} interface, for a given
+	 * module.
+	 * 
+	 * @param modulePackage the module's package name.
+	 * @return the list of service instances.
+	 * @since 1.9
+	 */
+	public List<OpenmrsService> getModuleOpenmrsServices(String modulePackage) {
+		List<OpenmrsService> services = new ArrayList<OpenmrsService>();
+		
+		for (Entry<String, OpenmrsService> entry : moduleOpenmrsServices.entrySet()) {
+			if (entry.getKey().startsWith(modulePackage)) {
+				services.add(entry.getValue());
+			}
+		}
+		
+		return services;
+	}
+	
+	/**
+	 * Gets the visit service.
+	 * 
+	 * @return visit service.
+	 * @since 1.9
+	 **/
+	public VisitService getVisitService() {
+		return getService(VisitService.class);
+	}
+	
+	/**
+	 * Sets the visit service.
+	 * 
+	 * @param visitService the visitService to set
+	 * @since 1.9
+	 **/
+	public void setVisitService(VisitService visitService) {
+		setService(VisitService.class, visitService);
+	}
+	
+	/**
+	 * Gets the provider service.
+	 * 
+	 * @return provider service.
+	 * @since 1.9
+	 **/
+	
+	public ProviderService getProviderService() {
+		return getService(ProviderService.class);
+	}
+	
+	/**
+	 * Sets the provider service.
+	 * 
+	 * @param providerService the providerService to set
+	 * @since 1.9
+	 **/
+	public void setProviderService(ProviderService providerService) {
+		setService(ProviderService.class, providerService);
+	}
+	
+	/**
+	 * Gets the datatype service
+	 * 
+	 * @return custom datatype service
+	 * @since 1.9
+	 */
+	public DatatypeService getDatatypeService() {
+		return getService(DatatypeService.class);
+	}
+	
+	/**
+	 * Sets the datatype service
+	 * 
+	 * @param datatypeService the datatypeService to set
+	 * @since 1.9
+	 * 
+	 */
+	public void setDatatypeService(DatatypeService datatypeService) {
+		setService(DatatypeService.class, datatypeService);
+	}
+	
 }

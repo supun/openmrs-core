@@ -15,6 +15,7 @@ package org.openmrs;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -26,6 +27,7 @@ import java.util.Set;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.openmrs.api.APIException;
+import org.openmrs.api.context.Context;
 import org.openmrs.util.LocaleUtility;
 import org.openmrs.util.OpenmrsConstants;
 import org.openmrs.util.OpenmrsUtil;
@@ -36,11 +38,12 @@ import org.simpleframework.xml.load.Validate;
 
 /**
  * Defines a User Account in the system. This account belongs to a {@link Person} in the system,
- * although that person may have other user accounts. Users have login credentials (username/password)
- * and can have special user properties. User properties are just simple key-value pairs for either quick
- * info or display specific info that needs to be persisted (like locale preferences, search options, etc)
+ * although that person may have other user accounts. Users have login credentials
+ * (username/password) and can have special user properties. User properties are just simple
+ * key-value pairs for either quick info or display specific info that needs to be persisted (like
+ * locale preferences, search options, etc)
  */
-public class User extends BaseOpenmrsMetadata implements java.io.Serializable {
+public class User extends BaseOpenmrsMetadata implements java.io.Serializable, Attributable<User> {
 	
 	public static final long serialVersionUID = 2L;
 	
@@ -88,15 +91,7 @@ public class User extends BaseOpenmrsMetadata implements java.io.Serializable {
 	 * @return true/false if this user is defined as a super user
 	 */
 	public boolean isSuperUser() {
-		Set<Role> tmproles = getAllRoles();
-		
-		Role role = new Role(RoleConstants.SUPERUSER); // default administrator with
-		// complete control
-		
-		if (tmproles.contains(role))
-			return true;
-		
-		return false;
+		return containsRole(RoleConstants.SUPERUSER);
 	}
 	
 	/**
@@ -160,11 +155,15 @@ public class User extends BaseOpenmrsMetadata implements java.io.Serializable {
 		if (log.isDebugEnabled())
 			log.debug("User #" + userId + " has roles: " + tmproles);
 		
-		Role role = new Role(r);
-		
-		if (tmproles.contains(role))
-			return true;
-		
+		return containsRole(r);
+	}
+	
+	private boolean containsRole(String roleName) {
+		for (Role role : getAllRoles()) {
+			if (role.getRole().equals(roleName)) {
+				return true;
+			}
+		}
 		return false;
 	}
 	
@@ -187,38 +186,6 @@ public class User extends BaseOpenmrsMetadata implements java.io.Serializable {
 		}
 		
 		return privileges;
-	}
-	
-	/**
-	 * Compares two objects for similarity
-	 * 
-	 * @param obj
-	 * @return boolean true/false whether or not they are the same objects
-	 */
-	@Override
-	public boolean equals(Object obj) {
-		if (obj instanceof User) {
-			User user = (User) obj;
-			
-			if (getUserId() != null && user.getUserId() != null)
-				return userId.equals(user.getUserId());
-		}
-		
-		// if userId is null for either object, for equality the
-		// two objects must be the same
-		return this == obj;
-	}
-	
-	/**
-	 * The hashcode for a user is used to index the objects in a tree
-	 * 
-	 * @see org.openmrs.Person#hashCode()
-	 */
-	@Override
-	public int hashCode() {
-		if (getUserId() == null)
-			return super.hashCode();
-		return getUserId().hashCode();
 	}
 	
 	// Property accessors
@@ -304,6 +271,65 @@ public class User extends BaseOpenmrsMetadata implements java.io.Serializable {
 	}
 	
 	/**
+	 * @see org.openmrs.Attributable#findPossibleValues(java.lang.String)
+	 */
+	public List<User> findPossibleValues(String searchText) {
+		try {
+			return Context.getUserService().getUsersByName(searchText, "", false);
+		}
+		catch (Exception e) {
+			return Collections.emptyList();
+		}
+	}
+	
+	/**
+	 * @see org.openmrs.Attributable#getPossibleValues()
+	 */
+	public List<User> getPossibleValues() {
+		try {
+			return Context.getUserService().getAllUsers();
+		}
+		catch (Exception e) {
+			return Collections.emptyList();
+		}
+	}
+	
+	/**
+	 * @see org.openmrs.Attributable#hydrate(java.lang.String)
+	 */
+	public User hydrate(String userId) {
+		try {
+			return Context.getUserService().getUser(Integer.valueOf(userId));
+		}
+		catch (Exception e) {
+			return new User();
+		}
+	}
+	
+	/**
+	 * @see org.openmrs.Attributable#serialize()
+	 */
+	public String serialize() {
+		if (getUserId() != null)
+			return "" + getUserId();
+		else
+			return "";
+	}
+	
+	/**
+	 * @see org.openmrs.Attributable#getDisplayString()
+	 */
+	public String getDisplayString() {
+		String returnString = "";
+		if (getPersonName() != null)
+			returnString += getPersonName().getFullName() + " ";
+		
+		returnString += "(" + getUsername() + ")";
+		return returnString;
+		
+	}
+	
+	/**
 	 * @return Returns the systemId.
 	 */
 	@Attribute(required = false)
@@ -348,6 +374,15 @@ public class User extends BaseOpenmrsMetadata implements java.io.Serializable {
 	 * @since 1.6
 	 */
 	public Person getPerson() {
+		return person;
+	}
+	
+	/**
+	 * @return the person, creating a new object if person is null
+	 */
+	private Person getPersonMaybeCreate() {
+		if (person == null)
+			person = new Person();
 		return person;
 	}
 	
@@ -459,7 +494,7 @@ public class User extends BaseOpenmrsMetadata implements java.io.Serializable {
 	 * @see Person#addName(PersonName)
 	 */
 	public void addName(PersonName name) {
-		getPerson().addName(name);
+		getPersonMaybeCreate().addName(name);
 	}
 	
 	/**
@@ -471,6 +506,7 @@ public class User extends BaseOpenmrsMetadata implements java.io.Serializable {
 	
 	/**
 	 * Get givenName on the Person this user account belongs to
+	 * 
 	 * @see Person#getGivenName()
 	 */
 	public String getGivenName() {
@@ -479,6 +515,7 @@ public class User extends BaseOpenmrsMetadata implements java.io.Serializable {
 	
 	/**
 	 * Get familyName on the Person this user account belongs to
+	 * 
 	 * @see Person#getFamilyName()
 	 */
 	public String getFamilyName() {
@@ -546,21 +583,23 @@ public class User extends BaseOpenmrsMetadata implements java.io.Serializable {
 	public List<Locale> getProficientLocales() {
 		String proficientLocalesProperty = getUserProperty(OpenmrsConstants.USER_PROPERTY_PROFICIENT_LOCALES);
 		
-		if ((proficientLocales == null) || (!parsedProficientLocalesProperty.equals(proficientLocalesProperty))) {
+		if ((proficientLocales == null)
+		        || (!OpenmrsUtil.nullSafeEquals(parsedProficientLocalesProperty, proficientLocalesProperty))) {
 			parsedProficientLocalesProperty = proficientLocalesProperty;
 			proficientLocales = new ArrayList<Locale>();
-			
-			String[] proficientLocalesArray = proficientLocalesProperty.split(",");
-			for (String proficientLocaleSpec : proficientLocalesArray) {
-				if (proficientLocaleSpec.length() > 0) {
-					Locale proficientLocale = LocaleUtility.fromSpecification(proficientLocaleSpec);
-					if (!proficientLocales.contains(proficientLocale)) {
-						proficientLocales.add(proficientLocale);
-						if (!"".equals(proficientLocale.getCountry())) {
-							// add the language also
-							Locale languageOnlyLocale = LocaleUtility.fromSpecification(proficientLocale.getLanguage());
-							if (!proficientLocales.contains(languageOnlyLocale)) {
-								proficientLocales.add(LocaleUtility.fromSpecification(proficientLocale.getLanguage()));
+			if (proficientLocalesProperty != null) {
+				String[] proficientLocalesArray = proficientLocalesProperty.split(",");
+				for (String proficientLocaleSpec : proficientLocalesArray) {
+					if (proficientLocaleSpec.length() > 0) {
+						Locale proficientLocale = LocaleUtility.fromSpecification(proficientLocaleSpec);
+						if (!proficientLocales.contains(proficientLocale)) {
+							proficientLocales.add(proficientLocale);
+							if (!"".equals(proficientLocale.getCountry())) {
+								// add the language also
+								Locale languageOnlyLocale = LocaleUtility.fromSpecification(proficientLocale.getLanguage());
+								if (!proficientLocales.contains(languageOnlyLocale)) {
+									proficientLocales.add(LocaleUtility.fromSpecification(proficientLocale.getLanguage()));
+								}
 							}
 						}
 					}

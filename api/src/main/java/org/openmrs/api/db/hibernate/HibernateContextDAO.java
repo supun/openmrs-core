@@ -14,7 +14,6 @@
 package org.openmrs.api.db.hibernate;
 
 import java.io.InputStream;
-import java.util.Date;
 import java.util.Map;
 import java.util.Properties;
 
@@ -89,8 +88,8 @@ public class HibernateContextDAO implements ContextDAO {
 			
 			try {
 				candidateUser = (User) session.createQuery(
-				    "from User u where (u.username = ? or u.systemId = ? or u.systemId = ?) and u.retired = 0").setString(0,
-				    login).setString(1, login).setString(2, loginWithDash).uniqueResult();
+				    "from User u where (u.username = ? or u.systemId = ? or u.systemId = ?) and u.retired = '0'").setString(
+				    0, login).setString(1, login).setString(2, loginWithDash).uniqueResult();
 			}
 			catch (HibernateException he) {
 				log.error("Got hibernate exception while logging in: '" + login + "'", he);
@@ -107,20 +106,28 @@ public class HibernateContextDAO implements ContextDAO {
 			
 			String lockoutTimeString = candidateUser.getUserProperty(OpenmrsConstants.USER_PROPERTY_LOCKOUT_TIMESTAMP, null);
 			Long lockoutTime = null;
-			if (lockoutTimeString != null && !lockoutTimeString.equals("0"))
-				lockoutTime = Long.valueOf(lockoutTimeString);
+			if (lockoutTimeString != null && !lockoutTimeString.equals("0")) {
+				try {
+					// putting this in a try/catch in case the admin decided to put junk into the property
+					lockoutTime = Long.valueOf(lockoutTimeString);
+				}
+				catch (NumberFormatException e) {
+					log.debug("bad value stored in " + OpenmrsConstants.USER_PROPERTY_LOCKOUT_TIMESTAMP + " user property: "
+					        + lockoutTimeString);
+				}
+			}
 			
 			// if they've been locked out, don't continue with the authentication
 			if (lockoutTime != null) {
 				// unlock them after 5 mins, otherwise reset the timestamp
 				// to now and make them wait another 5 mins
-				if (new Date().getTime() - lockoutTime > 300000) {
+				if (System.currentTimeMillis() - lockoutTime > 300000) {
 					candidateUser.setUserProperty(OpenmrsConstants.USER_PROPERTY_LOGIN_ATTEMPTS, "0");
 					candidateUser.removeUserProperty(OpenmrsConstants.USER_PROPERTY_LOCKOUT_TIMESTAMP);
 					saveUserProperties(candidateUser);
 				} else {
-					candidateUser.setUserProperty(OpenmrsConstants.USER_PROPERTY_LOCKOUT_TIMESTAMP, String
-					        .valueOf(new Date().getTime()));
+					candidateUser.setUserProperty(OpenmrsConstants.USER_PROPERTY_LOCKOUT_TIMESTAMP, String.valueOf(System
+					        .currentTimeMillis()));
 					throw new ContextAuthenticationException(
 					        "Invalid number of connection attempts. Please try again later.");
 				}
@@ -159,8 +166,8 @@ public class HibernateContextDAO implements ContextDAO {
 				
 				if (attempts >= 8) {
 					// set the user as locked out at this exact time
-					candidateUser.setUserProperty(OpenmrsConstants.USER_PROPERTY_LOCKOUT_TIMESTAMP, String
-					        .valueOf(new Date().getTime()));
+					candidateUser.setUserProperty(OpenmrsConstants.USER_PROPERTY_LOCKOUT_TIMESTAMP, String.valueOf(System
+					        .currentTimeMillis()));
 				} else {
 					candidateUser.setUserProperty(OpenmrsConstants.USER_PROPERTY_LOGIN_ATTEMPTS, String.valueOf(attempts));
 				}

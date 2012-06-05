@@ -50,6 +50,7 @@ import org.openmrs.hl7.HL7Constants;
 import org.openmrs.hl7.HL7InArchive;
 import org.openmrs.hl7.HL7InError;
 import org.openmrs.hl7.HL7InQueue;
+import org.openmrs.hl7.HL7QueueItem;
 import org.openmrs.hl7.HL7Service;
 import org.openmrs.hl7.HL7Source;
 import org.openmrs.hl7.HL7Util;
@@ -58,6 +59,7 @@ import org.openmrs.hl7.Hl7InArchivesMigrateThread.Status;
 import org.openmrs.hl7.db.HL7DAO;
 import org.openmrs.util.OpenmrsConstants;
 import org.openmrs.util.OpenmrsUtil;
+import org.openmrs.util.PrivilegeConstants;
 import org.openmrs.validator.PatientIdentifierValidator;
 
 import ca.uhn.hl7v2.HL7Exception;
@@ -77,8 +79,8 @@ import ca.uhn.hl7v2.parser.EncodingNotSupportedException;
 import ca.uhn.hl7v2.parser.GenericParser;
 
 /**
- * OpenMRS HL7 API default methods This class shouldn't be instantiated by
- * itself. Use the {@link org.openmrs.api.context.Context}
+ * OpenMRS HL7 API default methods This class shouldn't be instantiated by itself. Use the
+ * {@link org.openmrs.api.context.Context}
  * 
  * @see org.openmrs.hl7.HL7Service
  */
@@ -124,8 +126,7 @@ public class HL7ServiceImpl extends BaseOpenmrsService implements HL7Service {
 	/**
 	 * Used by spring to inject the parser
 	 * 
-	 * @param parser
-	 *            the parser to use
+	 * @param parser the parser to use
 	 */
 	public void setParser(GenericParser parser) {
 		this.parser = parser;
@@ -134,8 +135,7 @@ public class HL7ServiceImpl extends BaseOpenmrsService implements HL7Service {
 	/**
 	 * Used by spring to inject the router
 	 * 
-	 * @param router
-	 *            the router to use
+	 * @param router the router to use
 	 */
 	public void setRouter(MessageTypeRouter router) {
 		this.router = router;
@@ -241,8 +241,7 @@ public class HL7ServiceImpl extends BaseOpenmrsService implements HL7Service {
 	}
 	
 	/**
-	 * @see org.openmrs.hl7.HL7Service#getHL7InQueueBatch(int, int,
-	 *      java.lang.String)
+	 * @see org.openmrs.hl7.HL7Service#getHL7InQueueBatch(int, int, java.lang.String)
 	 */
 	@Override
 	public List<HL7InQueue> getHL7InQueueBatch(int start, int length, int messageState, String query) throws APIException {
@@ -250,8 +249,7 @@ public class HL7ServiceImpl extends BaseOpenmrsService implements HL7Service {
 	}
 	
 	/**
-	 * @see org.openmrs.hl7.HL7Service#getHL7InErrorBatch(int, int,
-	 *      java.lang.String)
+	 * @see org.openmrs.hl7.HL7Service#getHL7InErrorBatch(int, int, java.lang.String)
 	 */
 	@Override
 	public List<HL7InError> getHL7InErrorBatch(int start, int length, String query) throws APIException {
@@ -259,12 +257,11 @@ public class HL7ServiceImpl extends BaseOpenmrsService implements HL7Service {
 	}
 	
 	/**
-	 * @see org.openmrs.hl7.HL7Service#getHL7InArchiveBatch(int, int,
-	 *      java.lang.String)
+	 * @see org.openmrs.hl7.HL7Service#getHL7InArchiveBatch(int, int, java.lang.String)
 	 */
 	@Override
 	public List<HL7InArchive> getHL7InArchiveBatch(int start, int length, int messageState, String query)
-	                                                                                                     throws APIException {
+	        throws APIException {
 		return dao.getHL7Batch(HL7InArchive.class, start, length, messageState, query);
 	}
 	
@@ -326,6 +323,11 @@ public class HL7ServiceImpl extends BaseOpenmrsService implements HL7Service {
 	 */
 	public HL7InQueue getHL7InQueue(Integer hl7InQueueId) {
 		return dao.getHL7InQueue(hl7InQueueId);
+	}
+	
+	@Override
+	public HL7InQueue getHL7InQueueByUuid(String uuid) throws APIException {
+		return dao.getHL7InQueueByUuid(uuid);
 	}
 	
 	/**
@@ -480,6 +482,11 @@ public class HL7ServiceImpl extends BaseOpenmrsService implements HL7Service {
 		return dao.getHL7InError(hl7InErrorId);
 	}
 	
+	@Override
+	public HL7InError getHL7InErrorByUuid(String uuid) throws APIException {
+		return dao.getHL7InErrorByUuid(uuid);
+	}
+	
 	/**
 	 * @see org.openmrs.hl7.HL7Service#getHL7InErrors()
 	 * @deprecated
@@ -508,11 +515,10 @@ public class HL7ServiceImpl extends BaseOpenmrsService implements HL7Service {
 	}
 	
 	/**
-	 * @param xcn
-	 *            HL7 component of data type XCN (extended composite ID number
-	 *            and name for persons) (see HL7 2.5 manual Ch.2A.86)
-	 * @return Internal ID # of the specified user, or null if that user can't
-	 *         be found or is ambiguous
+	 * @param xcn HL7 component of data type XCN (extended composite ID number and name for persons)
+	 *            (see HL7 2.5 manual Ch.2A.86)
+	 * @return Internal ID # of the specified user, or null if that user can't be found or is
+	 *         ambiguous
 	 */
 	public Integer resolveUserId(XCN xcn) throws HL7Exception {
 		// TODO: properly handle family and given names. For now I'm treating
@@ -597,24 +603,22 @@ public class HL7ServiceImpl extends BaseOpenmrsService implements HL7Service {
 	}
 	
 	/**
-	 * @param pl
-	 *            HL7 component of data type PL (person location) (see Ch
-	 *            2.A.53)
-	 * @return internal identifier of the specified location, or null if it is
-	 *         not found or ambiguous
+	 * @param pl HL7 component of data type PL (person location) (see Ch 2.A.53)
+	 * @return internal identifier of the specified location, or null if it is not found or
+	 *         ambiguous
 	 */
 	public Integer resolveLocationId(PL pl) throws HL7Exception {
 		// TODO: Get rid of hack that allows first component to be an integer
 		// location.location_id
 		String pointOfCare = pl.getPointOfCare().getValue();
 		String facility = pl.getFacility().getUniversalID().getValue();
-		
 		// HACK: try to treat the first component (which should be "Point of
 		// Care" as an internal openmrs location_id
 		try {
 			Integer locationId = new Integer(pointOfCare);
 			Location l = Context.getLocationService().getLocation(locationId);
-			return l == null ? null : l.getLocationId();
+			if (l != null)
+				return l.getLocationId();
 		}
 		catch (Exception ex) {
 			if (facility == null) { // we have no tricks left up our sleeve, so
@@ -639,11 +643,9 @@ public class HL7ServiceImpl extends BaseOpenmrsService implements HL7Service {
 	}
 	
 	/**
-	 * @param pid
-	 *            A PID segment of an hl7 message
-	 * @return The internal id number of the Patient described by the PID
-	 *         segment, or null of the patient is not found, or if the PID
-	 *         segment is ambiguous
+	 * @param pid A PID segment of an hl7 message
+	 * @return The internal id number of the Patient described by the PID segment, or null of the
+	 *         patient is not found, or if the PID segment is ambiguous
 	 * @throws HL7Exception
 	 */
 	public Integer resolvePatientId(PID pid) throws HL7Exception {
@@ -654,10 +656,9 @@ public class HL7ServiceImpl extends BaseOpenmrsService implements HL7Service {
 	}
 	
 	/**
-	 * @param identifiers
-	 *            CX identifier list from an identifier (either PID or NK1)
-	 * @return The internal id number of the Patient based on one of the given
-	 *         identifiers, or null if the patient is not found
+	 * @param identifiers CX identifier list from an identifier (either PID or NK1)
+	 * @return The internal id number of the Patient based on one of the given identifiers, or null
+	 *         if the patient is not found
 	 * @throws HL7Exception
 	 */
 	public Person resolvePersonFromIdentifiers(CX[] identifiers) throws HL7Exception {
@@ -768,9 +769,8 @@ public class HL7ServiceImpl extends BaseOpenmrsService implements HL7Service {
 	
 	/**
 	 * @see org.openmrs.hl7.HL7Service#encounterCreated(org.openmrs.Encounter)
-	 * @deprecated This method is no longer needed. When an encounter is created
-	 *             in the ROUR01 handler, it is created with all obs. Any AOP
-	 *             hooking should be done on the
+	 * @deprecated This method is no longer needed. When an encounter is created in the ROUR01
+	 *             handler, it is created with all obs. Any AOP hooking should be done on the
 	 *             EncounterService.createEncounter(Encounter) method
 	 */
 	@Deprecated
@@ -846,8 +846,8 @@ public class HL7ServiceImpl extends BaseOpenmrsService implements HL7Service {
 	}
 	
 	/**
-	 * Convenience method to respond to fatal errors by moving the queue entry
-	 * into an error bin prior to aborting
+	 * Convenience method to respond to fatal errors by moving the queue entry into an error bin
+	 * prior to aborting
 	 */
 	private void setFatalError(HL7InQueue hl7InQueue, String error, Throwable cause) {
 		HL7InError hl7InError = new HL7InError(hl7InQueue);
@@ -921,15 +921,14 @@ public class HL7ServiceImpl extends BaseOpenmrsService implements HL7Service {
 	}
 	
 	/**
-	 * Sets the given handlers as router applications that are available to HAPI
-	 * when it is parsing an hl7 message.<br/>
+	 * Sets the given handlers as router applications that are available to HAPI when it is parsing
+	 * an hl7 message.<br/>
 	 * This method is usually used by Spring and the handlers are set in the
 	 * applicationContext-server.xml method.<br/>
-	 * The key in the map is a string like "ORU_R01" where the first part is the
-	 * message type and the second is the trigger event.
+	 * The key in the map is a string like "ORU_R01" where the first part is the message type and
+	 * the second is the trigger event.
 	 * 
-	 * @param handlers
-	 *            a map from MessageName to Application object
+	 * @param handlers a map from MessageName to Application object
 	 */
 	public void setHL7Handlers(Map<String, Application> handlers) {
 		// loop over all the given handlers and add them to the router
@@ -1013,6 +1012,11 @@ public class HL7ServiceImpl extends BaseOpenmrsService implements HL7Service {
 			}
 		}
 		if (!goodIdentifiers.isEmpty()) {
+			//If we have one identifier, set it as the preferred to make the validator happy.
+			if (goodIdentifiers.size() == 1) {
+				goodIdentifiers.get(0).setPreferred(true);
+			}
+			
 			// cast the person as a Patient and add identifiers
 			person = new Patient(person);
 			((Patient) person).addIdentifiers(goodIdentifiers);
@@ -1239,6 +1243,26 @@ public class HL7ServiceImpl extends BaseOpenmrsService implements HL7Service {
 			if (writer != null)
 				writer.close();
 		}
+	}
+	
+	@Override
+	public HL7QueueItem getHl7QueueItemByUuid(String uuid) throws APIException {
+		HL7QueueItem result = getHL7InQueueByUuid(uuid);
+		if (result != null) {
+			Context.hasPrivilege(PrivilegeConstants.PRIV_VIEW_HL7_IN_QUEUE);
+			return result;
+		}
+		result = getHL7InErrorByUuid(uuid);
+		if (result != null) {
+			Context.hasPrivilege(PrivilegeConstants.PRIV_VIEW_HL7_IN_EXCEPTION);
+			return result;
+		}
+		result = getHL7InArchiveByUuid(uuid);
+		if (result != null) {
+			Context.hasPrivilege(PrivilegeConstants.PRIV_VIEW_HL7_IN_ARCHIVE);
+			return result;
+		}
+		return null;
 	}
 	
 }

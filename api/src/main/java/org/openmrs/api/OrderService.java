@@ -34,6 +34,8 @@ import org.springframework.transaction.annotation.Transactional;
 /**
  * Contains methods pertaining to creating/deleting/voiding Orders and DrugOrders Use:<br/>
  * 
+ * @deprecated Will be removed in version 1.10
+ * 
  * <pre>
  *   Order order = new Order();
  *   order.set___(___);
@@ -42,6 +44,7 @@ import org.springframework.transaction.annotation.Transactional;
  * </pre>
  */
 @Transactional
+@Deprecated
 public interface OrderService extends OpenmrsService {
 	
 	/**
@@ -66,7 +69,10 @@ public interface OrderService extends OpenmrsService {
 	
 	/**
 	 * The type of status to match on an order. Used in getOrder* methods
+	 * 
+	 * @deprecated Will be removed in version 1.10
 	 */
+	@Deprecated
 	public static enum ORDER_STATUS {
 		/**
 		 * The patient is considered to be currently on this order
@@ -116,6 +122,7 @@ public interface OrderService extends OpenmrsService {
 	 * @return the Order that was saved
 	 * @throws APIException
 	 * @should not save order if order doesnt validate
+	 * @should save discontinued reason non coded
 	 */
 	@Authorized( { PrivilegeConstants.EDIT_ORDERS, PrivilegeConstants.ADD_ORDERS })
 	public Order saveOrder(Order order) throws APIException;
@@ -193,7 +200,7 @@ public interface OrderService extends OpenmrsService {
 	 * @param uuid
 	 * @return
 	 * @should find object given valid uuid
-	 * @should return null if no object found with given uuid 
+	 * @should return null if no object found with given uuid
 	 */
 	@Transactional(readOnly = true)
 	public Order getOrderByUuid(String uuid) throws APIException;
@@ -235,8 +242,8 @@ public interface OrderService extends OpenmrsService {
 	 */
 	@Authorized(PrivilegeConstants.VIEW_ORDERS)
 	public <Ord extends Order> List<Ord> getOrders(Class<Ord> orderClassType, List<Patient> patients,
-	                                               List<Concept> concepts, ORDER_STATUS status, List<User> orderers,
-	                                               List<Encounter> encounters, List<OrderType> orderTypes);
+	        List<Concept> concepts, ORDER_STATUS status, List<User> orderers, List<Encounter> encounters,
+	        List<OrderType> orderTypes);
 	
 	/**
 	 * @deprecated this method would return a very large list for most systems and doesn't make
@@ -450,7 +457,7 @@ public interface OrderService extends OpenmrsService {
 	 * @param uuid
 	 * @return
 	 * @should find object given valid uuid
-	 * @should return null if no object found with given uuid 
+	 * @should return null if no object found with given uuid
 	 */
 	@Transactional(readOnly = true)
 	public OrderType getOrderTypeByUuid(String uuid) throws APIException;
@@ -471,7 +478,7 @@ public interface OrderService extends OpenmrsService {
 	@Transactional(readOnly = true)
 	@Authorized(PrivilegeConstants.VIEW_ORDERS)
 	public Map<Concept, List<DrugOrder>> getDrugSetsByConcepts(List<DrugOrder> drugOrders, List<Concept> drugSets)
-	                                                                                                              throws APIException;
+	        throws APIException;
 	
 	/**
 	 * The standard regimens are currently stored in the application context file. See xml elements
@@ -492,7 +499,7 @@ public interface OrderService extends OpenmrsService {
 	@Transactional(readOnly = true)
 	@Authorized(PrivilegeConstants.VIEW_ORDERS)
 	public Map<String, List<DrugOrder>> getDrugSetsByDrugSetIdList(List<DrugOrder> orderList, String drugSetIdList,
-	                                                               String delimiter);
+	        String delimiter);
 	
 	/**
 	 * @deprecated use {@link org.openmrs.order.OrderUtil#getDrugSetHeadersByDrugSetIdList(String)}

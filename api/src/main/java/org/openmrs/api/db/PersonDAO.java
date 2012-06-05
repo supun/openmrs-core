@@ -13,6 +13,7 @@
  */
 package org.openmrs.api.db;
 
+import java.util.Date;
 import java.util.List;
 import java.util.Set;
 
@@ -23,6 +24,7 @@ import org.openmrs.PersonAttributeType;
 import org.openmrs.PersonName;
 import org.openmrs.Relationship;
 import org.openmrs.RelationshipType;
+import org.openmrs.person.PersonMergeLog;
 import org.openmrs.util.OpenmrsConstants;
 
 /**
@@ -68,7 +70,7 @@ public interface PersonDAO {
 	 *      java.lang.String, java.lang.Integer, java.lang.Boolean)
 	 */
 	public List<PersonAttributeType> getPersonAttributeTypes(String exactName, String format, Integer foreignKey,
-	                                                         Boolean searchable) throws DAOException;
+	        Boolean searchable) throws DAOException;
 	
 	/**
 	 * @see org.openmrs.api.PersonService#getAllPersonAttributeTypes()
@@ -136,7 +138,14 @@ public interface PersonDAO {
 	 *      org.openmrs.RelationshipType)
 	 */
 	public List<Relationship> getRelationships(Person fromPerson, Person toPerson, RelationshipType relType)
-	                                                                                                        throws DAOException;
+	        throws DAOException;
+	
+	/**
+	 * @see org.openmrs.api.PersonService#getRelationships(org.openmrs.Person, org.openmrs.Person,
+	 *      org.openmrs.RelationshipType, java.util.Date, java.util.Date)
+	 */
+	public List<Relationship> getRelationships(Person fromPerson, Person toPerson, RelationshipType relType,
+	        Date startEffectiveDate, Date endEffectiveDate) throws DAOException;
 	
 	/**
 	 * @see org.openmrs.api.PersonService#saveRelationshipType(org.openmrs.RelationshipType)
@@ -159,6 +168,8 @@ public interface PersonDAO {
 	public PersonAddress getPersonAddressByUuid(String uuid);
 	
 	public PersonAttribute getPersonAttributeByUuid(String uuid);
+	
+	public PersonName getPersonName(Integer personNameId);
 	
 	public PersonName getPersonNameByUuid(String uuid);
 	
@@ -191,8 +202,7 @@ public interface PersonDAO {
 	 * bypassing any caches. This is used prior to saving an personAttributeType, so that we can
 	 * change the vlaue of any global property which is in
 	 * {@link OpenmrsConstants#GLOBAL_PROPERTIES_OF_PERSON_ATTRIBUTES} and reference the given
-	 * personAttributeType.
-	 * <br/>
+	 * personAttributeType. <br/>
 	 * 
 	 * @param personAttributeType the personAttributeType get the the name of
 	 * @return the name currently in the database for this personAttributeType
@@ -204,4 +214,67 @@ public interface PersonDAO {
 	 * @see org.openmrs.api.PersonService#getAllRelationshipTypes(java.lang.Boolean)
 	 */
 	public List<RelationshipType> getAllRelationshipTypes(boolean includeRetired);
+	
+	/**
+	 * Saves a <code>PersonMergeLog</code> object to the database
+	 * 
+	 * @param personMergeLog the <code>PersonMergeLog</code> object to save
+	 * @return the persisted <code>PersonMergeLog</code> object
+	 */
+	public PersonMergeLog savePersonMergeLog(PersonMergeLog personMergeLog) throws DAOException;
+	
+	/**
+	 * Gets a <code>PersonMergeLog</code> object from the model by id
+	 * 
+	 * @param id the id of the <code>PersonMergeLog</code> object to retrieve
+	 * @return the <code>PersonMergeLog</code> object
+	 * @throws DAOException
+	 */
+	public PersonMergeLog getPersonMergeLog(Integer id) throws DAOException;
+	
+	/**
+	 * Gets a PersonMergeLog object from the model using UUID
+	 * 
+	 * @param uuid the UUID of the PersonMergeLog object to retrieve
+	 * @return the PersonMergeLog object
+	 * @throws DAOException
+	 */
+	public PersonMergeLog getPersonMergeLogByUuid(String uuid) throws DAOException;
+	
+	/**
+	 * Gets all the PersonMergeLog objects in the model
+	 * 
+	 * @return list of PersonMergeLog objects
+	 * @throws DAOException
+	 */
+	public List<PersonMergeLog> getAllPersonMergeLogs() throws DAOException;
+	
+	/**
+	 * Gets the PersonMergeLog objects by winner
+	 * 
+	 * @param person the winning person
+	 * @return List of <code>PersonMergeLog</code> objects
+	 * @throws DAOException
+	 */
+	public List<PersonMergeLog> getWinningPersonMergeLogs(Person person) throws DAOException;
+	
+	/**
+	 * Finds the PersonMergeLog by loser
+	 * 
+	 * @param person
+	 * @return <code>PersonMergeLog</code> object
+	 * @throws DAOException
+	 */
+	public PersonMergeLog getLosingPersonMergeLogs(Person person) throws DAOException;
+	
+	/**
+	 * @see org.openmrs.api.PersonService#savePersonName(org.openmrs.PersonName)
+	 */
+	public PersonName savePersonName(PersonName personName);
+	
+	/**
+	 * @see org.openmrs.api.PersonService#savePersonAddress(org.openmrs.PersonAddress)
+	 */
+	public PersonAddress savePersonAddress(PersonAddress personAddress);
+	
 }

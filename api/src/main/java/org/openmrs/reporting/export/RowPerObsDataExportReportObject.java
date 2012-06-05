@@ -69,28 +69,6 @@ public class RowPerObsDataExportReportObject extends DataExportReportObject impl
 	}
 	
 	/**
-	 * @see java.lang.Object#equals(java.lang.Object)
-	 */
-	public boolean equals(Object obj) {
-		if (obj instanceof RowPerObsDataExportReportObject) {
-			RowPerObsDataExportReportObject c = (RowPerObsDataExportReportObject) obj;
-			return (this.getReportObjectId().equals(c.getReportObjectId()));
-		}
-		return false;
-	}
-	
-	/**
-	 * @see java.lang.Object#hashCode()
-	 */
-	public int hashCode() {
-		if (this.getReportObjectId() == null)
-			return super.hashCode();
-		int hash = 5;
-		hash = 31 * this.getReportObjectId() + hash;
-		return hash;
-	}
-	
-	/**
 	 * Append a simple column
 	 * 
 	 * @param columnName
@@ -129,7 +107,7 @@ public class RowPerObsDataExportReportObject extends DataExportReportObject impl
 	 * @param filterId only one of this or cohortId should be non-null
 	 */
 	public void addCohortColumn(String columnName, Integer cohortId, Integer filterId, Integer patientSearchId,
-	                            String valueIfTrue, String valueIfFalse) {
+	        String valueIfTrue, String valueIfFalse) {
 		columns.add(new CohortColumn(columnName, cohortId, filterId, patientSearchId, valueIfTrue, valueIfFalse));
 	}
 	

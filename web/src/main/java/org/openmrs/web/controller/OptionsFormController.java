@@ -15,6 +15,7 @@ package org.openmrs.web.controller;
 
 import java.util.Date;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 
 import javax.servlet.ServletException;
@@ -36,6 +37,7 @@ import org.openmrs.util.OpenmrsUtil;
 import org.openmrs.util.PrivilegeConstants;
 import org.openmrs.web.OptionsForm;
 import org.openmrs.web.WebConstants;
+import org.openmrs.web.WebUtil;
 import org.openmrs.web.user.UserProperties;
 import org.springframework.validation.BindException;
 import org.springframework.web.servlet.ModelAndView;
@@ -43,8 +45,8 @@ import org.springframework.web.servlet.mvc.SimpleFormController;
 import org.springframework.web.servlet.view.RedirectView;
 
 /**
- * This is the controller for the "My Profile" page. This lets logged in users
- * set personal preferences, update their own information, etc.
+ * This is the controller for the "My Profile" page. This lets logged in users set personal
+ * preferences, update their own information, etc.
  * 
  * @see OptionsForm
  */
@@ -59,7 +61,7 @@ public class OptionsFormController extends SimpleFormController {
 	 *      org.springframework.validation.BindException)
 	 */
 	protected ModelAndView processFormSubmission(HttpServletRequest request, HttpServletResponse response, Object object,
-	                                             BindException errors) throws Exception {
+	        BindException errors) throws Exception {
 		OptionsForm opts = (OptionsForm) object;
 		
 		if (opts.getUsername().length() > 0) {
@@ -99,15 +101,15 @@ public class OptionsFormController extends SimpleFormController {
 	}
 	
 	/**
-	 * The onSubmit function receives the form/command object that was modified
-	 * by the input form and saves it to the db
+	 * The onSubmit function receives the form/command object that was modified by the input form
+	 * and saves it to the db
 	 * 
 	 * @see org.springframework.web.servlet.mvc.SimpleFormController#onSubmit(javax.servlet.http.HttpServletRequest,
 	 *      javax.servlet.http.HttpServletResponse, java.lang.Object,
 	 *      org.springframework.validation.BindException)
 	 */
 	protected ModelAndView onSubmit(HttpServletRequest request, HttpServletResponse response, Object obj,
-	                                BindException errors) throws Exception {
+	        BindException errors) throws Exception {
 		
 		HttpSession httpSession = request.getSession();
 		
@@ -130,8 +132,13 @@ public class OptionsFormController extends SimpleFormController {
 			Map<String, String> properties = user.getUserProperties();
 			
 			properties.put(OpenmrsConstants.USER_PROPERTY_DEFAULT_LOCATION, opts.getDefaultLocation());
-			properties.put(OpenmrsConstants.USER_PROPERTY_DEFAULT_LOCALE, opts.getDefaultLocale());
-			properties.put(OpenmrsConstants.USER_PROPERTY_PROFICIENT_LOCALES, opts.getProficientLocales());
+			
+			Locale locale = WebUtil.normalizeLocale(opts.getDefaultLocale());
+			if (locale != null)
+				properties.put(OpenmrsConstants.USER_PROPERTY_DEFAULT_LOCALE, locale.toString());
+			
+			properties.put(OpenmrsConstants.USER_PROPERTY_PROFICIENT_LOCALES, WebUtil.sanitizeLocales(opts
+			        .getProficientLocales()));
 			properties.put(OpenmrsConstants.USER_PROPERTY_SHOW_RETIRED, opts.getShowRetiredMessage().toString());
 			properties.put(OpenmrsConstants.USER_PROPERTY_SHOW_VERBOSE, opts.getVerbose().toString());
 			properties.put(OpenmrsConstants.USER_PROPERTY_NOTIFICATION, opts.getNotification() == null ? "" : opts
@@ -202,6 +209,7 @@ public class OptionsFormController extends SimpleFormController {
 			}
 			
 			if (!errors.hasErrors()) {
+				
 				user.setUsername(opts.getUsername());
 				user.setUserProperties(properties);
 				
@@ -228,6 +236,8 @@ public class OptionsFormController extends SimpleFormController {
 					Context.addProxyPrivilege(PrivilegeConstants.EDIT_USERS);
 					Context.addProxyPrivilege(PrivilegeConstants.VIEW_USERS);
 					us.saveUser(user, null);
+					//trigger updating of the javascript file cache
+					PseudoStaticContentController.invalidateCachedResources(properties);
 					// update login user object so that the new name is visible
 					// in the webapp
 					Context.refreshAuthenticatedUser();
@@ -248,8 +258,8 @@ public class OptionsFormController extends SimpleFormController {
 	}
 	
 	/**
-	 * This is called prior to displaying a form for the first time. It tells
-	 * Spring the form/command object to load into the request
+	 * This is called prior to displaying a form for the first time. It tells Spring the
+	 * form/command object to load into the request
 	 * 
 	 * @see org.springframework.web.servlet.mvc.AbstractFormController#formBackingObject(javax.servlet.http.HttpServletRequest)
 	 */
@@ -281,8 +291,7 @@ public class OptionsFormController extends SimpleFormController {
 	}
 	
 	/**
-	 * Called prior to form display. Allows for data to be put in the request to
-	 * be used in the view
+	 * Called prior to form display. Allows for data to be put in the request to be used in the view
 	 * 
 	 * @see org.springframework.web.servlet.mvc.SimpleFormController#referenceData(javax.servlet.http.HttpServletRequest)
 	 */

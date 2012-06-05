@@ -56,10 +56,12 @@ public class GlobalPropertyController extends SimpleFormController {
 	 * @see org.springframework.web.servlet.mvc.SimpleFormController#onSubmit(javax.servlet.http.HttpServletRequest,
 	 *      javax.servlet.http.HttpServletResponse, java.lang.Object,
 	 *      org.springframework.validation.BindException)
+	 * @should save or update included properties
+	 * @should purge not included properties
 	 */
 	@SuppressWarnings("unchecked")
 	protected ModelAndView onSubmit(HttpServletRequest request, HttpServletResponse response, Object obj,
-	                                BindException errors) throws Exception {
+	        BindException errors) throws Exception {
 		
 		String action = request.getParameter("action");
 		if (action == null)
@@ -106,6 +108,11 @@ public class GlobalPropertyController extends SimpleFormController {
 				}
 				
 				try {
+					// delete all properties not in this new list
+					List<GlobalProperty> purgeGlobalPropList = new ArrayList<GlobalProperty>(as.getAllGlobalProperties());
+					purgeGlobalPropList.removeAll(globalPropList);
+					as.purgeGlobalProperties(purgeGlobalPropList);
+					
 					as.saveGlobalProperties(globalPropList);
 					httpSession.setAttribute(WebConstants.OPENMRS_MSG_ATTR, "GlobalProperty.saved");
 					

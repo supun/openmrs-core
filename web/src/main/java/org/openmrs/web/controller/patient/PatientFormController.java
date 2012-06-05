@@ -26,6 +26,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.openmrs.Concept;
@@ -36,9 +37,9 @@ import org.openmrs.Obs;
 import org.openmrs.Patient;
 import org.openmrs.PatientIdentifier;
 import org.openmrs.PatientIdentifierType;
-import org.openmrs.Person;
 import org.openmrs.PersonAddress;
 import org.openmrs.PersonName;
+import org.openmrs.PatientIdentifierType.LocationBehavior;
 import org.openmrs.api.DuplicateIdentifierException;
 import org.openmrs.api.IdentifierNotUniqueException;
 import org.openmrs.api.InsufficientIdentifiersException;
@@ -51,6 +52,7 @@ import org.openmrs.propertyeditor.ConceptEditor;
 import org.openmrs.propertyeditor.LocationEditor;
 import org.openmrs.propertyeditor.PatientIdentifierTypeEditor;
 import org.openmrs.util.PrivilegeConstants;
+import org.openmrs.validator.PatientIdentifierValidator;
 import org.openmrs.validator.PatientValidator;
 import org.openmrs.web.WebConstants;
 import org.openmrs.web.controller.person.PersonFormController;
@@ -59,7 +61,6 @@ import org.springframework.beans.propertyeditors.CustomDateEditor;
 import org.springframework.beans.propertyeditors.CustomNumberEditor;
 import org.springframework.context.support.MessageSourceAccessor;
 import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.orm.ObjectRetrievalFailureException;
 import org.springframework.validation.BindException;
 import org.springframework.validation.Errors;
 import org.springframework.web.bind.ServletRequestDataBinder;
@@ -109,7 +110,11 @@ public class PatientFormController extends PersonFormController {
 	 */
 	@Override
 	protected ModelAndView processFormSubmission(HttpServletRequest request, HttpServletResponse response, Object object,
-	                                             BindException errors) throws Exception {
+	        BindException errors) throws Exception {
+		
+		if (errors.hasErrors()) {
+			return showForm(request, response, errors);
+		}
 		
 		Patient patient = (Patient) object;
 		
@@ -122,7 +127,12 @@ public class PatientFormController extends PersonFormController {
 			MessageSourceAccessor msa = getMessageSourceAccessor();
 			String action = request.getParameter("action");
 			
-			if (!action.equals(msa.getMessage("Patient.delete"))) {
+			if (action.equals(msa.getMessage("Patient.save"))) {
+				updatePersonNames(request, patient);
+				
+				updatePersonAddresses(request, patient);
+				
+				updatePersonAttributes(request, errors, patient);
 				
 				// Patient Identifiers
 				objs = patient.getIdentifiers().toArray();
@@ -143,9 +153,15 @@ public class PatientFormController extends PersonFormController {
 							PatientIdentifier pi = new PatientIdentifier();
 							pi.setIdentifier(id);
 							pi.setIdentifierType(ps.getPatientIdentifierType(Integer.valueOf(idTypes[i])));
-							pi.setLocation(ls.getLocation(Integer.valueOf(locs[i])));
+							if (StringUtils.isNotEmpty(locs[i])) {
+								pi.setLocation(ls.getLocation(Integer.valueOf(locs[i])));
+							}
 							if (idPrefStatus != null && idPrefStatus.length > i)
 								pi.setPreferred(new Boolean(idPrefStatus[i]));
+							new PatientIdentifierValidator().validate(pi, errors);
+							if (errors.hasErrors()) {
+								return showForm(request, response, errors);
+							}
 							patient.addIdentifier(pi);
 						}
 					}
@@ -165,183 +181,6 @@ public class PatientFormController extends PersonFormController {
 				}
 				if ((preferredId == null) && (currentId != null)) { // No preferred identifiers. Make the last identifier entry as preferred.
 					currentId.setPreferred(true);
-				}
-				
-				// Patient Address
-				
-				String[] add1s = ServletRequestUtils.getStringParameters(request, "address1");
-				String[] add2s = ServletRequestUtils.getStringParameters(request, "address2");
-				String[] cities = ServletRequestUtils.getStringParameters(request, "cityVillage");
-				String[] states = ServletRequestUtils.getStringParameters(request, "stateProvince");
-				String[] countries = ServletRequestUtils.getStringParameters(request, "country");
-				String[] lats = ServletRequestUtils.getStringParameters(request, "latitude");
-				String[] longs = ServletRequestUtils.getStringParameters(request, "longitude");
-				String[] pCodes = ServletRequestUtils.getStringParameters(request, "postalCode");
-				String[] counties = ServletRequestUtils.getStringParameters(request, "countyDistrict");
-				String[] add3s = ServletRequestUtils.getStringParameters(request, "address3");
-				String[] addPrefStatus = ServletRequestUtils.getStringParameters(request, "preferred");
-				String[] regions = ServletRequestUtils.getStringParameters(request, "region");
-				String[] subregions = ServletRequestUtils.getStringParameters(request, "subregion");
-				String[] townshipDivisions = ServletRequestUtils.getStringParameters(request, "townshipDivision");
-				String[] add6s = ServletRequestUtils.getStringParameters(request, "address6");
-				String[] add5s = ServletRequestUtils.getStringParameters(request, "address5");
-				String[] add4s = ServletRequestUtils.getStringParameters(request, "address4");
-				
-				if (add1s != null || add2s != null || cities != null || states != null || countries != null || lats != null
-				        || longs != null || pCodes != null || counties != null || add3s != null || add6s != null
-				        || add5s != null || add4s != null) {
-					int maxAddrs = 0;
-					
-					if (add1s != null)
-						if (add1s.length > maxAddrs)
-							maxAddrs = add1s.length;
-					if (add2s != null)
-						if (add2s.length > maxAddrs)
-							maxAddrs = add2s.length;
-					if (cities != null)
-						if (cities.length > maxAddrs)
-							maxAddrs = cities.length;
-					if (states != null)
-						if (states.length > maxAddrs)
-							maxAddrs = states.length;
-					if (countries != null)
-						if (countries.length > maxAddrs)
-							maxAddrs = countries.length;
-					if (lats != null)
-						if (lats.length > maxAddrs)
-							maxAddrs = lats.length;
-					if (longs != null)
-						if (longs.length > maxAddrs)
-							maxAddrs = longs.length;
-					if (pCodes != null)
-						if (pCodes.length > maxAddrs)
-							maxAddrs = pCodes.length;
-					if (counties != null)
-						if (counties.length > maxAddrs)
-							maxAddrs = counties.length;
-					if (add3s != null)
-						if (add3s.length > maxAddrs)
-							maxAddrs = add3s.length;
-					if (add6s != null)
-						if (add6s.length > maxAddrs)
-							maxAddrs = add6s.length;
-					if (add5s != null)
-						if (add5s.length > maxAddrs)
-							maxAddrs = add5s.length;
-					if (add4s != null)
-						if (add4s.length > maxAddrs)
-							maxAddrs = add4s.length;
-					
-					log.debug("There appears to be " + maxAddrs + " addresses that need to be saved");
-					
-					for (int i = 0; i < maxAddrs; i++) {
-						PersonAddress pa = new PersonAddress();
-						if (add1s.length >= i + 1)
-							pa.setAddress1(add1s[i]);
-						if (add2s.length >= i + 1)
-							pa.setAddress2(add2s[i]);
-						if (cities.length >= i + 1)
-							pa.setCityVillage(cities[i]);
-						if (states.length >= i + 1)
-							pa.setStateProvince(states[i]);
-						if (countries.length >= i + 1)
-							pa.setCountry(countries[i]);
-						if (lats.length >= i + 1)
-							pa.setLatitude(lats[i]);
-						if (longs.length >= i + 1)
-							pa.setLongitude(longs[i]);
-						if (pCodes.length >= i + 1)
-							pa.setPostalCode(pCodes[i]);
-						if (counties.length >= i + 1)
-							pa.setCountyDistrict(counties[i]);
-						if (add3s.length >= i + 1)
-							pa.setAddress3(add3s[i]);
-						if (addPrefStatus != null && addPrefStatus.length > i)
-							pa.setPreferred(new Boolean(addPrefStatus[i]));
-						if (add6s.length >= i + 1)
-							pa.setAddress6(add6s[i]);
-						if (add5s.length >= i + 1)
-							pa.setAddress5(add5s[i]);
-						if (add4s.length >= i + 1)
-							pa.setAddress4(add4s[i]);
-						
-						patient.addAddress(pa);
-						//}
-					}
-					Iterator<PersonAddress> addresses = patient.getAddresses().iterator();
-					PersonAddress currentAddress = null;
-					PersonAddress preferredAddress = null;
-					while (addresses.hasNext()) {
-						currentAddress = addresses.next();
-						if (currentAddress.isPreferred()) {
-							if (preferredAddress != null) { // if there's a preferred address already exists, make it preferred=false
-								preferredAddress.setPreferred(false);
-							}
-							preferredAddress = currentAddress;
-						}
-					}
-					if ((preferredAddress == null) && (currentAddress != null)) { // No preferred address. Make the last address entry as preferred.
-						currentAddress.setPreferred(true);
-					}
-				}
-				
-				// Patient Names
-				
-				objs = patient.getNames().toArray();
-				for (int i = 0; i < objs.length; i++) {
-					if (request.getParameter("names[" + i + "].givenName") == null)
-						patient.removeName((PersonName) objs[i]);
-				}
-				
-				//String[] prefs = request.getParameterValues("preferred");  (unreliable form info)
-				String[] gNames = ServletRequestUtils.getStringParameters(request, "givenName");
-				String[] mNames = ServletRequestUtils.getStringParameters(request, "middleName");
-				String[] fNamePrefixes = ServletRequestUtils.getStringParameters(request, "familyNamePrefix");
-				String[] fNames = ServletRequestUtils.getStringParameters(request, "familyName");
-				String[] fName2s = ServletRequestUtils.getStringParameters(request, "familyName2");
-				String[] fNameSuffixes = ServletRequestUtils.getStringParameters(request, "familyNameSuffix");
-				String[] degrees = ServletRequestUtils.getStringParameters(request, "degree");
-				String[] namePrefStatus = ServletRequestUtils.getStringParameters(request, "preferred");
-				
-				if (gNames != null) {
-					for (int i = 0; i < gNames.length; i++) {
-						if (!"".equals(gNames[i])) { //skips invalid and blank address data box
-							PersonName pn = new PersonName();
-							if (namePrefStatus != null && namePrefStatus.length > i)
-								pn.setPreferred(new Boolean(namePrefStatus[i]));
-							if (gNames.length >= i + 1)
-								pn.setGivenName(gNames[i]);
-							if (mNames.length >= i + 1)
-								pn.setMiddleName(mNames[i]);
-							if (fNamePrefixes.length >= i + 1)
-								pn.setFamilyNamePrefix(fNamePrefixes[i]);
-							if (fNames.length >= i + 1)
-								pn.setFamilyName(fNames[i]);
-							if (fName2s.length >= i + 1)
-								pn.setFamilyName2(fName2s[i]);
-							if (fNameSuffixes.length >= i + 1)
-								pn.setFamilyNameSuffix(fNameSuffixes[i]);
-							if (degrees.length >= i + 1)
-								pn.setDegree(degrees[i]);
-							patient.addName(pn);
-						}
-					}
-					Iterator<PersonName> names = patient.getNames().iterator();
-					PersonName currentName = null;
-					PersonName preferredName = null;
-					while (names.hasNext()) {
-						currentName = names.next();
-						if (currentName.isPreferred()) {
-							if (preferredName != null) { // if there's a preferred name already exists, make it preferred=false
-								preferredName.setPreferred(false);
-							}
-							preferredName = currentName;
-						}
-					}
-					if ((preferredName == null) && (currentName != null)) { // No preferred name. Make the last name entry as preferred.
-						currentName.setPreferred(true);
-					}
-					
 				}
 				
 				/*
@@ -400,7 +239,7 @@ public class PatientFormController extends PersonFormController {
 						return showForm(request, response, errors);
 				}
 				
-			} // end "if we're not deleting the patient"
+			} // end "if we're saving the patient"
 		}
 		
 		return super.processFormSubmission(request, response, patient, errors);
@@ -416,7 +255,7 @@ public class PatientFormController extends PersonFormController {
 	 */
 	@Override
 	protected ModelAndView onSubmit(HttpServletRequest request, HttpServletResponse response, Object obj,
-	                                BindException errors) throws Exception {
+	        BindException errors) throws Exception {
 		
 		HttpSession httpSession = request.getSession();
 		
@@ -440,6 +279,18 @@ public class PatientFormController extends PersonFormController {
 					return new ModelAndView(new RedirectView(getSuccessView() + "?patientId="
 					        + patient.getPatientId().toString()));
 				}
+			} else if (action.equals(msa.getMessage("Patient.void"))) {
+				String voidReason = request.getParameter("voidReason");
+				if (StringUtils.isBlank(voidReason))
+					voidReason = msa.getMessage("PatientForm.default.voidReason", null, "Voided from patient form", Context
+					        .getLocale());
+				ps.voidPatient(patient, voidReason);
+				httpSession.setAttribute(WebConstants.OPENMRS_MSG_ATTR, "Patient.voided");
+				return new ModelAndView(new RedirectView(getSuccessView() + "?patientId=" + patient.getPatientId()));
+			} else if (action.equals(msa.getMessage("Patient.unvoid"))) {
+				ps.unvoidPatient(patient);
+				httpSession.setAttribute(WebConstants.OPENMRS_MSG_ATTR, "Patient.unvoided");
+				return new ModelAndView(new RedirectView(getSuccessView() + "?patientId=" + patient.getPatientId()));
 			} else {
 				//boolean isNew = (patient.getPatientId() == null);
 				boolean isError = false;
@@ -607,26 +458,17 @@ public class PatientFormController extends PersonFormController {
 		if (Context.isAuthenticated()) {
 			PatientService ps = Context.getPatientService();
 			String patientId = request.getParameter("patientId");
-			Integer id = null;
+			Integer id;
 			if (patientId != null) {
 				try {
 					id = Integer.valueOf(patientId);
-					patient = ps.getPatient(id);
-					if (patient == null)
-						throw new ObjectRetrievalFailureException(Patient.class, id);
+					patient = ps.getPatientOrPromotePerson(id);
+					if (patient == null) {
+						throw new ServletException("There is no patient or person with id: '" + patientId + "'");
+					}
 				}
 				catch (NumberFormatException numberError) {
 					log.warn("Invalid patientId supplied: '" + patientId + "'", numberError);
-				}
-				catch (ObjectRetrievalFailureException noPatientEx) {
-					try {
-						Person person = Context.getPersonService().getPerson(id);
-						patient = new Patient(person);
-					}
-					catch (ObjectRetrievalFailureException noPersonEx) {
-						log.warn("There is no patient or person with id: '" + patientId + "'", noPersonEx);
-						throw new ServletException("There is no patient or person with id: '" + patientId + "'");
-					}
 				}
 			}
 		}
@@ -644,8 +486,22 @@ public class PatientFormController extends PersonFormController {
 			}
 		}
 		
-		if (patient.getIdentifiers().size() < 1)
+		if (patient.getIdentifiers().size() < 1) {
 			patient.addIdentifier(new PatientIdentifier());
+		} else {
+			// we need to check if current patient has preferred id
+			// if no we look for suitable one to set it as preferred 
+			if (patient.getPatientIdentifier() != null && !patient.getPatientIdentifier().isPreferred()) {
+				
+				List<PatientIdentifier> pi = patient.getActiveIdentifiers();
+				for (PatientIdentifier patientIdentifier : pi) {
+					if (!patientIdentifier.isVoided() && !patientIdentifier.getIdentifierType().isRetired()) {
+						patientIdentifier.setPreferred(true);
+						break;
+					}
+				}
+			}
+		}
 		
 		super.setupFormBackingObject(patient);
 		
@@ -698,7 +554,16 @@ public class PatientFormController extends PersonFormController {
 				}
 			}
 		}
-		
+		List<PatientIdentifierType> pits = Context.getPatientService().getAllPatientIdentifierTypes();
+		boolean identifierLocationUsed = false;
+		for (PatientIdentifierType pit : pits) {
+			if (pit.getLocationBehavior() == null || pit.getLocationBehavior() == LocationBehavior.REQUIRED) {
+				identifierLocationUsed = true;
+			}
+		}
+		map.put("identifierTypes", pits);
+		map.put("identifierLocationUsed", identifierLocationUsed);
+		map.put("identifiers", patient.getIdentifiers());
 		map.put("patientVariation", patientVariation);
 		
 		map.put("forms", forms);

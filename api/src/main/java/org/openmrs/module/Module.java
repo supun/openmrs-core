@@ -67,6 +67,8 @@ public final class Module {
 	
 	private Map<String, String> requiredModulesMap;
 	
+	private Map<String, String> awareOfModulesMap;
+	
 	private List<AdvicePoint> advicePoints = new Vector<AdvicePoint>();
 	
 	private IdentityHashMap<String, String> extensionNames = new IdentityHashMap<String, String>();
@@ -139,12 +141,14 @@ public final class Module {
 	@Deprecated
 	public Activator getActivator() {
 		try {
-			ModuleClassLoader classLoader = ModuleFactory.getModuleClassLoader(this);
-			if (classLoader == null)
-				throw new ModuleException("The classloader is null", getModuleId());
-			
-			Class<?> c = classLoader.loadClass(getActivatorName());
-			setActivator((Activator) c.newInstance());
+			if (activator == null) {
+				ModuleClassLoader classLoader = ModuleFactory.getModuleClassLoader(this);
+				if (classLoader == null)
+					throw new ModuleException("The classloader is null", getModuleId());
+				
+				Class<?> c = classLoader.loadClass(getActivatorName());
+				setActivator((Activator) c.newInstance());
+			}
 		}
 		catch (ClassNotFoundException e) {
 			throw new ModuleException("Unable to load/find activator: '" + getActivatorName() + "'", name, e);
@@ -171,14 +175,16 @@ public final class Module {
 	 */
 	public ModuleActivator getModuleActivator() {
 		try {
-			ModuleClassLoader classLoader = ModuleFactory.getModuleClassLoader(this);
-			if (classLoader == null)
-				throw new ModuleException("The classloader is null", getModuleId());
-			
-			Class<?> c = classLoader.loadClass(getActivatorName());
-			Object o = c.newInstance();
-			if (ModuleActivator.class.isAssignableFrom(o.getClass()))
-				setModuleActivator((ModuleActivator) o);
+			if (moduleActivator == null) {
+				ModuleClassLoader classLoader = ModuleFactory.getModuleClassLoader(this);
+				if (classLoader == null)
+					throw new ModuleException("The classloader is null", getModuleId());
+				
+				Class<?> c = classLoader.loadClass(getActivatorName());
+				Object o = c.newInstance();
+				if (ModuleActivator.class.isAssignableFrom(o.getClass()))
+					setModuleActivator((ModuleActivator) o);
+			}
 			
 		}
 		catch (ClassNotFoundException e) {
@@ -327,6 +333,28 @@ public final class Module {
 	 */
 	public Map<String, String> setRequiredModulesMap() {
 		return requiredModulesMap;
+	}
+	
+	/**
+	 * Sets the modules that this module is aware of.
+	 * 
+	 * @param awareOfModulesMap <code>Map<String,String></code> of the
+	 *            <code>awareOfModulesMap</code>s to set
+	 * @since 1.9
+	 */
+	public void setAwareOfModulesMap(Map<String, String> awareOfModulesMap) {
+		this.awareOfModulesMap = awareOfModulesMap;
+	}
+	
+	/**
+	 * This list of strings is just what is included in the config.xml file, the full package names:
+	 * e.g. org.openmrs.module.formentry, for the modules that this module is aware of.
+	 * 
+	 * @since 1.9
+	 * @return the list of awareOfModules
+	 */
+	public List<String> getAwareOfModules() {
+		return awareOfModulesMap == null ? null : new ArrayList<String>(awareOfModulesMap.keySet());
 	}
 	
 	/**
@@ -688,4 +716,12 @@ public final class Module {
 		return moduleId;
 	}
 	
+	public void disposeAdvicePointsClassInstance() {
+		if (advicePoints == null)
+			return;
+		
+		for (AdvicePoint advicePoint : advicePoints) {
+			advicePoint.disposeClassInstance();
+		}
+	}
 }

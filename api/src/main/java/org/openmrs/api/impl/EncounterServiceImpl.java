@@ -16,27 +16,42 @@ package org.openmrs.api.impl;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Vector;
 
+import org.apache.commons.lang.StringUtils;
 import org.openmrs.Cohort;
 import org.openmrs.Encounter;
+import org.openmrs.EncounterRole;
 import org.openmrs.EncounterType;
 import org.openmrs.Form;
 import org.openmrs.Location;
 import org.openmrs.Obs;
 import org.openmrs.Order;
 import org.openmrs.Patient;
+import org.openmrs.Provider;
 import org.openmrs.User;
+import org.openmrs.Visit;
+import org.openmrs.VisitType;
 import org.openmrs.api.APIException;
 import org.openmrs.api.EncounterService;
 import org.openmrs.api.ObsService;
 import org.openmrs.api.OrderService;
+import org.openmrs.api.ProviderService;
 import org.openmrs.api.context.Context;
 import org.openmrs.api.db.EncounterDAO;
+import org.openmrs.api.handler.EncounterVisitHandler;
+import org.openmrs.util.HandlerUtil;
+import org.openmrs.util.OpenmrsClassLoader;
+import org.openmrs.util.OpenmrsConstants;
 import org.openmrs.util.OpenmrsUtil;
 import org.openmrs.util.PrivilegeConstants;
+import org.openmrs.validator.EncounterValidator;
+import org.openmrs.validator.ValidateUtil;
+import org.springframework.validation.BindException;
+import org.springframework.validation.Errors;
 
 /**
  * Default implementation of the {@link EncounterService}
@@ -75,6 +90,25 @@ public class EncounterServiceImpl extends BaseOpenmrsService implements Encounte
 	 * @see org.openmrs.api.EncounterService#saveEncounter(org.openmrs.Encounter)
 	 */
 	public Encounter saveEncounter(Encounter encounter) throws APIException {
+		
+		//If new encounter, try to assign a visit using the registered visit assignment handler.
+		if (encounter.getEncounterId() == null) {
+			
+			//Am using Context.getEncounterService().getActiveEncounterVisitHandler() instead of just
+			//getActiveEncounterVisitHandler() for modules which may want to AOP around this call.
+			EncounterVisitHandler encounterVisitHandler = Context.getEncounterService().getActiveEncounterVisitHandler();
+			if (encounterVisitHandler != null) {
+				encounterVisitHandler.beforeCreateEncounter(encounter);
+				
+				//If we have been assigned a new visit, persist it.
+				if (encounter.getVisit() != null && encounter.getVisit().getVisitId() == null) {
+					Context.getVisitService().saveVisit(encounter.getVisit());
+				}
+			}
+		}
+		
+		Errors errors = new BindException(encounter, "encounter");
+		
 		boolean isNewEncounter = false;
 		Date newDate = encounter.getEncounterDatetime();
 		Date originalDate = null;
@@ -135,7 +169,6 @@ public class EncounterServiceImpl extends BaseOpenmrsService implements Encounte
 				if (!obs.getPerson().getPersonId().equals(p.getPatientId())) {
 					obs.setPerson(p);
 				}
-				
 			}
 			
 			// same goes for Orders
@@ -208,8 +241,7 @@ public class EncounterServiceImpl extends BaseOpenmrsService implements Encounte
 	 */
 	@Deprecated
 	public List<Encounter> getEncounters(Patient who, Location loc, Date fromDate, Date toDate,
-	                                     Collection<Form> enteredViaForms, Collection<EncounterType> encounterTypes,
-	                                     boolean includeVoided) {
+	        Collection<Form> enteredViaForms, Collection<EncounterType> encounterTypes, boolean includeVoided) {
 		return getEncounters(who, loc, fromDate, toDate, enteredViaForms, encounterTypes, null, includeVoided);
 	}
 	
@@ -217,11 +249,45 @@ public class EncounterServiceImpl extends BaseOpenmrsService implements Encounte
 	 * @see org.openmrs.api.EncounterService#getEncounters(org.openmrs.Patient,
 	 *      org.openmrs.Location, java.util.Date, java.util.Date, java.util.Collection,
 	 *      java.util.Collection, java.util.Collection, boolean)
+	 * @deprecated replaced by
+	 *             {@link #getEncounters(Patient, Location, Date, Date, Collection, Collection, Collection, Collection, Collection, boolean)}
 	 */
+	@Deprecated
 	public List<Encounter> getEncounters(Patient who, Location loc, Date fromDate, Date toDate,
-	                                     Collection<Form> enteredViaForms, Collection<EncounterType> encounterTypes,
-	                                     Collection<User> providers, boolean includeVoided) {
-		return dao.getEncounters(who, loc, fromDate, toDate, enteredViaForms, encounterTypes, providers, includeVoided);
+	        Collection<Form> enteredViaForms, Collection<EncounterType> encounterTypes, Collection<User> providers,
+	        boolean includeVoided) {
+		return dao.getEncounters(who, loc, fromDate, toDate, enteredViaForms, encounterTypes, usersToProviders(providers),
+		    null, null, includeVoided);
+	}
+	
+	/**
+	 * Helper method that finds the corresponding providers for a collection of users
+	 * 
+	 * @param users
+	 * @return a collection of providers, with 0-n for each item in users
+	 */
+	private Collection<Provider> usersToProviders(Collection<User> users) {
+		if (users == null)
+			return null;
+		ProviderService providerService = Context.getProviderService();
+		Collection<Provider> ret = new HashSet<Provider>();
+		for (User u : users) {
+			ret.addAll(providerService.getProvidersByPerson(u.getPerson()));
+		}
+		return ret;
+	}
+	
+	/**
+	 * @see org.openmrs.api.EncounterService#getEncounters(org.openmrs.Patient,
+	 *      org.openmrs.Location, java.util.Date, java.util.Date, java.util.Collection,
+	 *      java.util.Collection, java.util.Collection, boolean)
+	 */
+	@Override
+	public List<Encounter> getEncounters(Patient who, Location loc, Date fromDate, Date toDate,
+	        Collection<Form> enteredViaForms, Collection<EncounterType> encounterTypes, Collection<Provider> providers,
+	        Collection<VisitType> visitTypes, Collection<Visit> visits, boolean includeVoided) {
+		return dao.getEncounters(who, loc, fromDate, toDate, enteredViaForms, encounterTypes, providers, visitTypes, visits,
+		    includeVoided);
 	}
 	
 	/**
@@ -247,7 +313,11 @@ public class EncounterServiceImpl extends BaseOpenmrsService implements Encounte
 		
 		encounter.setVoided(true);
 		encounter.setVoidedBy(Context.getAuthenticatedUser());
-		encounter.setDateVoided(new Date());
+		//we expect the dateVoided to be already set by AOP logic at this point unless this method was called within the API, 
+		//this ensures that original ParentVoidedDate and the dateVoided of associated objects will always match for the 
+		//unvoid handler to work
+		if (encounter.getDateVoided() == null)
+			encounter.setDateVoided(new Date());
 		encounter.setVoidReason(reason);
 		saveEncounter(encounter);
 		return encounter;
@@ -354,7 +424,7 @@ public class EncounterServiceImpl extends BaseOpenmrsService implements Encounte
 	 */
 	public EncounterType retireEncounterType(EncounterType encounterType, String reason) throws APIException {
 		if (reason == null)
-			throw new IllegalArgumentException("The 'reason' argument is required");
+			throw new IllegalArgumentException("The 'reason' for retiring is required");
 		
 		encounterType.setRetired(true);
 		encounterType.setRetireReason(reason);
@@ -557,7 +627,7 @@ public class EncounterServiceImpl extends BaseOpenmrsService implements Encounte
 	 */
 	@Override
 	public List<Encounter> getEncounters(String query, Integer start, Integer length, boolean includeVoided)
-	                                                                                                        throws APIException {
+	        throws APIException {
 		return dao.getEncounters(query, start, length, includeVoided);
 	}
 	
@@ -566,6 +636,130 @@ public class EncounterServiceImpl extends BaseOpenmrsService implements Encounte
 	 */
 	@Override
 	public Integer getCountOfEncounters(String query, boolean includeVoided) {
-		return dao.getCountOfEncounters(query, includeVoided);
+		return OpenmrsUtil.convertToInteger(dao.getCountOfEncounters(query, includeVoided));
+	}
+	
+	/**
+	 * @see EncounterService#getEncountersByVisit(Visit, boolean)
+	 */
+	@Override
+	public List<Encounter> getEncountersByVisit(Visit visit, boolean includeVoided) {
+		return dao.getEncountersByVisit(visit, includeVoided);
+	}
+	
+	@Override
+	public List<EncounterVisitHandler> getEncounterVisitHandlers() {
+		List<EncounterVisitHandler> handlers = HandlerUtil.getHandlersForType(EncounterVisitHandler.class, null);
+		
+		return handlers;
+	}
+	
+	/**
+	 * @see org.openmrs.api.EncounterService#getActiveEncounterVisitHandler()
+	 */
+	@Override
+	public EncounterVisitHandler getActiveEncounterVisitHandler() throws APIException {
+		String value = Context.getAdministrationService().getGlobalProperty(OpenmrsConstants.GP_VISIT_ASSIGNMENT_HANDLER,
+		    null);
+		
+		if (StringUtils.isBlank(value))
+			return null;
+		
+		try {
+			Object handler = OpenmrsClassLoader.getInstance().loadClass(value).newInstance();
+			if (!(handler instanceof EncounterVisitHandler))
+				throw new APIException(
+				        "The registered visit assignment handler should implement the EncounterVisitHandler interface");
+			
+			return (EncounterVisitHandler) handler;
+		}
+		catch (Exception ex) {
+			throw new APIException("Failed to instantiate assignment handler object for class class: " + value, ex);
+		}
+	}
+	
+	/**
+	 * @see org.openmrs.api.EncounterService#saveEncounterRole(org.openmrs.EncounterRole)
+	 */
+	@Override
+	public EncounterRole saveEncounterRole(EncounterRole encounterRole) throws APIException {
+		dao.saveEncounterRole(encounterRole);
+		return encounterRole;
+	}
+	
+	/**
+	 * @see org.openmrs.api.EncounterService#getEncounterRole(Integer)
+	 */
+	@Override
+	public EncounterRole getEncounterRole(Integer encounterRoleId) throws APIException {
+		return dao.getEncounterRole(encounterRoleId);
+	}
+	
+	/**
+	 * @see org.openmrs.api.EncounterService#purgeEncounterRole(org.openmrs.EncounterRole)
+	 */
+	@Override
+	public void purgeEncounterRole(EncounterRole encounterRole) throws APIException {
+		dao.deleteEncounterRole(encounterRole);
+	}
+	
+	/**
+	 * @see org.openmrs.api.EncounterService#getAllEncounterRoles(boolean)
+	 */
+	@Override
+	public List<EncounterRole> getAllEncounterRoles(boolean includeRetired) {
+		return dao.getAllEncounterRoles(includeRetired);
+	}
+	
+	/**
+	 * @see org.openmrs.api.EncounterService#getEncounterRoleByUuid(String)
+	 */
+	@Override
+	public EncounterRole getEncounterRoleByUuid(String uuid) throws APIException {
+		return dao.getEncounterRoleByUuid(uuid);
+	}
+	
+	/**
+	 * @see org.openmrs.api.EncounterService#retireEncounterRole(org.openmrs.EncounterRole, String)
+	 */
+	@Override
+	public EncounterRole retireEncounterRole(EncounterRole encounterRole, String reason) throws APIException {
+		if (reason == null)
+			throw new IllegalArgumentException("The 'reason' for retiring is required");
+		return saveEncounterRole(encounterRole);
+	}
+	
+	/**
+	 * @see org.openmrs.api.EncounterService#unretireEncounterRole(org.openmrs.EncounterRole)
+	 */
+	@Override
+	public EncounterRole unretireEncounterRole(EncounterRole encounterRole) throws APIException {
+		return saveEncounterRole(encounterRole);
+	}
+	
+	/**
+	 * @see org.openmrs.api.EncounterService#getEncountersNotAssignedToAnyVisit(org.openmrs.Patient)
+	 */
+	@Override
+	public List<Encounter> getEncountersNotAssignedToAnyVisit(Patient patient) throws APIException {
+		return dao.getEncountersNotAssignedToAnyVisit(patient);
+	}
+	
+	/**
+	 * @see org.openmrs.api.EncounterService#getEncountersByVisitsAndPatient(org.openmrs.Patient, boolean, java.lang.String, java.lang.Integer, java.lang.Integer)
+	 */
+	@Override
+	public List<Encounter> getEncountersByVisitsAndPatient(Patient patient, boolean includeVoided, String query,
+	        Integer start, Integer length) throws APIException {
+		return dao.getEncountersByVisitsAndPatient(patient, includeVoided, query, start, length);
+	}
+	
+	/**
+	 * @see org.openmrs.api.EncounterService#getEncountersByVisitsAndPatientCount(org.openmrs.Patient, boolean, java.lang.String)
+	 */
+	@Override
+	public Integer getEncountersByVisitsAndPatientCount(Patient patient, boolean includeVoided, String query)
+	        throws APIException {
+		return dao.getEncountersByVisitsAndPatientCount(patient, includeVoided, query);
 	}
 }

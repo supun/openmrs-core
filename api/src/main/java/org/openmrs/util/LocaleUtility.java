@@ -16,6 +16,7 @@ package org.openmrs.util;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.MissingResourceException;
 import java.util.Set;
 
 import org.apache.commons.logging.Log;
@@ -33,14 +34,14 @@ public class LocaleUtility implements GlobalPropertyListener {
 	private static Log log = LogFactory.getLog(LocaleUtility.class);
 	
 	/**
-	 * Cached version of the default locale. This is cached so that we don't
-	 * have to look it up in the global property table every page load
+	 * Cached version of the default locale. This is cached so that we don't have to look it up in
+	 * the global property table every page load
 	 */
 	private static Locale defaultLocaleCache = null;
 	
 	/**
-	 * Cached version of the localeAllowedList. This is cached so that we don't
-	 * have to look it up in the global property table every page load
+	 * Cached version of the localeAllowedList. This is cached so that we don't have to look it up
+	 * in the global property table every page load
 	 */
 	private static List<Locale> localesAllowedListCache = null;
 	
@@ -61,6 +62,7 @@ public class LocaleUtility implements GlobalPropertyListener {
 	 * @should not fail with empty global property value
 	 * @should not fail with bogus global property value
 	 * @should return locale object for global property
+	 * @should not cache locale when session is not open
 	 */
 	public static Locale getDefaultLocale() {
 		if (defaultLocaleCache == null) {
@@ -83,26 +85,28 @@ public class LocaleUtility implements GlobalPropertyListener {
 					log.warn("Unable to get locale global property value. " + t.getMessage());
 					log.trace("Unable to get locale global property value", t);
 				}
+				
+				// if we weren't able to load the locale from the global property,
+				// use the default one
+				if (defaultLocaleCache == null)
+					defaultLocaleCache = fromSpecification(OpenmrsConstants.GLOBAL_PROPERTY_DEFAULT_LOCALE_DEFAULT_VALUE);
+			} else {
+				// if session is not open, return the default locale without caching
+				return fromSpecification(OpenmrsConstants.GLOBAL_PROPERTY_DEFAULT_LOCALE_DEFAULT_VALUE);
 			}
 			
-			// if we weren't able to load the locale from the global property,
-			// use the default one
-			if (defaultLocaleCache == null)
-				defaultLocaleCache = fromSpecification(OpenmrsConstants.GLOBAL_PROPERTY_DEFAULT_LOCALE_DEFAULT_VALUE);
 		}
 		
 		return defaultLocaleCache;
 	}
 	
 	/**
-	 * Compatible is a looser matching than that provided by Locale.equals().
-	 * Two locales are considered equal if they are equal, or if either does not
-	 * have a country specified and the languages match.
+	 * Compatible is a looser matching than that provided by Locale.equals(). Two locales are
+	 * considered equal if they are equal, or if either does not have a country specified and the
+	 * languages match.
 	 * 
-	 * @param lhs
-	 *            left hand side Locale
-	 * @param rhs
-	 *            right hand side Locale
+	 * @param lhs left hand side Locale
+	 * @param rhs right hand side Locale
 	 * @return true if the two locales are compatible, false otherwise
 	 * @should confirm different language missing country as compatible
 	 * @should confirm same language missing country as compatible
@@ -124,20 +128,18 @@ public class LocaleUtility implements GlobalPropertyListener {
 	}
 	
 	/**
-	 * Creates a locale based on a string specification. The specification must
-	 * be conform with the following format: ll_CC_vv <br/>
+	 * Creates a locale based on a string specification. The specification must be conform with the
+	 * following format: ll_CC_vv <br/>
 	 * <ul>
 	 * <li>ll: two-character lowercase ISO-639 language code
 	 * <li>CC: two-character uppercase ISO-3166 country code optional
 	 * <li>vv: arbitrary length variant code
 	 * </ul>
-	 * For example: en_US_Traditional_WIN ...represents English language in the
-	 * United States with the traditional collation for windows.
+	 * For example: en_US_Traditional_WIN ...represents English language in the United States with
+	 * the traditional collation for windows.
 	 * 
-	 * @param localeSpecification
-	 *            encoded locale specification
-	 * @return the representative Locale, or null if the specification is
-	 *         invalid
+	 * @param localeSpecification encoded locale specification
+	 * @return the representative Locale, or null if the specification is invalid
 	 * @should get locale from two character language code
 	 * @should get locale from language code and country code
 	 * @should get locale from language code country code and variant
@@ -162,21 +164,18 @@ public class LocaleUtility implements GlobalPropertyListener {
 	}
 	
 	/**
-	 * Utility method that returns a collection of all openmrs system locales,
-	 * the set includes the current logged in user's preferred locale if any is
-	 * set, the default locale, allowed locales in the order they are specified
-	 * in the 'allowed.locale.list' global property and 'en' at the very end of
-	 * the set if it isn't yet among them.
+	 * Utility method that returns a collection of all openmrs system locales, the set includes the
+	 * current logged in user's preferred locale if any is set, the default locale, allowed locales
+	 * in the order they are specified in the 'allowed.locale.list' global property and 'en' at the
+	 * very end of the set if it isn't yet among them.
 	 * 
-	 * @returns a collection of all specified and allowed locales with no
-	 *          duplicates.
+	 * @returns a collection of all specified and allowed locales with no duplicates.
 	 * @should return a set of locales with a predictable order
 	 * @should return a set of locales with no duplicates
-	 * @should have default locale as the first element if user has no preferred
-	 *         locale
-	 * @should have default locale as the second element if user has a preferred
-	 *         locale
+	 * @should have default locale as the first element if user has no preferred locale
+	 * @should have default locale as the second element if user has a preferred locale
 	 * @should always have english included in the returned collection
+	 * @should always have default locale default value included in the returned collection
 	 * @since 1.7
 	 */
 	public static Set<Locale> getLocalesInOrder() {
@@ -191,6 +190,7 @@ public class LocaleUtility implements GlobalPropertyListener {
 			locales.addAll(localesAllowedListCache);
 		
 		locales.add(Locale.ENGLISH);
+		locales.add(fromSpecification(OpenmrsConstants.GLOBAL_PROPERTY_DEFAULT_LOCALE_DEFAULT_VALUE));
 		
 		return locales;
 	}
@@ -214,6 +214,22 @@ public class LocaleUtility implements GlobalPropertyListener {
 		return propertyName.equals(OpenmrsConstants.GLOBAL_PROPERTY_DEFAULT_LOCALE)
 		        || propertyName.equals(OpenmrsConstants.GLOBAL_PROPERTY_LOCALE_ALLOWED_LIST);
 		
+	}
+	
+	/**
+	 * Checks if specified locale object is valid
+	 * 
+	 * @param locale
+	 *            object for validation
+	 * @return true if locale is available
+	 */
+	public static boolean isValid(Locale locale) {
+		try {
+			return locale.getISO3Language() != null && locale.getISO3Country() != null;
+		}
+		catch (MissingResourceException e) {
+			return false;
+		}
 	}
 	
 }

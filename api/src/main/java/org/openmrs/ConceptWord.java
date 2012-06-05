@@ -19,6 +19,8 @@ import java.util.Locale;
 import java.util.Set;
 import java.util.Vector;
 
+import org.apache.commons.lang.StringUtils;
+import org.openmrs.api.context.Context;
 import org.openmrs.util.OpenmrsConstants;
 
 /**
@@ -50,6 +52,7 @@ public class ConceptWord implements java.io.Serializable, Comparable<ConceptWord
 	
 	/**
 	 * Get the unique internal database identifier for this concept word
+	 * 
 	 * @since 1.5
 	 */
 	public Integer getConceptWordId() {
@@ -58,6 +61,7 @@ public class ConceptWord implements java.io.Serializable, Comparable<ConceptWord
 	
 	/**
 	 * Set the unique identifier for this concept word
+	 * 
 	 * @since 1.5
 	 */
 	public void setConceptWordId(Integer conceptWordId) {
@@ -102,43 +106,6 @@ public class ConceptWord implements java.io.Serializable, Comparable<ConceptWord
 		this.conceptName = conceptName;
 		this.word = null;
 		this.locale = null;
-	}
-	
-	/**
-	 * @see java.lang.Object#equals(java.lang.Object)
-	 */
-	public boolean equals(Object obj) {
-		if (obj instanceof ConceptWord) {
-			ConceptWord c = (ConceptWord) obj;
-			boolean matches = true;
-			if (getConcept() != null && c.getConcept() != null)
-				matches = matches && concept.equals(c.getConcept());
-			if (getWord() != null && c.getWord() != null)
-				matches = matches && word.equalsIgnoreCase(c.getWord());
-			if (getLocale() != null && c.getLocale() != null)
-				matches = matches && locale.equals(c.getLocale());
-			if (getConceptName() != null && c.getConceptName() != null)
-				matches = matches && conceptName.equals(c.getConceptName());
-			return (matches);
-		}
-		return false;
-	}
-	
-	/**
-	 * @see java.lang.Object#hashCode()
-	 */
-	public int hashCode() {
-		int hash = 3;
-		if (concept != null)
-			hash = 37 * hash + this.getConcept().hashCode();
-		if (word != null)
-			hash = 37 * hash + this.getWord().toLowerCase().hashCode(); // ABKTODO: MySQL searches are case insensitive 
-		if (locale != null)
-			hash = 37 * hash + this.getLocale().hashCode();
-		if (conceptName != null)
-			hash = 37 * hash + this.getConceptName().hashCode();
-		
-		return hash;
 	}
 	
 	/**
@@ -268,17 +235,32 @@ public class ConceptWord implements java.io.Serializable, Comparable<ConceptWord
 	 * @return Returns a list of the unique parts of the phrase, in all upper case.
 	 */
 	public static List<String> getUniqueWords(String phrase) {
-		
+		return getUniqueWords(phrase, Context.getLocale());
+	}
+	
+	/**
+	 * Split the given phrase on words and remove unique and stop words for the given locale
+	 * 
+	 * @param phrase
+	 * @param locale
+	 * @return Returns a list of the unique parts of the phrase, in all upper case.
+	 * @since 1.8
+	 */
+	public static List<String> getUniqueWords(String phrase, Locale locale) {
 		String[] parts = splitPhrase(phrase);
-		
 		List<String> uniqueParts = new Vector<String>();
 		
-		for (String part : parts) {
-			String p = part.trim();
-			String upper = p.toUpperCase();
-			if (!p.equals("") && !OpenmrsConstants.STOP_WORDS().contains(upper) && !uniqueParts.contains(upper))
-				uniqueParts.add(upper);
+		if (parts != null) {
+			List<String> conceptStopWords = Context.getConceptService().getConceptStopWords(locale);
+			for (String part : parts) {
+				if (!StringUtils.isBlank(part)) {
+					String upper = part.trim().toUpperCase();
+					if (!conceptStopWords.contains(upper) && !uniqueParts.contains(upper))
+						uniqueParts.add(upper);
+				}
+			}
 		}
+		
 		return uniqueParts;
 	}
 	
@@ -289,14 +271,16 @@ public class ConceptWord implements java.io.Serializable, Comparable<ConceptWord
 	 * @return String[] array of words
 	 */
 	public static String[] splitPhrase(String phrase) {
+		if (StringUtils.isBlank(phrase)) {
+			return null;
+		}
 		if (phrase.length() > 2) {
 			phrase = phrase.replaceAll(OpenmrsConstants.REGEX_LARGE, " ");
 		} else {
 			phrase = phrase.replaceAll(OpenmrsConstants.REGEX_SMALL, " ");
 		}
 		
-		String[] words = phrase.trim().replace('\n', ' ').split(" ");
-		return words;
+		return phrase.trim().replace('\n', ' ').split(" ");
 	}
 	
 	/**

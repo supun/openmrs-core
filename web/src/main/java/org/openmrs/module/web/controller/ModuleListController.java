@@ -74,7 +74,7 @@ public class ModuleListController extends SimpleFormController {
 	 */
 	@Override
 	protected ModelAndView onSubmit(HttpServletRequest request, HttpServletResponse response, Object command,
-	                                BindException errors) throws Exception {
+	        BindException errors) throws Exception {
 		
 		if (!Context.hasPrivilege(PrivilegeConstants.MANAGE_MODULES))
 			throw new APIAuthenticationException("Privilege required: " + PrivilegeConstants.MANAGE_MODULES);
@@ -131,6 +131,11 @@ public class ModuleListController extends SimpleFormController {
 								Module existingModule = ModuleFactory.getModuleById(tmpModule.getModuleId());
 								if (existingModule != null) {
 									dependentModulesStopped = ModuleFactory.stopModule(existingModule, false, true); // stop the module with these parameters so that mandatory modules can be upgraded
+									
+									for (Module depMod : dependentModulesStopped) {
+										WebModuleUtil.stopModule(depMod, getServletContext());
+									}
+									
 									WebModuleUtil.stopModule(existingModule, getServletContext());
 									ModuleFactory.unloadModule(existingModule);
 								}
@@ -193,7 +198,7 @@ public class ModuleListController extends SimpleFormController {
 			}
 			Module mod = ModuleFactory.getModuleById(moduleId);
 			if (mod.getDownloadURL() != null) {
-				ModuleFactory.stopModule(mod);
+				ModuleFactory.stopModule(mod, false, true); // stop the module with these parameters so that mandatory modules can be upgraded
 				WebModuleUtil.stopModule(mod, getServletContext());
 				Module newModule = ModuleFactory.updateModule(mod);
 				WebModuleUtil.startModule(newModule, getServletContext(), false);
@@ -265,6 +270,8 @@ public class ModuleListController extends SimpleFormController {
 	
 	@Override
 	protected Map<String, Object> referenceData(HttpServletRequest request) throws Exception {
+		ClassLoader cl = Thread.currentThread().getContextClassLoader();
+		
 		Map<String, Object> map = new HashMap<String, Object>();
 		MessageSourceAccessor msa = getMessageSourceAccessor();
 		

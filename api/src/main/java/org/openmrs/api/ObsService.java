@@ -176,6 +176,7 @@ public interface ObsService extends OpenmrsService {
 	 * @should set creator and dateCreated on new obs
 	 * @should cascade save to child obs groups
 	 * @should cascade update to new child obs groups
+	 * @should link original and updated obs
 	 */
 	@Authorized( { PrivilegeConstants.ADD_OBS, PrivilegeConstants.EDIT_OBS })
 	public Obs saveObs(Obs obs, String changeMessage) throws APIException;
@@ -401,9 +402,9 @@ public interface ObsService extends OpenmrsService {
 	@Transactional(readOnly = true)
 	@Authorized(PrivilegeConstants.VIEW_OBS)
 	public List<Obs> getObservations(List<Person> whom, List<Encounter> encounters, List<Concept> questions,
-	                                 List<Concept> answers, List<PERSON_TYPE> personTypes, List<Location> locations,
-	                                 List<String> sort, Integer mostRecentN, Integer obsGroupId, Date fromDate, Date toDate,
-	                                 boolean includeVoidedObs) throws APIException;
+	        List<Concept> answers, List<PERSON_TYPE> personTypes, List<Location> locations, List<String> sort,
+	        Integer mostRecentN, Integer obsGroupId, Date fromDate, Date toDate, boolean includeVoidedObs)
+	        throws APIException;
 	
 	/**
 	 * This method fetches the count of observations according to the criteria in the given
@@ -448,9 +449,8 @@ public interface ObsService extends OpenmrsService {
 	@Transactional(readOnly = true)
 	@Authorized(PrivilegeConstants.VIEW_OBS)
 	public Integer getObservationCount(List<Person> whom, List<Encounter> encounters, List<Concept> questions,
-	                                   List<Concept> answers, List<PERSON_TYPE> personTypes, List<Location> locations,
-	                                   Integer obsGroupId, Date fromDate, Date toDate, boolean includeVoidedObs)
-	                                                                                                            throws APIException;
+	        List<Concept> answers, List<PERSON_TYPE> personTypes, List<Location> locations, Integer obsGroupId,
+	        Date fromDate, Date toDate, boolean includeVoidedObs) throws APIException;
 	
 	/**
 	 * This method searches the obs table based on the given <code>searchString</code>.
@@ -543,7 +543,7 @@ public interface ObsService extends OpenmrsService {
 	@Transactional(readOnly = true)
 	@Authorized(PrivilegeConstants.VIEW_OBS)
 	public List<Object[]> getNumericAnswersForConcept(Concept answer, Boolean sortByValue, Integer personType,
-	                                                  boolean includeVoided);
+	        boolean includeVoided);
 	
 	/**
 	 * @deprecated use {@link org.openmrs#Encounter.getObservations()}
@@ -709,4 +709,5 @@ public interface ObsService extends OpenmrsService {
 	@Transactional(readOnly = true)
 	@Authorized(PrivilegeConstants.VIEW_OBS)
 	public Integer getObservationCount(List<ConceptName> conceptNames, boolean includeVoided);
+	
 }

@@ -15,6 +15,8 @@ package org.openmrs;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.util.Calendar;
+import java.util.Date;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -68,6 +70,10 @@ public class PersonAddress extends BaseOpenmrsData implements java.io.Serializab
 	
 	private String longitude;
 	
+	private Date startDate;
+	
+	private Date endDate;
+	
 	// Constructors
 	
 	/** default constructor */
@@ -86,23 +92,6 @@ public class PersonAddress extends BaseOpenmrsData implements java.io.Serializab
 		return "a1:" + getAddress1() + ", a2:" + getAddress2() + ", cv:" + getCityVillage() + ", sp:" + getStateProvince()
 		        + ", c:" + getCountry() + ", cd:" + getCountyDistrict() + ", nc:" + getAddress3() + ", pc:"
 		        + getPostalCode() + ", lat:" + getLatitude() + ", long:" + getLongitude();
-	}
-	
-	/**
-	 * Compares this address to the given object/address for similarity. Uses the very basic
-	 * comparison of just the PersonAddress.personAddressId
-	 * 
-	 * @param obj Object (Usually PersonAddress) with which to compare
-	 * @return boolean true/false whether or not they are the same objects
-	 * @see java.lang.Object#equals(java.lang.Object)
-	 */
-	public boolean equals(Object obj) {
-		if (obj instanceof PersonAddress) {
-			PersonAddress p = (PersonAddress) obj;
-			if (this.getPersonAddressId() != null && p.getPersonAddressId() != null)
-				return (this.getPersonAddressId().equals(p.getPersonAddressId()));
-		}
-		return false;
 	}
 	
 	/**
@@ -150,15 +139,6 @@ public class PersonAddress extends BaseOpenmrsData implements java.io.Serializab
 		}
 		
 		return returnValue;
-	}
-	
-	/**
-	 * @see java.lang.Object#hashCode()
-	 */
-	public int hashCode() {
-		if (this.getPersonAddressId() == null)
-			return super.hashCode();
-		return this.getPersonAddressId().hashCode();
 	}
 	
 	/**
@@ -571,5 +551,65 @@ public class PersonAddress extends BaseOpenmrsData implements java.io.Serializab
 	public void setId(Integer id) {
 		setPersonAddressId(id);
 		
+	}
+	
+	/**
+	 * @return the startDate
+	 * @since 1.9
+	 */
+	public Date getStartDate() {
+		return startDate;
+	}
+	
+	/**
+	 * @param startDate to set to
+	 * @since 1.9
+	 */
+	public void setStartDate(Date startDate) {
+		this.startDate = startDate;
+	}
+	
+	/**
+	 * @return the endDate
+	 * @since 1.9
+	 */
+	public Date getEndDate() {
+		return this.endDate;
+	}
+	
+	/**
+	 * @param endDate to set to
+	 * @since 1.9
+	 */
+	public void setEndDate(Date endDate) {
+		this.endDate = endDate;
+	}
+	
+	/**
+	 * Returns true if the address' endDate is null
+	 * 
+	 * @return true or false
+	 * @since 1.9
+	 */
+	public Boolean isActive() {
+		return (this.endDate == null);
+	}
+	
+	/**
+	 * Makes an address inactive by setting its endDate to the current time
+	 * 
+	 * @since 1.9
+	 */
+	public void deactivate() {
+		setEndDate(Calendar.getInstance().getTime());
+	}
+	
+	/**
+	 * Makes an address active by setting its endDate to null
+	 * 
+	 * @since 1.9
+	 */
+	public void activate() {
+		setEndDate(null);
 	}
 }

@@ -71,8 +71,7 @@ public interface SerializationService extends OpenmrsService {
 	 */
 	@Logging(ignoredArgumentIndexes = { 0 })
 	public <T extends Object> T deserialize(String serializedObject, Class<? extends T> objectClass,
-	                                        Class<? extends OpenmrsSerializer> serializerClass)
-	                                                                                           throws SerializationException;
+	        Class<? extends OpenmrsSerializer> serializerClass) throws SerializationException;
 	
 	/**
 	 * Gets the list of OpenmrsSerializers that have been registered with this service. <br/>

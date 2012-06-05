@@ -531,7 +531,7 @@ public interface UserService extends OpenmrsService {
 	 */
 	@Transactional(readOnly = true)
 	@Authorized( { PrivilegeConstants.VIEW_USERS })
-	public List<User> getUsersByName(String givenName, String familyName, boolean includeVoided) throws APIException;
+	public List<User> getUsersByName(String givenName, String familyName, boolean includeRetired) throws APIException;
 	
 	/**
 	 * Get all user accounts that belong to a given person.
@@ -607,11 +607,12 @@ public interface UserService extends OpenmrsService {
 	 * @param length number of users to return in the batch
 	 * @return list of matching users of a size based on the specified arguments
 	 * @since 1.8
+	 * @should return users whose roles inherit requested roles
 	 */
 	@Transactional(readOnly = true)
 	@Authorized( { PrivilegeConstants.VIEW_USERS })
 	public List<User> getUsers(String name, List<Role> roles, boolean includeRetired, Integer start, Integer length)
-	                                                                                                                throws APIException;
+	        throws APIException;
 	
 	/**
 	 * Return the number of users with a matching name or system id and have at least one of the

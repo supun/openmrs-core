@@ -22,7 +22,10 @@ import org.apache.commons.lang.StringUtils;
 import org.openmrs.api.APIException;
 import org.openmrs.api.context.Context;
 import org.openmrs.util.HandlerUtil;
+import org.springframework.util.Assert;
 import org.springframework.validation.BindException;
+import org.springframework.validation.Errors;
+import org.springframework.validation.FieldError;
 import org.springframework.validation.ObjectError;
 import org.springframework.validation.Validator;
 
@@ -54,26 +57,6 @@ public class ValidateUtil {
 	}
 	
 	/**
-	 * Fetches all validators that are registered
-	 * 
-	 * @param obj the object that will be validated
-	 * @return list of compatibile validators
-	 */
-	protected static List<Validator> getValidators(Object obj) {
-		List<Validator> matchingValidators = new Vector<Validator>();
-		
-		List<Validator> validators = HandlerUtil.getHandlersForType(Validator.class, obj.getClass());
-		
-		for (Validator validator : validators) {
-			if (validator.supports(obj.getClass())) {
-				matchingValidators.add(validator);
-			}
-		}
-		
-		return matchingValidators;
-	}
-	
-	/**
 	 * Test the given object against all validators that are registered as compatible with the
 	 * object class
 	 * 
@@ -84,21 +67,59 @@ public class ValidateUtil {
 	public static void validate(Object obj) throws APIException {
 		BindException errors = new BindException(obj, "");
 		
-		for (Validator validator : getValidators(obj)) {
-			validator.validate(obj, errors);
-		}
+		Context.getAdministrationService().validate(obj, errors);
 		
 		if (errors.hasErrors()) {
 			Set<String> uniqueErrorMessages = new LinkedHashSet<String>();
 			for (Object objerr : errors.getAllErrors()) {
 				ObjectError error = (ObjectError) objerr;
 				String message = Context.getMessageSourceService().getMessage(error.getCode());
+				if (error instanceof FieldError) {
+					message = ((FieldError) error).getField() + ": " + message;
+				}
 				uniqueErrorMessages.add(message);
 			}
 			
 			String exceptionMessage = "'" + obj + "' failed to validate with reason: ";
 			exceptionMessage += StringUtils.join(uniqueErrorMessages, ", ");
 			throw new APIException(exceptionMessage, errors.getCause());
+		}
+	}
+	
+	/**
+	 * Test the given object against all validators that are registered as compatible with the
+	 * object class
+	 * 
+	 * @param obj the object to validate
+	 * @param errors the validation errors found
+	 * @since 1.9
+	 * @should populate errors if object invalid
+	 */
+	public static void validate(Object obj, Errors errors) {
+		Context.getAdministrationService().validate(obj, errors);
+	}
+	
+	/**
+	 * Test the field lengths are valid
+	 * 
+	 * @param errors
+	 * @param aClass the class of the object being tested
+	 * @param fields a var args that contains all of the fields from the model
+	 * @should pass validation if regEx field length is not too long
+	 * @should fail validation if regEx field length is too long
+	 * @should fail validation if name field length is too long
+	 */
+	
+	public static void validateFieldLengths(Errors errors, Class aClass, String... fields) {
+		Assert.notNull(errors, "Errors object must not be null");
+		for (String field : fields) {
+			Object value = errors.getFieldValue(field);
+			if (value == null || !(value instanceof String))
+				return;
+			int length = Context.getAdministrationService().getMaximumPropertyLength(aClass, field);
+			if (((String) value).length() > length) {
+				errors.rejectValue(field, "error.exceededMaxLengthOfField", new Object[] { length }, null);
+			}
 		}
 	}
 }

@@ -1,14 +1,36 @@
+/**
+ * The contents of this file are subject to the OpenMRS Public License
+ * Version 1.0 (the "License"); you may not use this file except in
+ * compliance with the License. You may obtain a copy of the License at
+ * http://license.openmrs.org
+ *
+ * Software distributed under the License is distributed on an "AS IS"
+ * basis, WITHOUT WARRANTY OF ANY KIND, either express or implied. See the
+ * License for the specific language governing rights and limitations
+ * under the License.
+ *
+ * Copyright (C) OpenMRS, LLC.  All Rights Reserved.
+ */
 package org.openmrs.api.db;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+
+import java.util.List;
 import java.util.Locale;
 
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.openmrs.Concept;
+import org.openmrs.ConceptMapType;
 import org.openmrs.ConceptName;
+import org.openmrs.ConceptReferenceTerm;
+import org.openmrs.ConceptSet;
 import org.openmrs.ConceptWord;
 import org.openmrs.api.ConceptNameType;
+import org.openmrs.api.context.Context;
 import org.openmrs.test.BaseContextSensitiveTest;
 import org.openmrs.test.Verifies;
 
@@ -60,7 +82,7 @@ public class ConceptDAOTest extends BaseContextSensitiveTest {
 	@Test
 	@Verifies(value = "should assign a higher weight to a shorter word if both words are at the start of the concept name", method = "weighConceptWord(ConceptWord)")
 	public void weighConceptWord_shouldAssignAHigherWeightToAShorterWordIfBothWordsAreAtTheStartOfTheConceptName()
-	                                                                                                              throws Exception {
+	        throws Exception {
 		Concept c = new Concept();
 		
 		ConceptName synonymName = new ConceptName("my depot", Locale.ENGLISH);
@@ -113,7 +135,7 @@ public class ConceptDAOTest extends BaseContextSensitiveTest {
 	@Test
 	@Verifies(value = "should weigh a word for a preferred fullySpecified higher than that of a plain fullySpecified name", method = "weighConceptWord(ConceptWord)")
 	public void weighConceptWord_shouldWeighAWordForAPreferredFullySpecifiedHigherThanThatOfAPlainFullySpecifiedName()
-	                                                                                                                  throws Exception {
+	        throws Exception {
 		Concept c = new Concept();
 		
 		ConceptName prefFullSpecName = new ConceptName("my depot", Locale.ENGLISH);
@@ -136,7 +158,7 @@ public class ConceptDAOTest extends BaseContextSensitiveTest {
 	@Test
 	@Verifies(value = "should weigh a word for a preferred fullySpecified higher than that of a plain preferred name", method = "weighConceptWord(ConceptWord)")
 	public void weighConceptWord_shouldWeighAWordForAPreferredFullySpecifiedHigherThanThatOfAPlainPreferredName()
-	                                                                                                             throws Exception {
+	        throws Exception {
 		Concept c = new Concept();
 		
 		ConceptName prefFullSpecName = new ConceptName("my depot", Locale.ENGLISH);
@@ -260,7 +282,7 @@ public class ConceptDAOTest extends BaseContextSensitiveTest {
 	@Test
 	@Verifies(value = "should weigh words closer to the start higher than those closer to the end of the concept name", method = "weighConceptWord(ConceptWord)")
 	public void weighConceptWord_shouldWeighWordsCloserToTheStartHigherThanThoseCloserToTheEndOfTheConceptName()
-	                                                                                                            throws Exception {
+	        throws Exception {
 		Concept c = new Concept();
 		
 		ConceptName cn1 = new ConceptName("on my way", Locale.ENGLISH);
@@ -283,7 +305,7 @@ public class ConceptDAOTest extends BaseContextSensitiveTest {
 	@Test
 	@Verifies(value = "should weigh a word equal to a concept name higher than one that matches the start of the concept name", method = "weighConceptWord(ConceptWord)")
 	public void weighConceptWord_shouldWeighAWordEqualToAConceptNameHigherThanOneThatMatchesTheStartOfTheConceptName()
-	                                                                                                                  throws Exception {
+	        throws Exception {
 		Concept c = new Concept();
 		
 		ConceptName cn1 = new ConceptName("matching", Locale.ENGLISH);
@@ -305,15 +327,100 @@ public class ConceptDAOTest extends BaseContextSensitiveTest {
 	@Test
 	@Verifies(value = "weigh words when jvm is run in a locale with a different decimal separator character", method = "weighConceptWord(ConceptWord)")
 	public void weighConceptWord_shouldWeighWordsWhenJvmIsRunInALocaleWithADifferentDecimalSeparatorCharacter()
-	                                                                                                           throws Exception {
+	        throws Exception {
 		//simulate an environment where the default locale uses a different decimal character
 		Locale locale = Locale.FRENCH;
 		Locale.setDefault(locale);
 		ConceptName cn = new ConceptName("bonjour monsieur", locale);
 		ConceptWord word = new ConceptWord("BONJOUR", new Concept(), cn, locale);
 		//Sanity check for the test to be concrete, i.e. the word should be part of the concept name
-		Assert.assertTrue(cn.getName().toUpperCase().indexOf(word.getWord()) > -1);
+		Assert.assertTrue(cn.getName().toUpperCase().contains(word.getWord()));
 		dao.weighConceptWord(word);
 	}
 	
+	/**
+	 * @see {@link ConceptDAO#isConceptMapTypeInUse(ConceptMapType)}
+	 */
+	@Test
+	@Verifies(value = "should return true if a mapType has a conceptMap or more using it", method = "isConceptMapTypeInUse(ConceptMapType)")
+	public void isConceptMapTypeInUse_shouldReturnTrueIfAMapTypeHasAConceptMapOrMoreUsingIt() throws Exception {
+		Assert.assertTrue(dao.isConceptMapTypeInUse(Context.getConceptService().getConceptMapType(6)));
+	}
+	
+	/**
+	 * @see {@link ConceptDAO#isConceptMapTypeInUse(ConceptMapType)}
+	 */
+	@Test
+	@Verifies(value = "should return true if a mapType has a conceptReferenceTermMap or more using it", method = "isConceptMapTypeInUse(ConceptMapType)")
+	public void isConceptMapTypeInUse_shouldReturnTrueIfAMapTypeHasAConceptReferenceTermMapOrMoreUsingIt() throws Exception {
+		Assert.assertTrue(dao.isConceptMapTypeInUse(Context.getConceptService().getConceptMapType(4)));
+	}
+	
+	/**
+	 * @see {@link ConceptDAO#isConceptReferenceTermInUse(ConceptReferenceTerm)}
+	 */
+	@Test
+	@Verifies(value = "should return true if a term has a conceptMap or more using it", method = "isConceptReferenceTermInUse(ConceptReferenceTerm)")
+	public void isConceptReferenceTermInUse_shouldReturnTrueIfATermHasAConceptMapOrMoreUsingIt() throws Exception {
+		Assert.assertTrue(dao.isConceptReferenceTermInUse(Context.getConceptService().getConceptReferenceTerm(10)));
+	}
+	
+	/**
+	 * @see {@link ConceptDAO#isConceptReferenceTermInUse(ConceptReferenceTerm)}
+	 */
+	@Test
+	@Verifies(value = "should return true if a term has a conceptReferenceTermMap or more using it", method = "isConceptReferenceTermInUse(ConceptReferenceTerm)")
+	public void isConceptReferenceTermInUse_shouldReturnTrueIfATermHasAConceptReferenceTermMapOrMoreUsingIt()
+	        throws Exception {
+		Assert.assertTrue(dao.isConceptReferenceTermInUse(Context.getConceptService().getConceptReferenceTerm(2)));
+	}
+	
+	/**
+	 * @see {@link ConceptDAO#isConceptMapTypeInUse(ConceptMapType)}
+	 */
+	@Test
+	@Verifies(value = "should return false if a mapType has no maps using it", method = "isConceptMapTypeInUse(ConceptMapType)")
+	public void isConceptMapTypeInUse_shouldReturnFalseIfAMapTypeHasNoMapsUsingIt() throws Exception {
+		Assert.assertFalse(dao.isConceptMapTypeInUse(Context.getConceptService().getConceptMapType(3)));
+	}
+	
+	/**
+	 * @see {@link ConceptDAO#isConceptReferenceTermInUse(ConceptReferenceTerm)}
+	 */
+	@Test
+	@Verifies(value = "should return false if a term has no maps using it", method = "isConceptReferenceTermInUse(ConceptReferenceTerm)")
+	public void isConceptReferenceTermInUse_shouldReturnFalseIfATermHasNoMapsUsingIt() throws Exception {
+		Assert.assertFalse(dao.isConceptReferenceTermInUse(Context.getConceptService().getConceptReferenceTerm(11)));
+	}
+	
+	@Test
+	public void updateConceptSetDerived_shouldRecreateConceptSetDerived() throws Exception {
+		Concept concept = dao.getConcept(5497);
+		List<ConceptSet> conceptSetsByConcept = dao.getConceptSetsByConcept(concept);
+		assertNotNull(conceptSetsByConcept);
+		dao.updateConceptSetDerived();
+		List<ConceptSet> conceptSetsByConceptAfterUpdate = dao.getConceptSetsByConcept(concept);
+		assertNotNull(conceptSetsByConceptAfterUpdate);
+		assertEquals(conceptSetsByConcept.size(), conceptSetsByConceptAfterUpdate.size());
+	}
+	
+	@Test
+	@Verifies(value = "should delete concept from datastore", method = "purgeConcept")
+	public void purgeConcept_shouldDeleteConceptWithWords() throws Exception {
+		executeDataSet("org/openmrs/api/include/ConceptServiceTest-words.xml");
+		Concept concept = dao.getConcept(5497);
+		dao.purgeConcept(concept);
+		
+		assertNull(dao.getConcept(5497));
+	}
+	
+	@Test
+	@Verifies(value = "should update concept in datastore", method = "updateConcept")
+	public void updateConceptWord_shouldUpdateConceptWithWords() throws Exception {
+		executeDataSet("org/openmrs/api/include/ConceptServiceTest-words.xml");
+		Concept concept = dao.getConcept(5497);
+		dao.updateConceptWord(concept);
+		
+		assertNotNull(dao.getConcept(5497));
+	}
 }

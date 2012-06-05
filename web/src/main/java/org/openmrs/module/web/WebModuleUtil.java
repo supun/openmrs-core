@@ -28,9 +28,9 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Properties;
 import java.util.Vector;
-import java.util.Map.Entry;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 
@@ -47,6 +47,7 @@ import javax.xml.parsers.DocumentBuilderFactory;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.log4j.xml.DOMConfigurator;
+import org.openmrs.api.context.Context;
 import org.openmrs.module.Module;
 import org.openmrs.module.ModuleException;
 import org.openmrs.module.ModuleFactory;
@@ -55,6 +56,7 @@ import org.openmrs.module.web.filter.ModuleFilterConfig;
 import org.openmrs.module.web.filter.ModuleFilterDefinition;
 import org.openmrs.module.web.filter.ModuleFilterMapping;
 import org.openmrs.util.OpenmrsUtil;
+import org.openmrs.util.PrivilegeConstants;
 import org.openmrs.web.DispatcherServlet;
 import org.openmrs.web.dwr.OpenmrsDWRServlet;
 import org.springframework.web.context.support.WebApplicationContextUtils;
@@ -261,7 +263,8 @@ public class WebModuleUtil {
 					Node node = root.getElementsByTagName("dwr").item(0);
 					Node current = node.getFirstChild();
 					while (current != null) {
-						if ("allow".equals(current.getNodeName()) || "signatures".equals(current.getNodeName())) {
+						if ("allow".equals(current.getNodeName()) || "signatures".equals(current.getNodeName())
+						        || "init".equals(current.getNodeName())) {
 							((Element) current).setAttribute("moduleId", mod.getModuleId());
 							outputRoot.appendChild(dwrmodulexml.importNode(current, true));
 						}
@@ -333,8 +336,8 @@ public class WebModuleUtil {
 						log.warn(msg + " for module: " + mod.getModuleId(), e);
 					
 					try {
-						ModuleFactory.stopModule(mod, true, true); //remove jar from classloader play
 						stopModule(mod, servletContext, true);
+						ModuleFactory.stopModule(mod, true, true); //remove jar from classloader play
 					}
 					catch (Exception e2) {
 						// exception expected with most modules here
@@ -344,6 +347,8 @@ public class WebModuleUtil {
 					
 					// try starting the application context again
 					refreshWAC(servletContext, false, mod);
+					
+					notifySuperUsersAboutModuleFailure(mod);
 				}
 				
 			}
@@ -370,6 +375,27 @@ public class WebModuleUtil {
 		
 		// we aren't processing this module, so a context refresh is not necessary
 		return false;
+	}
+	
+	/**
+	 * Send an Alert to all super users that the given module did not start successfully.
+	 * 
+	 * @param mod The Module that failed
+	 */
+	private static void notifySuperUsersAboutModuleFailure(Module mod) {
+		try {
+			// Add the privileges necessary for notifySuperUsers
+			Context.addProxyPrivilege(PrivilegeConstants.MANAGE_ALERTS);
+			Context.addProxyPrivilege(PrivilegeConstants.VIEW_USERS);
+			
+			// Send an alert to all administrators
+			Context.getAlertService().notifySuperUsers("Module.startupError.notification.message", null, mod.getName());
+		}
+		finally {
+			// Remove added privileges
+			Context.removeProxyPrivilege(PrivilegeConstants.VIEW_USERS);
+			Context.removeProxyPrivilege(PrivilegeConstants.MANAGE_ALERTS);
+		}
 	}
 	
 	/**
@@ -432,10 +458,16 @@ public class WebModuleUtil {
 			}
 			
 			// don't allow modules to overwrite servlets of other modules.
-			if (moduleServlets.containsKey(name)) {
+			HttpServlet otherServletUsingSameName = moduleServlets.get(name);
+			if (otherServletUsingSameName != null) {
 				//log.debug("A servlet mapping with name " + name + " already exists. " + mod.getModuleId() + "'s servlet is overwriting it");
-				throw new ModuleException("A servlet mapping with name " + name + " already exists. " + mod.getModuleId()
-				        + "'s servlet is trying to overwrite it");
+				String otherServletName = otherServletUsingSameName.getClass().getPackage() + "."
+				        + otherServletUsingSameName.getClass().getName();
+				throw new ModuleException("A servlet mapping with name " + name + " is already in use and pointing at: "
+				        + otherServletName + " from another installed module and this module is trying"
+				        + " to use that same name.  Either the module attempting to be installed (" + mod.getModuleId()
+				        + ") will not work or the other one will not.  Please consult the developers of these two"
+				        + " modules to sort this out.");
 			}
 			
 			log.debug("Caching the " + name + " servlet.");
@@ -784,7 +816,7 @@ public class WebModuleUtil {
 	 * @return The newly refreshed webApplicationContext
 	 */
 	public static XmlWebApplicationContext refreshWAC(ServletContext servletContext, boolean isOpenmrsStartup,
-	                                                  Module startedModule) {
+	        Module startedModule) {
 		XmlWebApplicationContext wac = (XmlWebApplicationContext) WebApplicationContextUtils
 		        .getWebApplicationContext(servletContext);
 		if (log.isDebugEnabled())

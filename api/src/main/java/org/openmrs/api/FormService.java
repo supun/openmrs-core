@@ -24,6 +24,7 @@ import org.openmrs.FieldAnswer;
 import org.openmrs.FieldType;
 import org.openmrs.Form;
 import org.openmrs.FormField;
+import org.openmrs.FormResource;
 import org.openmrs.annotation.Authorized;
 import org.openmrs.util.PrivilegeConstants;
 import org.springframework.transaction.annotation.Transactional;
@@ -42,6 +43,7 @@ public interface FormService extends OpenmrsService {
 	 * @return the Form that was saved
 	 * @throws APIException
 	 * @should save given form successfully
+	 * @should update an existing form
 	 */
 	@Authorized(PrivilegeConstants.MANAGE_FORMS)
 	public Form saveForm(Form form) throws APIException;
@@ -60,6 +62,7 @@ public interface FormService extends OpenmrsService {
 	 * @return requested form
 	 * @throws APIException
 	 * @should return null if no form exists with given formId
+	 * @should return the requested form
 	 */
 	@Transactional(readOnly = true)
 	@Authorized(PrivilegeConstants.VIEW_FORMS)
@@ -150,8 +153,7 @@ public interface FormService extends OpenmrsService {
 	@Transactional(readOnly = true)
 	@Authorized(PrivilegeConstants.VIEW_FORMS)
 	public List<Form> getForms(String partialNameSearch, Boolean published, Collection<EncounterType> encounterTypes,
-	                           Boolean retired, Collection<FormField> containingAnyFormField,
-	                           Collection<FormField> containingAllFormFields);
+	        Boolean retired, Collection<FormField> containingAnyFormField, Collection<FormField> containingAllFormFields);
 	
 	/**
 	 * Gets all forms that match all the (nullable) criteria
@@ -178,8 +180,8 @@ public interface FormService extends OpenmrsService {
 	@Transactional(readOnly = true)
 	@Authorized(PrivilegeConstants.VIEW_FORMS)
 	public List<Form> getForms(String partialNameSearch, Boolean published, Collection<EncounterType> encounterTypes,
-	                           Boolean retired, Collection<FormField> containingAnyFormField,
-	                           Collection<FormField> containingAllFormFields, Collection<Field> fields);
+	        Boolean retired, Collection<FormField> containingAnyFormField, Collection<FormField> containingAllFormFields,
+	        Collection<Field> fields);
 	
 	/**
 	 * Same as
@@ -191,8 +193,8 @@ public interface FormService extends OpenmrsService {
 	@Transactional(readOnly = true)
 	@Authorized(PrivilegeConstants.VIEW_FORMS)
 	public Integer getFormCount(String partialNameSearch, Boolean published, Collection<EncounterType> encounterTypes,
-	                            Boolean retired, Collection<FormField> containingAnyFormField,
-	                            Collection<FormField> containingAllFormFields, Collection<Field> fields);
+	        Boolean retired, Collection<FormField> containingAnyFormField, Collection<FormField> containingAllFormFields,
+	        Collection<Field> fields);
 	
 	/**
 	 * Returns all published forms (not including retired ones)
@@ -264,6 +266,7 @@ public interface FormService extends OpenmrsService {
 	 * @throws APIException
 	 * @should clear changed details and update creation details
 	 * @should give a new uuid to the duplicated form
+	 * @should copy resources for old form to new form
 	 */
 	@Authorized(PrivilegeConstants.MANAGE_FORMS)
 	public Form duplicateForm(Form form) throws APIException;
@@ -296,6 +299,7 @@ public interface FormService extends OpenmrsService {
 	 * @param form
 	 * @throws APIException
 	 * @should delete given form successfully
+	 * @should delete form resources for deleted form
 	 */
 	@Authorized(PrivilegeConstants.MANAGE_FORMS)
 	public void purgeForm(Form form) throws APIException;
@@ -527,9 +531,9 @@ public interface FormService extends OpenmrsService {
 	@Transactional(readOnly = true)
 	@Authorized(PrivilegeConstants.VIEW_FORMS)
 	public List<Field> getFields(Collection<Form> forms, Collection<FieldType> fieldTypes, Collection<Concept> concepts,
-	                             Collection<String> tableNames, Collection<String> attributeNames, Boolean selectMultiple,
-	                             Collection<FieldAnswer> containsAllAnswers, Collection<FieldAnswer> containsAnyAnswer,
-	                             Boolean retired) throws APIException;
+	        Collection<String> tableNames, Collection<String> attributeNames, Boolean selectMultiple,
+	        Collection<FieldAnswer> containsAllAnswers, Collection<FieldAnswer> containsAnyAnswer, Boolean retired)
+	        throws APIException;
 	
 	/**
 	 * @deprecated use {@link #getAllFields()}
@@ -580,6 +584,7 @@ public interface FormService extends OpenmrsService {
 	 * @return the Field that was saved
 	 * @throws APIException
 	 * @should save given field successfully
+	 * @should update an existing field
 	 */
 	@Authorized(PrivilegeConstants.MANAGE_FORMS)
 	public Field saveField(Field field) throws APIException;
@@ -691,7 +696,7 @@ public interface FormService extends OpenmrsService {
 	@Transactional(readOnly = true)
 	@Authorized(PrivilegeConstants.VIEW_FORMS)
 	public FormField getFormField(Form form, Concept concept, Collection<FormField> ignoreFormFields, boolean force)
-	                                                                                                                throws APIException;
+	        throws APIException;
 	
 	/**
 	 * Creates or updates the given FormField
@@ -791,4 +796,60 @@ public interface FormService extends OpenmrsService {
 	@Authorized(PrivilegeConstants.PURGE_FIELD_TYPES)
 	public void purgeFieldType(FieldType fieldType) throws APIException;
 	
+	/**
+	 * Finds a FormResource by its id
+	 *
+	 * @param formResourceId the id of the resource
+	 * @should find a saved FormResource
+	 * @should return null if no FormResource found
+	 * @since 1.9
+	 */
+	public FormResource getFormResource(Integer formResourceId) throws APIException;
+	
+	/**
+	 * Finds a FormResource by its uuid
+	 *
+	 * @param uuid the uuid of the resource
+	 * @since 1.9
+	 */
+	public FormResource getFormResourceByUuid(String uuid) throws APIException;
+	
+	/**
+	 * Finds a FormResource based on a given Form and name
+	 * 
+	 * @param form the Form that the resource belongs to
+	 * @param name the name of the resource
+	 * @since 1.9
+	 */
+	public FormResource getFormResource(Form form, String name) throws APIException;
+	
+	/**
+	 * Finds all FormResources tied to a given form
+	 * 
+	 * @param form
+	 * @return the resources attached to the form
+	 * @throws APIException 
+	 * @since 1.9
+	 */
+	public Collection<FormResource> getFormResourcesForForm(Form form) throws APIException;
+	
+	/**
+	 * Saves or updates the given form resource
+	 *
+	 * @param formResource the resource to be saved
+	 * @should persist a FormResource
+	 * @should overwrite an existing resource with same name
+	 * @should be able to save an XSLT
+	 * @since 1.9
+	 */
+	public FormResource saveFormResource(FormResource formResource) throws APIException;
+	
+	/**
+	 * Purges a form resource
+	 *
+	 * @param formResource the resource to be purged
+	 * @should delete a form resource
+	 * @since 1.9
+	 */
+	public void purgeFormResource(FormResource formResource) throws APIException;
 }

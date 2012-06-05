@@ -30,6 +30,7 @@ import org.openmrs.ConceptName;
 import org.openmrs.ConceptProposal;
 import org.openmrs.Drug;
 import org.openmrs.Encounter;
+import org.openmrs.EncounterRole;
 import org.openmrs.EncounterType;
 import org.openmrs.Form;
 import org.openmrs.Location;
@@ -38,6 +39,7 @@ import org.openmrs.Patient;
 import org.openmrs.Person;
 import org.openmrs.PersonAttribute;
 import org.openmrs.PersonAttributeType;
+import org.openmrs.Provider;
 import org.openmrs.Relationship;
 import org.openmrs.RelationshipType;
 import org.openmrs.User;
@@ -97,6 +99,8 @@ public class ORUR01Handler implements Application {
 	
 	private Log log = LogFactory.getLog(ORUR01Handler.class);
 	
+	private static EncounterRole unknownRole = null;
+	
 	/**
 	 * Always returns true, assuming that the router calling this handler will only call this
 	 * handler with ORU_R01 messages.
@@ -127,6 +131,11 @@ public class ORUR01Handler implements Application {
 	 * @should set value_Numeric for obs if Question datatype is Numeric
 	 * @should fail if question datatype is coded and a boolean is not a valid answer
 	 * @should fail if question datatype is neither Boolean nor numeric nor coded
+	 * @should create an encounter and find the provider by identifier
+	 * @should create an encounter and find the provider by personId
+	 * @should create an encounter and find the provider by uuid
+	 * @should create an encounter and find the provider by providerId
+	 * @should fail if the provider name type code is not specified and is not a personId
 	 */
 	public Message processMessage(Message message) throws ApplicationException {
 		
@@ -216,18 +225,19 @@ public class ORUR01Handler implements Application {
 			log.debug("Creating observations for message " + messageControlId + "...");
 		// we ignore all MEDICAL_RECORD_OBSERVATIONS that are OBRs.  We do not
 		// create obs_groups for them
-		List<Concept> ignoredConcepts = new ArrayList<Concept>();
+		List<Integer> ignoredConceptIds = new ArrayList<Integer>();
 		
-		String ignoreOBRConceptId = Context.getAdministrationService().getGlobalProperty(
+		String obrConceptId = Context.getAdministrationService().getGlobalProperty(
 		    OpenmrsConstants.GLOBAL_PROPERTY_MEDICAL_RECORD_OBSERVATIONS, "1238");
-		if (ignoreOBRConceptId.length() > 0)
-			ignoredConcepts.add(new Concept(Integer.valueOf(ignoreOBRConceptId)));
+		if (StringUtils.hasLength(obrConceptId)) {
+			ignoredConceptIds.add(Integer.valueOf(obrConceptId));
+		}
 		
 		// we also ignore all PROBLEM_LIST that are OBRs
-		ignoreOBRConceptId = Context.getAdministrationService().getGlobalProperty(
+		String obrProblemListConceptId = Context.getAdministrationService().getGlobalProperty(
 		    OpenmrsConstants.GLOBAL_PROPERTY_PROBLEM_LIST, "1284");
-		if (ignoreOBRConceptId.length() > 0)
-			ignoredConcepts.add(new Concept(Integer.valueOf(ignoreOBRConceptId)));
+		if (StringUtils.hasLength(obrProblemListConceptId))
+			ignoredConceptIds.add(Integer.valueOf(obrProblemListConceptId));
 		
 		ORU_R01_PATIENT_RESULT patientResult = oru.getPATIENT_RESULT();
 		int numObr = patientResult.getORDER_OBSERVATIONReps();
@@ -243,7 +253,7 @@ public class ORUR01Handler implements Application {
 			// Obs grouper object that the underlying obs objects will use
 			Obs obsGrouper = null;
 			Concept obrConcept = getConcept(obr.getUniversalServiceIdentifier(), messageControlId);
-			if (obrConcept != null && !ignoredConcepts.contains(obrConcept)) {
+			if (obrConcept != null && !ignoredConceptIds.contains(obrConcept.getId())) {
 				// maybe check for a parent obs group from OBR-29 Parent ?
 				
 				// create an obs for this obs group too
@@ -536,7 +546,7 @@ public class ORUR01Handler implements Application {
 			encounter = new Encounter();
 			
 			Date encounterDate = getEncounterDate(pv1);
-			Person provider = getProvider(pv1);
+			Provider provider = getProvider(pv1);
 			Location location = getLocation(pv1);
 			Form form = getForm(msh);
 			EncounterType encounterType = getEncounterType(msh, form);
@@ -544,7 +554,10 @@ public class ORUR01Handler implements Application {
 			//			Date dateEntered = getDateEntered(orc); // ignore this since we have no place in the data model to store it
 			
 			encounter.setEncounterDatetime(encounterDate);
-			encounter.setProvider(provider);
+			if (unknownRole == null)
+				unknownRole = Context.getEncounterService()
+				        .getEncounterRoleByUuid(EncounterRole.UNKNOWN_ENCOUNTER_ROLE_UUID);
+			encounter.setProvider(unknownRole, provider);
 			encounter.setPatient(patient);
 			encounter.setLocation(location);
 			encounter.setForm(form);
@@ -568,7 +581,7 @@ public class ORUR01Handler implements Application {
 	 * @throws ProposingConceptException if the answer to this obs is a proposed concept
 	 * @should add comments to an observation from NTE segments
 	 * @should add multiple comments for an observation as one comment
-	 * @should add comments to an observation group 
+	 * @should add comments to an observation group
 	 */
 	private Obs parseObs(Encounter encounter, OBX obx, OBR obr, String uid) throws HL7Exception, ProposingConceptException {
 		if (log.isDebugEnabled())
@@ -644,7 +657,7 @@ public class ORUR01Handler implements Application {
 					Collection<ConceptAnswer> conceptAnswers = concept.getAnswers();
 					if (conceptAnswers != null && conceptAnswers.size() > 0) {
 						for (ConceptAnswer conceptAnswer : conceptAnswers) {
-							if (conceptAnswer.getAnswerConcept().equals(answer)) {
+							if (conceptAnswer.getAnswerConcept().getId().equals(answer.getId())) {
 								obs.setValueCoded(answer);
 								isValidAnswer = true;
 								break;
@@ -891,7 +904,7 @@ public class ORUR01Handler implements Application {
 	 * @should return a mapped Concept if given a valid mapping
 	 */
 	protected Concept getConcept(String hl7ConceptId, String codingSystem, String uid) throws HL7Exception {
-		if (HL7Constants.HL7_LOCAL_CONCEPT.equals(codingSystem)) {
+		if (codingSystem == null || HL7Constants.HL7_LOCAL_CONCEPT.equals(codingSystem)) {
 			// the concept is local
 			try {
 				Integer conceptId = new Integer(hl7ConceptId);
@@ -966,12 +979,53 @@ public class ORUR01Handler implements Application {
 		return tsToDate(pv1.getAdmitDateTime());
 	}
 	
-	private Person getProvider(PV1 pv1) throws HL7Exception {
+	private Provider getProvider(PV1 pv1) throws HL7Exception {
 		XCN hl7Provider = pv1.getAttendingDoctor(0);
-		Integer providerId = Context.getHL7Service().resolvePersonId(hl7Provider);
-		if (providerId == null)
-			throw new HL7Exception("Could not resolve provider");
-		Person provider = new Person(providerId);
+		Provider provider = null;
+		String id = hl7Provider.getIDNumber().getValue();
+		String assignAuth = hl7Provider.getAssigningAuthority().getUniversalID().getValue();
+		String type = hl7Provider.getAssigningAuthority().getUniversalIDType().getValue();
+		String errorMessage = "";
+		if (StringUtils.hasText(id)) {
+			String specificErrorMsg = "";
+			if (OpenmrsUtil.nullSafeEquals("L", type)) {
+				if (HL7Constants.PROVIDER_ASSIGNING_AUTH_PROV_ID.equalsIgnoreCase(assignAuth)) {
+					try {
+						provider = Context.getProviderService().getProvider(Integer.valueOf(id));
+					}
+					catch (NumberFormatException e) {
+						// ignore
+					}
+					specificErrorMsg = "with provider Id";
+				} else if (HL7Constants.PROVIDER_ASSIGNING_AUTH_IDENTIFIER.equalsIgnoreCase(assignAuth)) {
+					provider = Context.getProviderService().getProviderByIdentifier(id);
+					specificErrorMsg = "with provider identifier";
+				} else if (HL7Constants.PROVIDER_ASSIGNING_AUTH_PROV_UUID.equalsIgnoreCase(assignAuth)) {
+					provider = Context.getProviderService().getProviderByUuid(id);
+					specificErrorMsg = "with provider uuid";
+				}
+			} else {
+				try {
+					Person person = Context.getPersonService().getPerson(Integer.valueOf(id));
+					Collection<Provider> providers = Context.getProviderService().getProvidersByPerson(person);
+					if (!providers.isEmpty())
+						provider = providers.iterator().next();
+				}
+				catch (NumberFormatException e) {
+					// ignore
+				}
+				specificErrorMsg = "associated to a person with person id";
+			}
+			
+			errorMessage = "Could not resolve provider " + specificErrorMsg + ":" + id;
+		} else {
+			errorMessage = "No unique identifier was found for the provider";
+		}
+		
+		if (provider == null) {
+			throw new HL7Exception(errorMessage);
+		}
+		
 		return provider;
 	}
 	
@@ -1142,5 +1196,4 @@ public class ORUR01Handler implements Application {
 		}
 		log.debug("finished discharge to location method");
 	}
-	
 }

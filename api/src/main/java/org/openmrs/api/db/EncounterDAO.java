@@ -20,11 +20,14 @@ import java.util.Map;
 
 import org.openmrs.Cohort;
 import org.openmrs.Encounter;
+import org.openmrs.EncounterRole;
 import org.openmrs.EncounterType;
 import org.openmrs.Form;
 import org.openmrs.Location;
 import org.openmrs.Patient;
-import org.openmrs.User;
+import org.openmrs.Provider;
+import org.openmrs.Visit;
+import org.openmrs.VisitType;
 import org.openmrs.api.EncounterService;
 
 /**
@@ -66,11 +69,12 @@ public interface EncounterDAO {
 	/**
 	 * @see org.openmrs.api.EncounterService#getEncounters(org.openmrs.Patient,
 	 *      org.openmrs.Location, java.util.Date, java.util.Date, java.util.Collection,
-	 *      java.util.Collection, java.util.Collection, boolean)
+	 *      java.util.Collection, java.util.Collection, java.util.Collection, java.util.Collection,
+	 *      boolean)
 	 */
 	public List<Encounter> getEncounters(Patient patient, Location location, Date fromDate, Date toDate,
-	                                     Collection<Form> enteredViaForms, Collection<EncounterType> encounterTypes,
-	                                     Collection<User> providers, boolean includeVoided);
+	        Collection<Form> enteredViaForms, Collection<EncounterType> encounterTypes, Collection<Provider> providers,
+	        Collection<VisitType> visitTypes, Collection<Visit> visits, boolean includeVoided);
 	
 	/**
 	 * Save an Encounter Type
@@ -183,5 +187,68 @@ public interface EncounterDAO {
 	 * @return the number of encounters matching the given search phrase
 	 * @see {@link EncounterService#getCountOfEncounters(String, boolean)}
 	 */
-	public Integer getCountOfEncounters(String query, boolean includeVoided);
+	public Long getCountOfEncounters(String query, boolean includeVoided);
+	
+	/**
+	 * @see EncounterService#getEncountersByVisit(Visit, boolean)
+	 */
+	public List<Encounter> getEncountersByVisit(Visit visit, boolean includeVoided);
+	
+	/**
+	 * Saves an encounter role
+	 * 
+	 * @param encounter role to be saved
+	 * @throws org.openmrs.api.db.DAOException
+	 */
+	public EncounterRole saveEncounterRole(EncounterRole encounterRole) throws DAOException;
+	
+	/**
+	 * Purge an encounter role from database.
+	 * 
+	 * @param encounterRole encounter role object to be purged
+	 */
+	public void deleteEncounterRole(EncounterRole encounterRole) throws DAOException;
+	
+	/**
+	 * Get encounter role by internal identifier
+	 * 
+	 * @param encounterRoleId encounter role id
+	 * @return encounter role with given internal identifier
+	 * @throws org.openmrs.api.db.DAOException
+	 */
+	public EncounterRole getEncounterRole(Integer encounterRoleId) throws DAOException;
+	
+	/**
+	 * Find {@link org.openmrs.EncounterRole} matching a uuid
+	 * 
+	 * @param uuid
+	 * @return {@link org.openmrs.EncounterRole}
+	 */
+	public EncounterRole getEncounterRoleByUuid(String uuid);
+	
+	/**
+	 * Get all enconter roles and optionally specify whehter to include retired encontered roles
+	 * 
+	 * @param includeRetired include retired
+	 * @return enconter roles
+	 * @throws org.openmrs.api.db.DAOException
+	 * @see org.openmrs.api.EncounterRoleService#getAllEncounterRoles(boolan includeRetired)
+	 */
+	public List<EncounterRole> getAllEncounterRoles(boolean includeRetired) throws DAOException;
+	
+	/**
+	 * @see EncounterService#getEncountersNotAssignedToAnyVisit(Patient)
+	 */
+	public List<Encounter> getEncountersNotAssignedToAnyVisit(Patient patient) throws DAOException;
+	
+	/**
+	 * @see EncounterService#getEncountersByVisitsAndPatient(Patient, boolean, String, Date, Date)
+	 */
+	List<Encounter> getEncountersByVisitsAndPatient(Patient patient, boolean includeVoided, String query, Integer start,
+	        Integer length);
+	
+	/**
+	 * @see EncounterService#getEncountersByVisitsAndPatientCount(Patient, boolean, String)
+	 */
+	Integer getEncountersByVisitsAndPatientCount(Patient patient, boolean includeVoided, String query);
 }

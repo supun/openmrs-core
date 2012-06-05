@@ -19,12 +19,13 @@ import java.util.Set;
 import junit.framework.Assert;
 
 import org.junit.Test;
+import org.openmrs.test.BaseContextSensitiveTest;
 import org.openmrs.test.Verifies;
 
 /**
  * Tests methods on the ConceptWord object
  */
-public class ConceptWordTest {
+public class ConceptWordTest extends BaseContextSensitiveTest {
 	
 	/**
 	 * @see ConceptWord#makeConceptWords(Concept)
@@ -32,7 +33,7 @@ public class ConceptWordTest {
 	@Test
 	@Verifies(value = "should return separate ConceptWord objects for the same word in different ConceptNames", method = "makeConceptWords(Concept)")
 	public void makeConceptWords_shouldReturnSeparateConceptWordObjectsForTheSameWordInDifferentConceptNames()
-	                                                                                                          throws Exception {
+	        throws Exception {
 		Concept concept = new Concept(1);
 		concept.addName(new ConceptName("name number one", Locale.ENGLISH));
 		concept.addName(new ConceptName("name number two", Locale.ENGLISH));

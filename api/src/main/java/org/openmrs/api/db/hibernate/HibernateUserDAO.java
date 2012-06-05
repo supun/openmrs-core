@@ -41,6 +41,7 @@ import org.openmrs.api.db.DAOException;
 import org.openmrs.api.db.LoginCredential;
 import org.openmrs.api.db.UserDAO;
 import org.openmrs.patient.impl.LuhnIdentifierValidator;
+import org.openmrs.util.OpenmrsConstants;
 import org.openmrs.util.Security;
 import org.openmrs.util.UserByNameComparator;
 
@@ -97,7 +98,7 @@ public class HibernateUserDAO implements UserDAO {
 	@SuppressWarnings("unchecked")
 	public User getUserByUsername(String username) {
 		Query query = sessionFactory.getCurrentSession().createQuery(
-		    "from User u where u.retired = 0 and (u.username = ? or u.systemId = ?)");
+		    "from User u where u.retired = '0' and (u.username = ? or u.systemId = ?)");
 		query.setString(0, username);
 		query.setString(1, username);
 		List<User> users = query.list();
@@ -276,7 +277,7 @@ public class HibernateUserDAO implements UserDAO {
 	 * @param userId2
 	 */
 	private void updateUserPassword(String newHashedPassword, String salt, Integer changedBy, Date dateChanged,
-	                                Integer userIdToChange) {
+	        Integer userIdToChange) {
 		User changeForUser = getUser(userIdToChange);
 		if (changeForUser == null)
 			throw new DAOException("Couldn't find user to set password for userId=" + userIdToChange);
@@ -290,6 +291,11 @@ public class HibernateUserDAO implements UserDAO {
 		credentials.setUuid(changeForUser.getUuid());
 		
 		sessionFactory.getCurrentSession().merge(credentials);
+		
+		// reset lockout 
+		changeForUser.setUserProperty(OpenmrsConstants.USER_PROPERTY_LOCKOUT_TIMESTAMP, "");
+		changeForUser.setUserProperty(OpenmrsConstants.USER_PROPERTY_LOGIN_ATTEMPTS, "0");
+		saveUser(changeForUser, null);
 	}
 	
 	/**
@@ -409,12 +415,15 @@ public class HibernateUserDAO implements UserDAO {
 	@SuppressWarnings("unchecked")
 	public List<User> getUsersByName(String givenName, String familyName, boolean includeRetired) {
 		List<User> users = new Vector<User>();
-		String query = "from User u where u.names.givenName = :givenName and u.names.familyName = :familyName";
+		Criteria crit = sessionFactory.getCurrentSession().createCriteria(User.class);
+		crit.createAlias("person", "person");
+		crit.createAlias("person.names", "names");
+		crit.add(Expression.eq("names.givenName", givenName));
+		crit.add(Expression.eq("names.familyName", familyName));
+		crit.setResultTransformer(Criteria.DISTINCT_ROOT_ENTITY);
 		if (!includeRetired)
-			query += " and u.retired = false";
-		Query q = sessionFactory.getCurrentSession().createQuery(query).setString("givenName", givenName).setString(
-		    "familyName", familyName);
-		for (User u : (List<User>) q.list()) {
+			crit.add(Expression.eq("retired", false));
+		for (User u : (List<User>) crit.list()) {
 			users.add(u);
 		}
 		return users;

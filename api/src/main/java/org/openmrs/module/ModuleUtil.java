@@ -342,7 +342,8 @@ public class ModuleUtil {
 	 *         numerically less than the argument <code>value</code>; and a value greater than
 	 *         <code>0</code> if <code>version</code> is numerically greater than the argument
 	 *         <code>value</code>
-	 * @should correctly comparing two version number
+	 * @should correctly comparing two version numbers
+	 * @should treat SNAPSHOT as earliest version
 	 */
 	public static int compareVersion(String version, String value) {
 		try {
@@ -351,6 +352,10 @@ public class ModuleUtil {
 			
 			List<String> versions = new Vector<String>();
 			List<String> values = new Vector<String>();
+			
+			// treat "-SNAPSHOT" as the lowest possible version
+			// e.g. 1.8.4-SNAPSHOT is really 1.8.4.0 
+			version = version.replace("-SNAPSHOT", ".0");
 			
 			Collections.addAll(versions, version.split("\\."));
 			Collections.addAll(values, value.split("\\."));
@@ -590,7 +595,7 @@ public class ModuleUtil {
 			if (c instanceof HttpURLConnection) {
 				HttpURLConnection http = (HttpURLConnection) c;
 				int stat = http.getResponseCode();
-				if (stat >= 300 && stat <= 307 && stat != 306 && stat != HttpURLConnection.HTTP_NOT_MODIFIED) {
+				if (stat == 300 || stat == 301 || stat == 302 || stat == 303 || stat == 305 || stat == 307) {
 					URL base = http.getURL();
 					String loc = http.getHeaderField("Location");
 					URL target = null;
@@ -741,8 +746,7 @@ public class ModuleUtil {
 	 * @return AbstractRefreshableApplicationContext The newly refreshed application context.
 	 */
 	public static AbstractRefreshableApplicationContext refreshApplicationContext(AbstractRefreshableApplicationContext ctx,
-	                                                                              boolean isOpenmrsStartup,
-	                                                                              Module startedModule) {
+	        boolean isOpenmrsStartup, Module startedModule) {
 		//notify all started modules that we are about to refresh the context
 		for (Module module : ModuleFactory.getStartedModules()) {
 			try {
@@ -963,8 +967,8 @@ public class ModuleUtil {
 	}
 	
 	/**
-	 * This loops over all FILES in this jar to get the package names.  If there is an
-	 * empty directory in this jar it is not returned as a providedPackage. 
+	 * This loops over all FILES in this jar to get the package names. If there is an empty
+	 * directory in this jar it is not returned as a providedPackage.
 	 * 
 	 * @param file jar file to look into
 	 * @return list of strings of package names in this jar

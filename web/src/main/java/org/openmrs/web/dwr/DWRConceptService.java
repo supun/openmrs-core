@@ -13,11 +13,14 @@
  */
 package org.openmrs.web.dwr;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.Vector;
 
 import org.apache.commons.lang.StringUtils;
@@ -30,8 +33,10 @@ import org.openmrs.ConceptDatatype;
 import org.openmrs.ConceptDescription;
 import org.openmrs.ConceptName;
 import org.openmrs.ConceptNumeric;
+import org.openmrs.ConceptReferenceTerm;
 import org.openmrs.ConceptSearchResult;
 import org.openmrs.ConceptSet;
+import org.openmrs.ConceptSource;
 import org.openmrs.Drug;
 import org.openmrs.Field;
 import org.openmrs.User;
@@ -40,8 +45,13 @@ import org.openmrs.api.ConceptService;
 import org.openmrs.api.ConceptsLockedException;
 import org.openmrs.api.FormService;
 import org.openmrs.api.context.Context;
+import org.openmrs.messagesource.MessageSourceService;
 import org.openmrs.util.OpenmrsConstants;
 import org.openmrs.util.OpenmrsUtil;
+import org.openmrs.validator.ConceptReferenceTermValidator;
+import org.springframework.validation.BindException;
+import org.springframework.validation.Errors;
+import org.springframework.validation.ObjectError;
 
 /**
  * This class exposes some of the methods in org.openmrs.api.ConceptService via the dwr package
@@ -63,8 +73,8 @@ public class DWRConceptService {
 	 * @return a list of conceptListItems matching the given arguments
 	 */
 	public List<Object> findConcepts(String phrase, boolean includeRetired, List<String> includeClassNames,
-	                                 List<String> excludeClassNames, List<String> includeDatatypeNames,
-	                                 List<String> excludeDatatypeNames, boolean includeDrugConcepts) {
+	        List<String> excludeClassNames, List<String> includeDatatypeNames, List<String> excludeDatatypeNames,
+	        boolean includeDrugConcepts) {
 		return findBatchOfConcepts(phrase, includeRetired, includeClassNames, excludeClassNames, includeDatatypeNames,
 		    excludeDatatypeNames, null, null);
 	}
@@ -84,8 +94,8 @@ public class DWRConceptService {
 	 * @since 1.8
 	 */
 	public List<Object> findBatchOfConcepts(String phrase, boolean includeRetired, List<String> includeClassNames,
-	                                        List<String> excludeClassNames, List<String> includeDatatypeNames,
-	                                        List<String> excludeDatatypeNames, Integer start, Integer length) {
+	        List<String> excludeClassNames, List<String> includeDatatypeNames, List<String> excludeDatatypeNames,
+	        Integer start, Integer length) {
 		//TODO factor out the reusable code in this and findCountAndConcepts methods to a single utility method
 		// List to return
 		// Object type gives ability to return error strings
@@ -256,9 +266,10 @@ public class DWRConceptService {
 	 * @return list of {@link ConceptListItem} or {@link ConceptDrugListItem} answers that match the
 	 *         query
 	 * @throws Exception if given conceptId is not found
+	 * @should not fail if the specified concept has no answers (regression test for TRUNK-2807)
 	 */
 	public List<Object> findConceptAnswers(String text, Integer conceptId, boolean includeVoided, boolean includeDrugConcepts)
-	                                                                                                                          throws Exception {
+	        throws Exception {
 		
 		if (includeVoided == true)
 			throw new APIException("You should not include voideds in the search.");
@@ -274,7 +285,7 @@ public class DWRConceptService {
 		List<ConceptSearchResult> searchResults = cs.findConceptAnswers(text, locale, concept);
 		
 		List<Drug> drugAnswers = new Vector<Drug>();
-		for (ConceptAnswer conceptAnswer : concept.getAnswers()) {
+		for (ConceptAnswer conceptAnswer : concept.getAnswers(false)) {
 			if (conceptAnswer.getAnswerDrug() != null)
 				drugAnswers.add(conceptAnswer.getAnswerDrug());
 		}
@@ -310,11 +321,16 @@ public class DWRConceptService {
 				Field field = null;
 				ConceptName cn = set.getConcept().getName(locale);
 				ConceptDescription description = set.getConcept().getDescription(locale);
-				for (Field f : fs.getFieldsByConcept(set.getConcept())) {
-					if (f.getName().equals(cn.getName()) && f.getDescription().equals(description.getDescription())
-					        && f.isSelectMultiple().equals(false))
-						field = f;
+				if (description != null) {
+					for (Field f : fs.getFieldsByConcept(set.getConcept())) {
+						if (OpenmrsUtil.nullSafeEquals(f.getName(), cn.getName())
+						        && OpenmrsUtil.nullSafeEquals(f.getDescription(), description.getDescription())
+						        && f.isSelectMultiple().equals(false)) {
+							field = f;
+						}
+					}
 				}
+				
 				if (field == null)
 					returnList.add(new ConceptListItem(set.getConcept(), cn, locale));
 				else
@@ -368,7 +384,7 @@ public class DWRConceptService {
 		}
 		
 		// find drugs for this concept
-		List<Drug> drugs = null;
+		List<Drug> drugs = cs.getDrugsByConcept(concept);
 		
 		// if there are drugs to choose from, add some instructions
 		if (drugs.size() > 0 && showConcept == true)
@@ -391,8 +407,23 @@ public class DWRConceptService {
 		List<Object> items = new Vector<Object>();
 		
 		// find drugs for this concept
-		List<Drug> drugs = cs.getDrugs(phrase);
-		
+		Set<Drug> drugs = new HashSet<Drug>();
+       
+        // trying to treat search phrase as drug concept id
+        try {
+                Integer conceptId = Integer.parseInt(phrase);
+                Concept targetConcept = cs.getConcept(conceptId);
+                if (targetConcept != null) {
+                        drugs.addAll(cs.getDrugsByConcept(targetConcept));
+                }
+        } catch (NumberFormatException e) {
+                // do nothing
+        }
+        
+        // also find drugs by given phrase, assuming that 
+        // this phrase is a list of concept words
+        drugs.addAll(cs.getDrugs(phrase));
+        		
 		// miniaturize our drug objects
 		for (Drug drug : drugs) {
 			items.add(new ConceptDrugListItem(drug, locale));
@@ -416,7 +447,7 @@ public class DWRConceptService {
 	public List<ConceptListItem> getAnswersForQuestion(Integer conceptId) {
 		Vector<ConceptListItem> ret = new Vector<ConceptListItem>();
 		Concept c = Context.getConceptService().getConcept(conceptId);
-		Collection<ConceptAnswer> answers = c.getAnswers();
+		Collection<ConceptAnswer> answers = c.getAnswers(false);
 		// TODO: deal with concept answers (e.g. drug) whose answer concept is null. (Not sure if this actually ever happens)
 		Locale locale = Context.getLocale();
 		for (ConceptAnswer ca : answers)
@@ -472,9 +503,8 @@ public class DWRConceptService {
 	 * @since 1.8
 	 */
 	public Map<String, Object> findCountAndConcepts(String phrase, boolean includeRetired, List<String> includeClassNames,
-	                                                List<String> excludeClassNames, List<String> includeDatatypeNames,
-	                                                List<String> excludeDatatypeNames, Integer start, Integer length,
-	                                                boolean getMatchCount) throws APIException {
+	        List<String> excludeClassNames, List<String> includeDatatypeNames, List<String> excludeDatatypeNames,
+	        Integer start, Integer length, boolean getMatchCount) throws APIException {
 		//Map to return
 		Map<String, Object> resultsMap = new HashMap<String, Object>();
 		Vector<Object> objectList = new Vector<Object>();
@@ -591,5 +621,147 @@ public class DWRConceptService {
 		}
 		
 		return resultsMap;
+	}
+	
+	/**
+	 * Get a {@link ConceptReferenceTerm} by its internal database id.
+	 * 
+	 * @param conceptReferenceTermId the id to look for
+	 * @return a {@link ConceptReferenceTermListItem} or null if conceptReferenceTermId is not found
+	 */
+	public ConceptReferenceTermListItem getConceptReferenceTerm(Integer conceptReferenceTermId) {
+		ConceptReferenceTerm term = Context.getConceptService().getConceptReferenceTerm(conceptReferenceTermId);
+		if (term == null)
+			return null;
+		
+		return new ConceptReferenceTermListItem(term);
+	}
+	
+	/**
+	 * Gets a list of conceptListItems matching the given arguments
+	 * 
+	 * @param phrase the string to search against
+	 * @param sourceId the id of concept source where to look up reference terms
+	 * @param start the beginning index
+	 * @param length the number of matching concept reference terms to return
+	 * @param includeRetired Specifies if retired concept reference terms should be included or not
+	 * @return a {@link List} of {@link ConceptReferenceTermListItem}
+	 */
+	public List<Object> findBatchOfConceptReferenceTerms(String phrase, Integer sourceId, Integer start, Integer length,
+	        boolean includeRetired) {
+		Vector<Object> objectList = new Vector<Object>();
+		MessageSourceService mss = Context.getMessageSourceService();
+		try {
+			ConceptService cs = Context.getConceptService();
+			List<ConceptReferenceTerm> terms = new Vector<ConceptReferenceTerm>();
+			
+			if (StringUtils.isEmpty(phrase)) {
+				objectList.add(mss.getMessage("searchWidget.searchPhraseCannotBeNull"));
+				return objectList;
+			}
+			ConceptSource source = null;
+			if (sourceId != null)
+				source = cs.getConceptSource(sourceId);
+			terms.addAll(cs.getConceptReferenceTerms(phrase, source, start, length, includeRetired));
+			
+			if (terms.size() == 0) {
+				objectList.add(mss.getMessage("general.noMatchesFound", new Object[] { "'" + phrase + "'" }, Context
+				        .getLocale()));
+			} else {
+				objectList = new Vector<Object>(terms.size());
+				for (ConceptReferenceTerm term : terms) {
+					objectList.add(new ConceptReferenceTermListItem(term));
+				}
+			}
+		}
+		catch (Exception e) {
+			log.error("Error while searching for concept reference terms", e);
+			objectList.add(mss.getMessage("ConceptReferenceTerm.search.error") + " - " + e.getMessage());
+		}
+		
+		return objectList;
+	}
+	
+	/**
+	 * @param phrase query the string to match against the reference term names
+	 * @param sourceId the id for the concept source from which the terms should be looked up
+	 * @param includeRetired specifies if the retired terms should be included
+	 * @param start beginning index for the batch
+	 * @param length number of terms to return in the batch
+	 * @param getMatchCount Specifies if the count of matches should be included in the returned map
+	 * @return
+	 * @throws APIException
+	 */
+	public Map<String, Object> findCountAndConceptReferenceTerms(String phrase, Integer sourceId, Integer start,
+	        Integer length, boolean includeRetired, boolean getMatchCount) throws APIException {
+		//Map to return
+		Map<String, Object> resultsMap = new HashMap<String, Object>();
+		List<Object> objectList = new Vector<Object>();
+		try {
+			ConceptService cs = Context.getConceptService();
+			int conceptReferenceTermCount = 0;
+			if (getMatchCount) {
+				ConceptSource source = null;
+				if (sourceId != null)
+					source = cs.getConceptSource(sourceId);
+				conceptReferenceTermCount += cs.getCountOfConceptReferenceTerms(phrase, source, includeRetired);
+			}
+			//If we have any matches, load them or if this is not the first ajax call
+			//for displaying the results on the first page, the getMatchCount is expected to be zero
+			if (conceptReferenceTermCount > 0 || !getMatchCount)
+				objectList = findBatchOfConceptReferenceTerms(phrase, sourceId, start, length, includeRetired);
+			
+			resultsMap.put("count", conceptReferenceTermCount);
+			resultsMap.put("objectList", objectList);
+		}
+		catch (Exception e) {
+			log.error("Error while searching for conceptReferenceTerms", e);
+			objectList.clear();
+			objectList.add(Context.getMessageSourceService().getMessage("ConceptReferenceTerm.search.error") + " - "
+			        + e.getMessage());
+			resultsMap.put("count", 0);
+			resultsMap.put("objectList", objectList);
+		}
+		return resultsMap;
+	}
+	
+	/**
+	 * Process calls to create new reference terms
+	 * 
+	 * @param code the unique code for the reference term
+	 * @param conceptSourceId the concept source for the term
+	 * @param name the unique name for the reference term
+	 * @return a list of error messages
+	 */
+	public List<String> createConceptReferenceTerm(String code, Integer conceptSourceId, String name) {
+		List<String> errors = new ArrayList<String>();
+		MessageSourceService mss = Context.getMessageSourceService();
+		ConceptService cs = Context.getConceptService();
+		
+		ConceptSource source = null;
+		if (conceptSourceId != null)
+			source = cs.getConceptSource(conceptSourceId);
+		
+		ConceptReferenceTerm term = new ConceptReferenceTerm();
+		term.setCode(code);
+		term.setName(name);
+		term.setConceptSource(source);
+		
+		Errors bindErrors = new BindException(term, "term");
+		new ConceptReferenceTermValidator().validate(term, bindErrors);
+		if (bindErrors.hasErrors()) {
+			for (ObjectError objectError : bindErrors.getAllErrors())
+				errors.add(mss.getMessage(objectError.getCode()));
+		} else {
+			try {
+				cs.saveConceptReferenceTerm(term);
+				return null;//indicates that the term was saved successfully
+			}
+			catch (APIException e) {
+				errors.add(mss.getMessage("ConceptReferenceTerm.save.error"));
+			}
+		}
+		
+		return errors;
 	}
 }

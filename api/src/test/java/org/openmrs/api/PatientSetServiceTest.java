@@ -256,7 +256,7 @@ public class PatientSetServiceTest extends BaseContextSensitiveTest {
 			obs.setPerson(new Person(8));
 			obs.setConcept(Context.getConceptService().getConcept(18));
 			obs.setObsDatetime(ymd.parse("2007-01-01"));
-			obs.setValueNumeric(1.0);
+			obs.setValueBoolean(true);
 			obs.setLocation(new Location(1));
 			Context.getObsService().saveObs(obs, null);
 		}
@@ -265,7 +265,7 @@ public class PatientSetServiceTest extends BaseContextSensitiveTest {
 			obs.setPerson(new Person(8));
 			obs.setConcept(Context.getConceptService().getConcept(18));
 			obs.setObsDatetime(ymd.parse("2008-01-01"));
-			obs.setValueNumeric(0.0);
+			obs.setValueBoolean(false);
 			obs.setLocation(new Location(1));
 			Context.getObsService().saveObs(obs, null);
 		}
@@ -323,7 +323,7 @@ public class PatientSetServiceTest extends BaseContextSensitiveTest {
 	@Test
 	@Verifies(value = "should get all patients with encounters when passed an empty encounterTypeList", method = "getPatientsHavingEncounters(List<EncounterType>,Location,Form,Date,Date,Integer,Integer)")
 	public void getPatientsHavingEncounters_shouldGetAllPatientsWithEncountersWhenPassedAnEmptyEncounterTypeList()
-	                                                                                                              throws Exception {
+	        throws Exception {
 		Cohort c = Context.getPatientSetService().getPatientsHavingEncounters(new ArrayList<EncounterType>(), null, null,
 		    null, null, null, null);
 		Assert.assertEquals(1, c.size());

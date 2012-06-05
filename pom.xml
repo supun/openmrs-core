@@ -3,7 +3,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>org.openmrs</groupId>
 	<artifactId>openmrs</artifactId>
-	<version>1.8.2</version>
+	<version>1.9.0</version>
 	<packaging>pom</packaging>
 	<name>OpenMRS</name>
 	<description>Master project for the modules of OpenMRS</description>
@@ -27,9 +27,9 @@
 	</organization>
 
 	<scm>
-		<connection>scm:svn:http://svn.openmrs.org/openmrs/tags/1.8.2</connection>
-		<developerConnection>scm:svn:http://svn.openmrs.org/openmrs/tags/1.8.2</developerConnection>
-		<url>http://svn.openmrs.org/openmrs/tags/1.8.2</url>
+		<connection>scm:svn:http://svn.openmrs.org/openmrs/tags/1.9.0</connection>
+		<developerConnection>scm:svn:http://svn.openmrs.org/openmrs/tags/1.9.0</developerConnection>
+		<url>http://svn.openmrs.org/openmrs/tags/1.9.0</url>
 	</scm>
 
 	<modules>
@@ -104,6 +104,11 @@
 				<groupId>commons-io</groupId>
 				<artifactId>commons-io</artifactId>
 				<version>1.4</version>
+			</dependency>
+			<dependency>
+				<groupId>org.apache.commons</groupId>
+				<artifactId>commons-lang3</artifactId>
+				<version>3.1</version>
 			</dependency>
 
 			<dependency>
@@ -226,7 +231,7 @@
 			<dependency>
 				<groupId>org.antlr</groupId>
 				<artifactId>antlr-runtime</artifactId>
-				<version>3.2</version>
+				<version>3.4</version>
 			</dependency>
 			<dependency>
 				<groupId>asm</groupId>
@@ -248,11 +253,15 @@
 				<artifactId>cglib-nodep</artifactId>
 				<version>2.2</version>
 			</dependency>
-
+			<dependency>
+				<groupId>javassist</groupId>
+				<artifactId>javassist</artifactId>
+				<version>3.12.1.GA</version>
+			</dependency>
 			<dependency>
 				<groupId>org.openmrs.hibernate</groupId>
-				<artifactId>hibernate</artifactId>
-				<version>3.2.5.ga-mod</version>
+				<artifactId>hibernate-core</artifactId>
+				<version>3.6.5.Final-mod</version>
 				<exclusions>
 					<exclusion>
 						<groupId>asm</groupId>
@@ -277,9 +286,83 @@
 				</exclusions>
 			</dependency>
 			<dependency>
-				<groupId>org.openmrs.liquibase</groupId>
+				<groupId>org.hibernate</groupId>
+				<artifactId>hibernate-search-analyzers</artifactId>
+				<version>3.4.0.Final</version>
+			</dependency>
+			<dependency>
+				<groupId>org.hibernate</groupId>
+				<artifactId>hibernate-c3p0</artifactId>
+				<version>3.6.0.Final</version>
+				<exclusions>
+					<exclusion>
+						<groupId>commons-logging</groupId>
+						<artifactId>commons-logging</artifactId>
+					</exclusion>
+					<exclusion>
+						<groupId>asm</groupId>
+						<artifactId>asm-attrs</artifactId>
+					</exclusion>
+					<exclusion>
+						<groupId>net.sf.ehcache</groupId>
+						<artifactId>ehcache</artifactId>
+					</exclusion>
+					<exclusion>
+						<groupId>cglib</groupId>
+						<artifactId>cglib</artifactId>
+					</exclusion>
+				</exclusions>
+			</dependency>
+			<dependency> 
+				<groupId>org.hibernate</groupId>
+				<artifactId>hibernate-ehcache</artifactId>
+				<version>3.6.0.Final</version>
+				<exclusions>
+					<exclusion>
+						<groupId>commons-logging</groupId>
+						<artifactId>commons-logging</artifactId>
+					</exclusion>
+					<exclusion>
+						<groupId>asm</groupId>
+						<artifactId>asm-attrs</artifactId>
+					</exclusion>
+					<exclusion>
+						<groupId>net.sf.ehcache</groupId>
+						<artifactId>ehcache</artifactId>
+					</exclusion>
+					<exclusion>
+						<groupId>cglib</groupId>
+						<artifactId>cglib</artifactId>
+					</exclusion>
+				</exclusions>
+			</dependency>
+			<dependency>
+				<groupId>org.hibernate</groupId>
+				<artifactId>hibernate-search</artifactId>
+				<version>3.4.0.Final</version>
+				<exclusions>
+					<exclusion>
+						<groupId>commons-logging</groupId>
+						<artifactId>commons-logging</artifactId>
+					</exclusion>
+					<exclusion>
+						<groupId>asm</groupId>
+						<artifactId>asm-attrs</artifactId>
+					</exclusion>
+					<exclusion>
+						<groupId>net.sf.ehcache</groupId>
+						<artifactId>ehcache</artifactId>
+					</exclusion>
+					<exclusion>
+						<groupId>cglib</groupId>
+						<artifactId>cglib</artifactId>
+					</exclusion>
+				</exclusions>
+			</dependency>
+			<dependency>
+				<groupId>org.liquibase</groupId>
 				<artifactId>liquibase-core</artifactId>
-				<version>1.9.4-mod</version>
+				<version>2.0.1</version>
 			</dependency>
 
 			<dependency>
@@ -304,17 +387,17 @@
 			<dependency>
 				<groupId>org.slf4j</groupId>
 				<artifactId>slf4j-api</artifactId>
-				<version>1.5.6</version>
+				<version>1.6.0</version>
 			</dependency>
 			<dependency>
 				<groupId>org.slf4j</groupId>
 				<artifactId>jcl-over-slf4j</artifactId>
-				<version>1.5.6</version>
+				<version>1.6.0</version>
 			</dependency>
 			<dependency>
 				<groupId>org.slf4j</groupId>
 				<artifactId>slf4j-log4j12</artifactId>
-				<version>1.5.6</version>
+				<version>1.6.0</version>
 				<scope>runtime</scope>
 			</dependency>
 
@@ -436,6 +519,18 @@
 				<scope>runtime</scope>
 			</dependency>
 			<dependency>
+				<groupId>postgresql</groupId>
+				<artifactId>postgresql</artifactId>
+				<version>9.0-801.jdbc4</version>
+				<scope>runtime</scope>
+			</dependency>
+			<dependency>
+				<groupId>net.sourceforge.jtds</groupId>
+				<artifactId>jtds</artifactId>
+				<version>1.2.4</version>
+				<scope>runtime</scope>
+			</dependency>
+			<dependency>
 				<groupId>org.codehaus.jackson</groupId>
 				<artifactId>jackson-core-asl</artifactId>
 				<version>1.5.0</version>
@@ -465,6 +560,21 @@
 				<groupId>junit</groupId>
 				<artifactId>junit</artifactId>
 				<version>4.8.1</version>
+			</dependency>
+			<dependency>
+				<groupId>org.mockito</groupId>
+				<artifactId>mockito-all</artifactId>
+				<version>1.8.5</version>
+			</dependency>
+			<dependency>
+				<groupId>org.powermock</groupId>
+				<artifactId>powermock-module-junit4</artifactId>
+				<version>1.4.10</version>
+			</dependency>
+			<dependency>
+				<groupId>org.powermock</groupId>
+				<artifactId>powermock-api-mockito</artifactId>
+				<version>1.4.10</version>
 			</dependency>
 			<dependency>
 				<groupId>org.databene</groupId>
@@ -506,13 +616,12 @@
 				<plugin>
 					<groupId>org.apache.maven.plugins</groupId>
 					<artifactId>maven-resources-plugin</artifactId>
-					<configuration>
-						<encoding>UTF-8</encoding>
-					</configuration>
+					<version>2.4</version>
 				</plugin>
 				<plugin>
 					<groupId>org.apache.maven.plugins</groupId>
 					<artifactId>maven-compiler-plugin</artifactId>
+					<version>2.1</version>
 					<configuration>
 						<target>${javaCompilerVersion}</target>
 						<source>${javaCompilerVersion}</source>
@@ -522,10 +631,13 @@
 				<plugin>
 					<groupId>org.apache.maven.plugins</groupId>
 					<artifactId>maven-jar-plugin</artifactId>
+					<version>2.3.2</version>
 					<configuration>
 						<archive>
 							<manifestEntries>
 								<Build-Timestamp>${TIMESTAMP}</Build-Timestamp>
+								<Specification-Version>${openmrs.version.shortnumericonly}</Specification-Version>
+								<Specification-Vendor>${openmrs.version.long}</Specification-Vendor>
 							</manifestEntries>
 						</archive>
 					</configuration>
@@ -537,21 +649,17 @@
 						</execution>
 					</executions>
 				</plugin>
-				<!-- 
-					Using modified version of plugin with patch applied from issue:
-					http://jira.codehaus.org/browse/MOJO-1539
-					Allows building without svn using revisionOnScmFailure
-				-->
 				<plugin>
-					<groupId>org.openmrs.codehaus.mojo</groupId>
+					<groupId>org.codehaus.mojo</groupId>
 					<artifactId>buildnumber-maven-plugin</artifactId>
-					<version>1.0-beta-4-mod</version>
+					<version>1.0</version>
 					<configuration>
 						<doCheck>false</doCheck>
 						<doUpdate>false</doUpdate>
 						<getRevisionOnlyOnce>true</getRevisionOnlyOnce>
 						<buildNumberPropertyName>revisionNumber</buildNumberPropertyName>
 						<revisionOnScmFailure>0</revisionOnScmFailure>
+						<useLastCommittedRevision>true</useLastCommittedRevision>
 						<providerImplementations>
 							<svn>javasvn</svn>
 						</providerImplementations>
@@ -575,7 +683,7 @@
 				<plugin>
 					<groupId>com.googlecode.maven-java-formatter-plugin</groupId>
 					<artifactId>maven-java-formatter-plugin</artifactId>
-					<version>0.2.0</version>
+					<version>0.3</version>
 					<configuration>
 						<compilerSource>${javaCompilerVersion}</compilerSource>
 						<compilerCompliance>${javaCompilerVersion}</compilerCompliance>
@@ -594,6 +702,24 @@
 				</plugin>
 				<plugin>
 					<groupId>org.apache.maven.plugins</groupId>
+					<artifactId>maven-checkstyle-plugin</artifactId>
+					<version>2.9.1</version>
+					<configuration>
+						<configLocation>checkstyle/openmrs-checkstyle.xml</configLocation>
+						<propertiesLocation>checkstyle/openmrs-checkstyle.properties</propertiesLocation>
+						<headerLocation>checkstyle/license-header.txt</headerLocation>
+						<suppressionsLocation>checkstyle/checkstyle-suppressions.xml</suppressionsLocation>
+					</configuration>
+					<dependencies>
+						<dependency>
+							<groupId>org.openmrs.tools</groupId>
+							<artifactId>openmrs-tools</artifactId>
+							<version>${project.version}</version>
+						</dependency>
+					</dependencies>
+				</plugin>
+				<plugin>
+					<groupId>org.apache.maven.plugins</groupId>
 					<artifactId>maven-release-plugin</artifactId>
 					<version>2.1</version>
 					<configuration>
@@ -601,12 +727,62 @@
 						<autoVersionSubmodules>true</autoVersionSubmodules>
 					</configuration>
 				</plugin>
+				<!--This plugin's configuration is used to store Eclipse m2e settings only. It has no influence on the Maven build itself.-->
+				<plugin>
+					<groupId>org.eclipse.m2e</groupId>
+					<artifactId>lifecycle-mapping</artifactId>
+					<version>1.0.0</version>
+					<configuration>
+						<lifecycleMappingMetadata>
+							<pluginExecutions>
+								<pluginExecution>
+									<pluginExecutionFilter>
+										<groupId>
+											com.googlecode.maven-java-formatter-plugin
+										</groupId>
+										<artifactId>
+											maven-java-formatter-plugin
+										</artifactId>
+										<versionRange>
+											[0.3,)
+										</versionRange>
+										<goals>
+											<goal>format</goal>
+										</goals>
+									</pluginExecutionFilter>
+									<action>
+										<ignore />
+									</action>
+								</pluginExecution>
+								<pluginExecution>
+									<pluginExecutionFilter>
+										<groupId>
+											org.apache.maven.plugins
+										</groupId>
+										<artifactId>
+											maven-antrun-plugin
+										</artifactId>
+										<versionRange>
+											[1.4,)
+										</versionRange>
+										<goals>
+											<goal>run</goal>
+										</goals>
+									</pluginExecutionFilter>
+									<action>
+										<ignore />
+									</action>
+								</pluginExecution>
+							</pluginExecutions>
+						</lifecycleMappingMetadata>
+					</configuration>
+				</plugin>
 			</plugins>
 		</pluginManagement>
 
 		<plugins>
 			<plugin>
-				<groupId>org.openmrs.codehaus.mojo</groupId>
+				<groupId>org.codehaus.mojo</groupId>
 				<artifactId>buildnumber-maven-plugin</artifactId>
 				<executions>
 					<execution>
@@ -656,13 +832,13 @@
 			<version>3.0.5.RELEASE</version>
 		</dependency>
 	</dependencies>
-	
 	<reporting>
 		<plugins>
 			<!-- docfilessubdirs config set to include image resource -->
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-javadoc-plugin</artifactId>
+				<version>2.6.1</version>
 				<configuration>
 					<docfilessubdirs>true</docfilessubdirs>
 					<bottom>&lt;em&gt;&lt;small&gt; Generated ${TIMESTAMP} NOTE - these libraries are in active
@@ -673,7 +849,18 @@
 						border=0/&gt;&lt;/a&gt;</header>
 					<footer>&lt;a href="http://www.openmrs.org"
 						target=_top&gt;${project.name}&lt;/a&gt;</footer>
+					<taglet>org.openmrs.tools.doclet.ShouldTaglet</taglet>
+					<tagletArtifact>
+						<groupId>org.openmrs.tools</groupId>
+						<artifactId>openmrs-tools</artifactId>
+						<version>${project.version}</version>
+					</tagletArtifact>
 				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-jxr-plugin</artifactId>
+				<version>2.3</version>
 			</plugin>
 		</plugins>
 	</reporting>
@@ -711,6 +898,7 @@
 	</distributionManagement>
 
    <properties>
+      <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
       <javaCompilerVersion>1.6</javaCompilerVersion>
       <maven.build.timestamp.format>MMM dd yyyy hh:mm aa</maven.build.timestamp.format>
       <TIMESTAMP>${maven.build.timestamp}</TIMESTAMP>

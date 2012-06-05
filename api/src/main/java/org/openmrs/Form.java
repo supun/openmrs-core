@@ -18,6 +18,10 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import org.openmrs.api.APIException;
+import org.openmrs.api.FormService;
+import org.openmrs.api.context.Context;
+
 /**
  * Form
  * 
@@ -39,10 +43,6 @@ public class Form extends BaseOpenmrsMetadata implements java.io.Serializable {
 	
 	private EncounterType encounterType;
 	
-	private String template;
-	
-	private String xslt;
-	
 	private Set<FormField> formFields;
 	
 	// Constructors
@@ -58,37 +58,6 @@ public class Form extends BaseOpenmrsMetadata implements java.io.Serializable {
 	 */
 	public Form(Integer formId) {
 		this.formId = formId;
-	}
-	
-	/**
-	 * Compares two objects for similarity
-	 * 
-	 * @param obj
-	 * @return boolean true/false whether or not they are the same objects
-	 * @should have equal form objects by form id
-	 * @should not have equal form objects by formId
-	 * @should have equal form objects with no formId
-	 * @should not have equal form objects when one has null formId
-	 */
-	public boolean equals(Object obj) {
-		if (obj instanceof Form) {
-			Form f = (Form) obj;
-			if (this.getFormId() != null && f.getFormId() != null)
-				return (this.getFormId().equals(f.getFormId()));
-		}
-		
-		// default to comparing the object pointers
-		return this == obj;
-	}
-	
-	/**
-	 * @see java.lang.Object#hashCode()
-	 * @should get hashCode even with null attributes
-	 */
-	public int hashCode() {
-		if (this.getFormId() == null)
-			return super.hashCode();
-		return this.getFormId().hashCode();
 	}
 	
 	// Property accessors
@@ -165,27 +134,38 @@ public class Form extends BaseOpenmrsMetadata implements java.io.Serializable {
 	
 	/**
 	 * @return Returns the template.
+	 * @deprecated
 	 */
+	@Deprecated
 	public String getTemplate() {
-		return template;
+		throw new UnsupportedOperationException("Templates no longer exist on Forms. Use Form Attributes.");
 	}
 	
 	/**
 	 * @param template The template to set.
+	 * @deprecated
 	 */
+	@Deprecated
 	public void setTemplate(String template) {
-		this.template = template;
+		throw new UnsupportedOperationException("Templates no longer exist on Forms. Use Form Attributes.");
 	}
 	
 	/**
 	 * @return Returns the creator
+	 * @deprecated
 	 */
+	@Deprecated
 	public String getXslt() {
-		return xslt;
+		throw new UnsupportedOperationException("XSLTs no longer exist on Forms. Use Form Attributes.");
 	}
 	
+	/**
+	 * @param xslt the xslt to set.
+	 * @deprecated
+	 */
+	@Deprecated
 	public void setXslt(String xslt) {
-		this.xslt = xslt;
+		throw new UnsupportedOperationException("XSLTs no longer exist on Forms. Use Form Attributes.");
 	}
 	
 	/**
@@ -265,6 +245,7 @@ public class Form extends BaseOpenmrsMetadata implements java.io.Serializable {
 		}
 	}
 	
+	@Override
 	public String toString() {
 		if (formId == null)
 			return "";
@@ -292,6 +273,7 @@ public class Form extends BaseOpenmrsMetadata implements java.io.Serializable {
 	/**
 	 * @deprecated use {@link #setRetireReason(String)}
 	 */
+	@Deprecated
 	public void setRetiredReason(String reason) {
 		setRetireReason(reason);
 		
@@ -300,6 +282,7 @@ public class Form extends BaseOpenmrsMetadata implements java.io.Serializable {
 	/**
 	 * @deprecated use {@link #getRetireReason()}
 	 */
+	@Deprecated
 	public String getRetiredReason() {
 		return getRetireReason();
 	}

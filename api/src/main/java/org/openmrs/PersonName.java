@@ -87,42 +87,6 @@ public class PersonName extends BaseOpenmrsData implements java.io.Serializable,
 	}
 	
 	/**
-	 * Compares two objects for similarity
-	 * 
-	 * @param obj PersonName to compare to
-	 * @return boolean true/false whether or not they are the same objects
-	 * @see java.lang.Object#equals(java.lang.Object)
-	 * @should not fail if either has a null person property
-	 * @should return false if this has a missing person property
-	 * @should return false if obj has a missing person property
-	 * @should return true if properties are equal and have null person
-	 */
-	public boolean equals(Object obj) {
-		if (obj instanceof PersonName) {
-			PersonName pname = (PersonName) obj;
-			if (this.personNameId != null && pname.getPersonNameId() != null)
-				return (this.personNameId.equals(pname.getPersonNameId()));
-			else {
-				return (OpenmrsUtil.nullSafeEquals(getPerson(), pname.getPerson())
-				        && OpenmrsUtil.nullSafeEqualsIgnoreCase(getGivenName(), pname.getGivenName())
-				        && OpenmrsUtil.nullSafeEqualsIgnoreCase(getMiddleName(), pname.getMiddleName()) && OpenmrsUtil
-				        .nullSafeEqualsIgnoreCase(getFamilyName(), pname.getFamilyName()));
-			}
-			
-		}
-		return false;
-	}
-	
-	/**
-	 * @see java.lang.Object#hashCode()
-	 */
-	public int hashCode() {
-		if (this.getPersonNameId() == null)
-			return super.hashCode();
-		return this.getPersonNameId().hashCode();
-	}
-	
-	/**
 	 * Compares this PersonName object to the given otherName. This method differs from
 	 * {@link #equals(Object)} in that this method compares the inner fields of each name for
 	 * equality. Note: Null/empty fields on <code>otherName</code> /will not/ cause a false value to
@@ -204,9 +168,9 @@ public class PersonName extends BaseOpenmrsData implements java.io.Serializable,
 			newName.setDateVoided((Date) pn.getDateVoided().clone());
 		
 		if (pn.getPreferred() != null)
-			newName.setPreferred(new Boolean(pn.getPreferred().booleanValue()));
+			newName.setPreferred(pn.getPreferred().booleanValue());
 		if (pn.getVoided() != null)
-			newName.setVoided(new Boolean(pn.getVoided().booleanValue()));
+			newName.setVoided(pn.getVoided().booleanValue());
 		
 		newName.setPerson(pn.getPerson());
 		newName.setVoidedBy(pn.getVoidedBy());
@@ -215,8 +179,6 @@ public class PersonName extends BaseOpenmrsData implements java.io.Serializable,
 		
 		return newName;
 	}
-	
-	// Property accessors
 	
 	/**
 	 * This still exists on PersonName for the SimpleFramework annotation
@@ -254,7 +216,7 @@ public class PersonName extends BaseOpenmrsData implements java.io.Serializable,
 	
 	/**
 	 * @return Returns the familyName.
-	 * @should return obscured name if obscure_patients is set to true 
+	 * @should return obscured name if obscure_patients is set to true
 	 */
 	@Element(data = true, required = false)
 	public String getFamilyName() {
@@ -403,7 +365,7 @@ public class PersonName extends BaseOpenmrsData implements java.io.Serializable,
 	 */
 	public Boolean isPreferred() {
 		if (preferred == null)
-			return new Boolean(false);
+			return Boolean.FALSE;
 		return preferred;
 	}
 	
@@ -498,11 +460,9 @@ public class PersonName extends BaseOpenmrsData implements java.io.Serializable,
 	}
 	
 	/**
-	 * Convenience method to get all the names of this
-	 * PersonName and concatonating them together with
-	 * spaces in between.  If any part of {@link #getPrefix()},
-	 * {@link #getGivenName()}, {@link #getMiddleName()}, etc
-	 * are null, they are not included in the returned name
+	 * Convenience method to get all the names of this PersonName and concatonating them together
+	 * with spaces in between. If any part of {@link #getPrefix()}, {@link #getGivenName()},
+	 * {@link #getMiddleName()}, etc are null, they are not included in the returned name
 	 * 
 	 * @return all of the parts of this {@link PersonName} joined with spaces
 	 * @should not put spaces around an empty middle name

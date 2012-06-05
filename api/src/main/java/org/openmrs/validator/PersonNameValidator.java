@@ -24,6 +24,7 @@ import org.springframework.validation.Validator;
 
 /**
  * This class validates a PersonName object.
+ * 
  * @since 1.7
  */
 @Handler(supports = { PersonName.class }, order = 50)
@@ -34,7 +35,6 @@ public class PersonNameValidator implements Validator {
 	/**
 	 * @see org.springframework.validation.Validator#supports(java.lang.Class)
 	 */
-	@SuppressWarnings("unchecked")
 	public boolean supports(Class c) {
 		return PersonName.class.isAssignableFrom(c);
 	}
@@ -45,7 +45,6 @@ public class PersonNameValidator implements Validator {
 	 * @param personName
 	 * @param errors
 	 * @should fail validation if PersonName object is null
-	 * 
 	 */
 	public void validate(Object object, Errors errors) {
 		if (log.isDebugEnabled())
@@ -68,7 +67,7 @@ public class PersonNameValidator implements Validator {
 	 * 
 	 * @param personName the {@link PersonName} to validate
 	 * @param errors
-	 * @param arrayInd indicates whether or not a names[0] array needs to be prepended to field  
+	 * @param arrayInd indicates whether or not a names[0] array needs to be prepended to field
 	 * @should fail validation if PersonName object is null
 	 * @should fail validation if PersonName.givenName is null
 	 * @should fail validation if PersonName.givenName is empty
@@ -119,25 +118,25 @@ public class PersonNameValidator implements Validator {
 		
 		// Make sure the length does not exceed database column size
 		if (StringUtils.length(personName.getPrefix()) > 50)
-			rejectPersonName(errors, "prefix", arrayInd, testInd);
+			rejectPersonNameOnLength(errors, "prefix", arrayInd, testInd);
 		if (StringUtils.length(personName.getGivenName()) > 50)
-			rejectPersonName(errors, "givenName", arrayInd, testInd);
+			rejectPersonNameOnLength(errors, "givenName", arrayInd, testInd);
 		if (StringUtils.length(personName.getMiddleName()) > 50)
-			rejectPersonName(errors, "middleName", arrayInd, testInd);
+			rejectPersonNameOnLength(errors, "middleName", arrayInd, testInd);
 		if (StringUtils.length(personName.getFamilyNamePrefix()) > 50)
-			rejectPersonName(errors, "familyNamePrefix", arrayInd, testInd);
+			rejectPersonNameOnLength(errors, "familyNamePrefix", arrayInd, testInd);
 		if (StringUtils.length(personName.getFamilyName()) > 50)
-			rejectPersonName(errors, "familyName", arrayInd, testInd);
+			rejectPersonNameOnLength(errors, "familyName", arrayInd, testInd);
 		if (StringUtils.length(personName.getFamilyName2()) > 50)
-			rejectPersonName(errors, "familyName2", arrayInd, testInd);
+			rejectPersonNameOnLength(errors, "familyName2", arrayInd, testInd);
 		if (StringUtils.length(personName.getFamilyNameSuffix()) > 50)
-			rejectPersonName(errors, "familyNameSuffix", arrayInd, testInd);
+			rejectPersonNameOnLength(errors, "familyNameSuffix", arrayInd, testInd);
 		if (StringUtils.length(personName.getDegree()) > 50)
-			rejectPersonName(errors, "degree", arrayInd, testInd);
+			rejectPersonNameOnLength(errors, "degree", arrayInd, testInd);
 		
 	}
 	
-	private void rejectPersonName(Errors errors, String fieldKey, boolean arrayInd, boolean testInd) {
+	private void rejectPersonNameOnLength(Errors errors, String fieldKey, boolean arrayInd, boolean testInd) {
 		errors.rejectValue(getFieldKey(fieldKey, arrayInd, testInd), "error.name.max.length", new Object[] {
 		        getInternationizedFieldName("PersonName." + fieldKey), 50 }, "error.name");
 	}
@@ -145,7 +144,7 @@ public class PersonNameValidator implements Validator {
 	/***********************************************************************************************************
 	 * @param field the field name
 	 * @param arrayInd indicates whether or not a names[0] array needs to be prepended to field
-	 * @return formated 
+	 * @return formated
 	 */
 	private String getFieldKey(String field, boolean arrayInd, boolean testInd) {
 		return testInd ? field : arrayInd ? "names[0]." + field : "name." + field;

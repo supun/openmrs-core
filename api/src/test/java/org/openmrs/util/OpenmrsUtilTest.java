@@ -134,7 +134,7 @@ public class OpenmrsUtilTest extends BaseContextSensitiveTest {
 	@Test
 	@Verifies(value = "should use equals method for comparison instead of compareTo given List collection", method = "collectionContains(Collection<*>,Object)")
 	public void collectionContains_shouldUseEqualsMethodForComparisonInsteadOfCompareToGivenListCollection()
-	                                                                                                        throws Exception {
+	        throws Exception {
 		
 		ArrayList<PatientIdentifier> identifiers = new ArrayList<PatientIdentifier>();
 		
@@ -165,7 +165,7 @@ public class OpenmrsUtilTest extends BaseContextSensitiveTest {
 	@Test
 	@Verifies(value = "should use equals method for comparison instead of compareTo given SortedSet collection", method = "collectionContains(Collection<*>,Object)")
 	public void collectionContains_shouldUseEqualsMethodForComparisonInsteadOfCompareToGivenSortedSetCollection()
-	                                                                                                             throws Exception {
+	        throws Exception {
 		
 		SortedSet<PatientIdentifier> identifiers = new TreeSet<PatientIdentifier>();
 		

@@ -25,11 +25,14 @@ import org.hibernate.HibernateException;
 import org.hibernate.MappingException;
 import org.hibernate.usertype.ParameterizedType;
 import org.hibernate.usertype.UserType;
+import org.openmrs.api.context.Context;
 
 /**
  * This is intended to be a temporary utility class until enums are handled properly in Hibernate:
  * http://community.jboss.org/wiki/Java5EnumUserType
  * http://docs.jboss.org/hibernate/stable/core/reference/en/html_single/#inheritance
+ * 
+ * @since 1.7
  */
 public class HibernateEnumType implements UserType, ParameterizedType {
 	
@@ -44,7 +47,7 @@ public class HibernateEnumType implements UserType, ParameterizedType {
 		}
 		
 		try {
-			this.clazz = Class.forName(enumClassName);
+			this.clazz = Context.loadClass(enumClassName);
 		}
 		catch (ClassNotFoundException e) {
 			throw new MappingException("enumClass " + enumClassName + " not found", e);
@@ -70,7 +73,7 @@ public class HibernateEnumType implements UserType, ParameterizedType {
 	}
 	
 	public void nullSafeSet(PreparedStatement preparedStatement, Object value, int index) throws HibernateException,
-	                                                                                     SQLException {
+	        SQLException {
 		if (null == value) {
 			preparedStatement.setNull(index, Types.VARCHAR);
 		} else {

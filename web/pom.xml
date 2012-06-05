@@ -2,7 +2,7 @@
    <parent>
       <groupId>org.openmrs</groupId>
       <artifactId>openmrs</artifactId>
-      <version>1.8.2</version>
+      <version>1.9.0</version>
    </parent>
    <modelVersion>4.0.0</modelVersion>
    <groupId>org.openmrs.web</groupId>
@@ -86,6 +86,14 @@
          <artifactId>mysql-connector-java</artifactId>
       </dependency>
       <dependency>
+         <groupId>postgresql</groupId>
+         <artifactId>postgresql</artifactId>
+      </dependency>
+      <dependency>
+         <groupId>net.sourceforge.jtds</groupId>
+         <artifactId>jtds</artifactId>
+      </dependency>
+      <dependency>
          <groupId>taglibs</groupId>
          <artifactId>request</artifactId>
       </dependency>
@@ -108,7 +116,22 @@
       <dependency>
          <groupId>org.codehaus.jackson</groupId>
          <artifactId>jackson-mapper-asl</artifactId>
-      </dependency>      
+      </dependency>
+      <dependency>
+         <groupId>org.liquibase</groupId>
+         <artifactId>liquibase-core</artifactId>
+      </dependency>
+      <dependency>
+         <groupId>org.slf4j</groupId>
+         <artifactId>jcl-over-slf4j</artifactId>
+         <version>1.6.1</version>
+         <type>jar</type>
+      </dependency>
+      <dependency>
+		 <groupId>org.apache.velocity</groupId>
+		 <artifactId>velocity-tools</artifactId>
+		 <version>2.0</version>
+	  </dependency>      
    </dependencies>
 
    <build>

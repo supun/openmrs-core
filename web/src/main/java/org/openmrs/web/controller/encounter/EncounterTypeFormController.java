@@ -61,7 +61,7 @@ public class EncounterTypeFormController extends SimpleFormController {
 	 *      org.springframework.validation.BindException)
 	 */
 	protected ModelAndView onSubmit(HttpServletRequest request, HttpServletResponse response, Object obj,
-	                                BindException errors) throws Exception {
+	        BindException errors) throws Exception {
 		
 		HttpSession httpSession = request.getSession();
 		
@@ -87,6 +87,14 @@ public class EncounterTypeFormController extends SimpleFormController {
 				
 				es.retireEncounterType(encounterType, retireReason);
 				httpSession.setAttribute(WebConstants.OPENMRS_MSG_ATTR, "EncounterType.retiredSuccessfully");
+				
+				view = getSuccessView();
+			}
+
+			// if the user is unretiring the EncounterType
+			else if (request.getParameter("unretire") != null) {
+				es.unretireEncounterType(encounterType);
+				httpSession.setAttribute(WebConstants.OPENMRS_MSG_ATTR, "EncounterType.unretiredSuccessfully");
 				
 				view = getSuccessView();
 			}

@@ -47,6 +47,7 @@ import org.openmrs.api.context.Context;
 import org.openmrs.order.RegimenSuggestion;
 import org.openmrs.util.PrivilegeConstants;
 import org.openmrs.web.WebConstants;
+import org.openmrs.web.controller.PortletControllerUtil;
 import org.springframework.util.StringUtils;
 import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.mvc.Controller;
@@ -72,6 +73,8 @@ public class PortletController implements Controller {
 	 *          (Patient) patient
 	 *          (List<Obs>) patientObs
 	 *          (List<Encounter>) patientEncounters
+	 *          (List<Visit>) patientVisits
+	 *          (List<Visit>) activeVisits
 	 *          (List<DrugOrder>) patientDrugOrders
 	 *          (List<DrugOrder>) currentDrugOrders
 	 *          (List<DrugOrder>) completedDrugOrders
@@ -106,7 +109,7 @@ public class PortletController implements Controller {
 	 */
 	@SuppressWarnings("unchecked")
 	public ModelAndView handleRequest(HttpServletRequest request, HttpServletResponse response) throws ServletException,
-	                                                                                           IOException {
+	        IOException {
 		
 		AdministrationService as = Context.getAdministrationService();
 		ConceptService cs = Context.getConceptService();
@@ -124,8 +127,10 @@ public class PortletController implements Controller {
 				
 				// remove cached parameters 
 				List<String> parameterKeys = (List<String>) model.get("parameterKeys");
-				for (String key : parameterKeys) {
-					model.remove(key);
+				if (parameterKeys != null) {
+					for (String key : parameterKeys) {
+						model.remove(key);
+					}
 				}
 			}
 			if (model == null) {
@@ -188,6 +193,14 @@ public class PortletController implements Controller {
 						// add encounters if this user can view them
 						if (Context.hasPrivilege(PrivilegeConstants.VIEW_ENCOUNTERS))
 							model.put("patientEncounters", Context.getEncounterService().getEncountersByPatient(p));
+						
+						// add visits if this user can view them
+						if (Context.hasPrivilege(PrivilegeConstants.VIEW_VISITS)) {
+							model.put("person", p);
+							PortletControllerUtil.addFormToEditAndViewUrlMaps(model);
+							model.put("patientVisits", Context.getVisitService().getVisitsByPatient(p));
+							model.put("activeVisits", Context.getVisitService().getActiveVisitsByPatient(p));
+						}
 						
 						if (Context.hasPrivilege(PrivilegeConstants.VIEW_OBS)) {
 							List<Obs> patientObs = Context.getObsService().getObservationsByPerson(p);
@@ -333,12 +346,15 @@ public class PortletController implements Controller {
 				}
 			}
 			if (personId != null) {
-				if (!model.containsKey("person")) {
-					Person p = (Person) model.get("patient");
+				Person p = (Person) model.get("person");
+				if (p == null) {
+					p = (Person) model.get("patient");
 					if (p == null)
 						p = Context.getPersonService().getPerson(personId);
 					model.put("person", p);
-					
+				}
+				
+				if (!model.containsKey("personRelationships")) {
 					if (Context.hasPrivilege(PrivilegeConstants.VIEW_RELATIONSHIPS)) {
 						List<Relationship> relationships = new ArrayList<Relationship>();
 						relationships.addAll(Context.getPersonService().getRelationshipsByPerson(p));

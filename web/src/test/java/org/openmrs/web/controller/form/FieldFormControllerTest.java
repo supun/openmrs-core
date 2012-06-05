@@ -17,6 +17,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import org.junit.Assert;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.openmrs.Field;
 import org.openmrs.api.context.Context;
@@ -82,8 +83,31 @@ public class FieldFormControllerTest extends BaseWebContextSensitiveTest {
 		request.setParameter("fieldTypeId", "1");
 		request.setParameter("name", "Some concept");
 		request.setParameter("conceptId", "3");
+		request.setParameter("action", "save");
 		
 		controller.handleRequest(request, response);
 	}
 	
+	@Test
+	@Ignore("TRUNK-3079: Fails due to foreign key constraint: Referential integrity constraint violation: FKF276DBFEA104846: PUBLIC.FORM_FIELD FOREIGN KEY(FIELD_ID) REFERENCES PUBLIC.FIELD(FIELD_ID); SQL statement: delete from field where field_id=? [23003-135]")
+	public void onSubmit_shouldPurgeField() throws Exception {
+		final String FIELD_ID = "1";
+		
+		HttpServletResponse response = new MockHttpServletResponse();
+		FieldFormController controller = (FieldFormController) applicationContext.getBean("fieldForm");
+		
+		MockHttpServletRequest request = new MockHttpServletRequest("POST", "");
+		response = new MockHttpServletResponse();
+		request.setParameter("fieldId", FIELD_ID);
+		request.setParameter("name", "Some concept");
+		request.setParameter("description", "This is a test field");
+		request.setParameter("fieldTypeId", "1");
+		request.setParameter("name", "Some concept");
+		request.setParameter("conceptId", "3");
+		request.setParameter("action", Context.getMessageSourceService().getMessage("general.delete"));
+		
+		controller.handleRequest(request, response);
+		
+		Assert.assertNull(Context.getFormService().getField(new Integer(FIELD_ID)));
+	}
 }

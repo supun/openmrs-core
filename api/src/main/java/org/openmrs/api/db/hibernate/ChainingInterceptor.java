@@ -69,7 +69,7 @@ public class ChainingInterceptor implements Interceptor {
 	}
 	
 	public boolean onFlushDirty(Object entity, Serializable id, Object[] currentState, Object[] previousState,
-	                            String[] propertyNames, Type[] types) {
+	        String[] propertyNames, Type[] types) {
 		boolean objectChanged = false;
 		
 		for (Interceptor i : interceptors)
@@ -141,7 +141,7 @@ public class ChainingInterceptor implements Interceptor {
 	}
 	
 	public int[] findDirty(Object entity, Serializable id, Object[] currentState, Object[] previousState,
-	                       String[] propertyNames, Type[] types) {
+	        String[] propertyNames, Type[] types) {
 		
 		List<Integer> uniqueIndices = new LinkedList<Integer>();
 		

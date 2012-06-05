@@ -19,6 +19,8 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
+import java.util.LinkedHashSet;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
@@ -29,7 +31,6 @@ import org.apache.commons.logging.LogFactory;
 import org.openmrs.aop.RequiredDataAdvice;
 import org.openmrs.api.APIException;
 import org.openmrs.api.context.Context;
-import org.openmrs.api.handler.AuditableSaveHandler;
 import org.openmrs.api.handler.OpenmrsObjectSaveHandler;
 import org.openmrs.api.handler.SaveHandler;
 import org.openmrs.obs.ComplexData;
@@ -111,9 +112,7 @@ public class Obs extends BaseOpenmrsData implements java.io.Serializable {
 	
 	protected Encounter encounter;
 	
-	protected Date dateStarted;
-	
-	protected Date dateStopped;
+	private Obs previousVersion;
 	
 	/** default constructor */
 	public Obs() {
@@ -165,8 +164,6 @@ public class Obs extends BaseOpenmrsData implements java.io.Serializable {
 		newObs.setComment(obsToCopy.getComment());
 		newObs.setOrder(obsToCopy.getOrder());
 		newObs.setEncounter(obsToCopy.getEncounter());
-		newObs.setDateStarted(obsToCopy.getDateStarted());
-		newObs.setDateStopped(obsToCopy.getDateStopped());
 		newObs.setCreator(obsToCopy.getCreator());
 		newObs.setDateCreated(obsToCopy.getDateCreated());
 		newObs.setVoided(obsToCopy.getVoided());
@@ -177,8 +174,9 @@ public class Obs extends BaseOpenmrsData implements java.io.Serializable {
 		newObs.setValueComplex(obsToCopy.getValueComplex());
 		newObs.setComplexData(obsToCopy.getComplexData());
 		
-		if (obsToCopy.getGroupMembers() != null)
-			for (Obs member : obsToCopy.getGroupMembers()) {
+		// Copy list of all members, including voided, and put them in respective groups
+		if (obsToCopy.hasGroupMembers(true))
+			for (Obs member : obsToCopy.getGroupMembers(true)) {
 				// if the obs hasn't been saved yet, no need to duplicate it
 				if (member.getObsId() == null)
 					newObs.addGroupMember(member);
@@ -190,46 +188,11 @@ public class Obs extends BaseOpenmrsData implements java.io.Serializable {
 	}
 	
 	/**
-	 * Compares two Obs for similarity. The comparison is done on obsId of both this and the given
-	 * <code>obs</code> object. If either has a null obsId, then they are not equal
-	 * 
-	 * @param obj
-	 * @return boolean True if the obsIds match, false otherwise or if either obsId is null.
-	 */
-	public boolean equals(Object obj) {
-		if (obj instanceof Obs) {
-			Obs o = (Obs) obj;
-			if (this.getObsId() != null && o.getObsId() != null)
-				return (this.getObsId().equals(o.getObsId()));
-			/*
-			 * return (this.getConcept().equals(o.getConcept()) &&
-			 * this.getPatient().equals(o.getPatient()) &&
-			 * this.getEncounter().equals(o.getEncounter()) &&
-			 * this.getLocation().equals(o.getLocation()));
-			 */
-		}
-		
-		// if the obsIds don't match, its possible that they are the same
-		// exact object. Check that now on the way out.
-		return this == obj;
-	}
-	
-	/**
-	 * @see java.lang.Object#hashCode()
-	 */
-	public int hashCode() {
-		if (this.getObsId() == null)
-			return super.hashCode();
-		return this.getObsId().hashCode();
-	}
-	
-	/**
 	 * This method isn't needed anymore. There are handlers that are mapped around the saveObs(obs)
 	 * method that get called automatically. See {@link SaveHandler}, et al.
 	 * 
 	 * @see SaveHandler
 	 * @see OpenmrsObjectSaveHandler
-	 * @see AuditableSaveHandler
 	 * @deprecated no longer needed. Replaced by handlers.
 	 */
 	@Deprecated
@@ -370,8 +333,10 @@ public class Obs extends BaseOpenmrsData implements java.io.Serializable {
 	}
 	
 	/**
-	 * Convenience method that checks for nullity and length of the (@link #getGroupMembers())
-	 * method
+	 * Convenience method that checks for if this obs has 1 or more group members (either voided or non-voided)
+	 * Note this method differs from hasGroupMembers(), as that method excludes voided obs; logic is that
+	 * while a obs that has only voided group members should be seen as "having no group members" it
+	 * still should be considered an "obs grouping"
 	 * <p>
 	 * NOTE: This method could also be called "isObsGroup" for a little less confusion on names.
 	 * However, jstl in a web layer (or any psuedo-getter) access isn't good with both an
@@ -383,21 +348,39 @@ public class Obs extends BaseOpenmrsData implements java.io.Serializable {
 	 * @return true if this is the parent group of other obs
 	 */
 	public boolean isObsGrouping() {
-		return hasGroupMembers();
+		return hasGroupMembers(true);
 	}
 	
 	/**
-	 * Convenience method that checks for nullity and length of the (@link #getGroupMembers())
-	 * method
+	 * A convenience method to check for nullity and length to determine if this obs has group
+	 * members. By default, this ignores voided-objects. To include voided, use
+	 * {@link #hasGroupMembers(boolean)} with value true.
 	 * 
 	 * @return true if this is the parent group of other obs
+	 * @should not include voided obs
 	 */
 	public boolean hasGroupMembers() {
-		return getGroupMembers() != null && getGroupMembers().size() > 0;
+		return hasGroupMembers(false);
 	}
 	
 	/**
-	 * Get the members of the obs group, if this obs is a group.
+	 * Convenience method that checks for nullity and length to determine if this obs has group
+	 * members. The parameter specifies if this method whether or not voided obs should be
+	 * considered.
+	 * 
+	 * @param includeVoided determines if Voided members should be considered as group members.
+	 * @return true if this is the parent group of other Obs
+	 * @should return true if this obs has group members based on parameter
+	 */
+	public boolean hasGroupMembers(boolean includeVoided) {
+		// ! symbol used because if it's not empty, we want true
+		return !org.springframework.util.CollectionUtils.isEmpty(getGroupMembers(includeVoided));
+	}
+	
+	/**
+	 * Get the non-voided members of the obs group, if this obs is a group. By default this method
+	 * only returns non-voided group members. To get all group members, use
+	 * {@link #getGroupMembers(boolean)} with value true.
 	 * <p>
 	 * If it's not a group (i.e. {@link #getConcept()}.{@link org.openmrs.Concept#isSet()} is not
 	 * true, then this returns null.
@@ -407,7 +390,31 @@ public class Obs extends BaseOpenmrsData implements java.io.Serializable {
 	 * @see #hasGroupMembers()
 	 */
 	public Set<Obs> getGroupMembers() {
-		return groupMembers;
+		return getGroupMembers(false); //same as just returning groupMembers
+	}
+	
+	/**
+	 * Get the group members of this obs group, if this obs is a group. This method will either
+	 * return all group members, or only non-voided group members, depending on if the argument is
+	 * set to be true or false respectively.
+	 * 
+	 * @param includeVoided
+	 * @return the set of group members in this obs group
+	 * @should Get all group members if passed true, and non-voided if passed false
+	 */
+	public Set<Obs> getGroupMembers(boolean includeVoided) {
+		if (includeVoided) //just return all group members
+			return groupMembers;
+		if (groupMembers == null) //Empty set so return null
+			return null;
+		Set<Obs> nonVoided = new LinkedHashSet<Obs>(groupMembers);
+		Iterator<Obs> i = nonVoided.iterator();
+		while (i.hasNext()) {
+			Obs obs = i.next();
+			if (obs.isVoided())
+				i.remove();
+		}
+		return nonVoided;
 	}
 	
 	/**
@@ -421,12 +428,13 @@ public class Obs extends BaseOpenmrsData implements java.io.Serializable {
 	 * @see #hasGroupMembers()
 	 */
 	public void setGroupMembers(Set<Obs> groupMembers) {
-		this.groupMembers = groupMembers;
+		this.groupMembers = groupMembers; //Copy over the entire list
+		
 	}
 	
 	/**
 	 * Convenience method to add the given <code>obs</code> to this grouping. Will implicitly make
-	 * this obs an ObsGroup
+	 * this obs an ObsGroup.
 	 * 
 	 * @param member Obs to add to this group
 	 * @see #setGroupMembers(Set)
@@ -634,8 +642,10 @@ public class Obs extends BaseOpenmrsData implements java.io.Serializable {
 	 * @should return false if value coded answer concept is false concept
 	 */
 	public Boolean getValueBoolean() {
-		if (getConcept() != null && valueCoded != null && getConcept().getDatatype().isBoolean())
-			return valueCoded.equals(Context.getConceptService().getTrueConcept());
+		if (getConcept() != null && valueCoded != null && getConcept().getDatatype().isBoolean()) {
+			Concept trueConcept = Context.getConceptService().getTrueConcept();
+			return trueConcept != null && valueCoded.getId().equals(trueConcept.getId());
+		}
 		
 		return null;
 	}
@@ -698,6 +708,40 @@ public class Obs extends BaseOpenmrsData implements java.io.Serializable {
 	 */
 	public void setValueDatetime(Date valueDatetime) {
 		this.valueDatetime = valueDatetime;
+	}
+	
+	/**
+	 * @return the value of this obs as a Date. Note that this uses a java.util.Date, so it includes
+	 *         a time component, that should be ignored.
+	 * @since 1.9
+	 */
+	public Date getValueDate() {
+		return valueDatetime;
+	}
+	
+	/**
+	 * @param valueDate The date value to set.
+	 * @since 1.9
+	 */
+	public void setValueDate(Date valueDate) {
+		this.valueDatetime = valueDate;
+	}
+	
+	/**
+	 * @return the time value of this obs. Note that this uses a java.util.Date, so it includes a
+	 *         date component, that should be ignored.
+	 * @since 1.9
+	 */
+	public Date getValueTime() {
+		return valueDatetime;
+	}
+	
+	/**
+	 * @param valueTime the time value to set
+	 * @since 1.9
+	 */
+	public void setValueTime(Date valueTime) {
+		this.valueDatetime = valueTime;
 	}
 	
 	/**
@@ -802,7 +846,8 @@ public class Obs extends BaseOpenmrsData implements java.io.Serializable {
 	/**
 	 * Set the ComplexData for this Obs. The ComplexData is stored in the file system or elsewhere,
 	 * but is not persisted to the database. <br/>
-	 * <br/> {@link ComplexObsHandler}s that are registered to {@link ConceptComplex}s will persist the
+	 * <br/>
+	 * {@link ComplexObsHandler}s that are registered to {@link ConceptComplex}s will persist the
 	 * {@link ComplexData#getData()} object to the correct place for the given concept.
 	 * 
 	 * @param complexData
@@ -819,7 +864,8 @@ public class Obs extends BaseOpenmrsData implements java.io.Serializable {
 	 * This will be null unless you call:
 	 * 
 	 * <pre>
-	 *    Obs obsWithComplexData = Context.getObsService().getComplexObs(obsId, OpenmrsConstants.RAW_VIEW);
+	 * 
+	 * Obs obsWithComplexData = Context.getObsService().getComplexObs(obsId, OpenmrsConstants.RAW_VIEW);
 	 * </pre>
 	 * 
 	 * @return the complex data for this obs (if its a complex obs)
@@ -843,34 +889,6 @@ public class Obs extends BaseOpenmrsData implements java.io.Serializable {
 		this.accessionNumber = accessionNumber;
 	}
 	
-	/**
-	 * @return Returns the dateStarted.
-	 */
-	public Date getDateStarted() {
-		return dateStarted;
-	}
-	
-	/**
-	 * @param dateStarted The dateStarted to set.
-	 */
-	public void setDateStarted(Date dateStarted) {
-		this.dateStarted = dateStarted;
-	}
-	
-	/**
-	 * @return Returns the dateStopped.
-	 */
-	public Date getDateStopped() {
-		return dateStopped;
-	}
-	
-	/**
-	 * @param dateStopped The dateStopped to set.
-	 */
-	public void setDateStopped(Date dateStopped) {
-		this.dateStopped = dateStopped;
-	}
-	
 	/***************************************************************************
 	 * Convenience methods
 	 **************************************************************************/
@@ -884,6 +902,8 @@ public class Obs extends BaseOpenmrsData implements java.io.Serializable {
 	 * @param locale locale for locale-specific depictions of value
 	 * @should return first part of valueComplex for complex obs
 	 * @should return first part of valueComplex for non null valueComplexes
+	 * @should return non precise values for NumericConcepts
+	 * @should return proper DateFormat
 	 */
 	public String getValueAsString(Locale locale) {
 		//branch on hl7 abbreviations
@@ -910,9 +930,22 @@ public class Obs extends BaseOpenmrsData implements java.io.Serializable {
 						
 					}
 				}
-			} else if (abbrev.equals("NM") || abbrev.equals("SN"))
-				return getValueNumeric() == null ? "" : getValueNumeric().toString();
-			else if (abbrev.equals("DT"))
+			} else if (abbrev.equals("NM") || abbrev.equals("SN")) {
+				if (getValueNumeric() == null) {
+					return "";
+				} else {
+					if (getConcept() instanceof ConceptNumeric) {
+						ConceptNumeric cn = (ConceptNumeric) getConcept();
+						if (cn.isPrecise() != true) {
+							double d = getValueNumeric();
+							int i = (int) d;
+							return Integer.toString(i);
+						} else {
+							getValueNumeric().toString();
+						}
+					}
+				}
+			} else if (abbrev.equals("DT"))
 				return (getValueDatetime() == null ? "" : Format.format(getValueDatetime(), locale, FORMAT_TYPE.DATE));
 			else if (abbrev.equals("TM"))
 				return (getValueDatetime() == null ? "" : Format.format(getValueDatetime(), locale, FORMAT_TYPE.TIME));
@@ -976,7 +1009,11 @@ public class Obs extends BaseOpenmrsData implements java.io.Serializable {
 		return "";
 	}
 	
-	private static DateFormat df = new SimpleDateFormat("yyyy-MM-dd");
+	private static DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
+	
+	private static DateFormat timeFormat = new SimpleDateFormat("HH:mm");
+	
+	private static DateFormat datetimeFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm");
 	
 	/**
 	 * Sets the value for the obs from a string depending on the datatype of the question concept
@@ -998,8 +1035,12 @@ public class Obs extends BaseOpenmrsData implements java.io.Serializable {
 				throw new RuntimeException("Not Yet Implemented");
 			} else if (abbrev.equals("NM") || abbrev.equals("SN")) {
 				setValueNumeric(Double.valueOf(s));
-			} else if (abbrev.equals("DT") || abbrev.equals("TM") || abbrev.equals("TS")) {
-				setValueDatetime(df.parse(s));
+			} else if (abbrev.equals("DT")) {
+				setValueDatetime(dateFormat.parse(s));
+			} else if (abbrev.equals("TM")) {
+				setValueDatetime(timeFormat.parse(s));
+			} else if (abbrev.equals("TS")) {
+				setValueDatetime(datetimeFormat.parse(s));
 			} else if (abbrev.equals("ST")) {
 				setValueText(s);
 			} else {
@@ -1055,6 +1096,18 @@ public class Obs extends BaseOpenmrsData implements java.io.Serializable {
 	public void setId(Integer id) {
 		setObsId(id);
 		
+	}
+	
+	public Obs getPreviousVersion() {
+		return previousVersion;
+	}
+	
+	public void setPreviousVersion(Obs previousVersion) {
+		this.previousVersion = previousVersion;
+	}
+	
+	public Boolean hasPreviousVersion() {
+		return getPreviousVersion() != null;
 	}
 	
 }

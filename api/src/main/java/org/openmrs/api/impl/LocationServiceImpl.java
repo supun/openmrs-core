@@ -19,12 +19,16 @@ import java.util.List;
 
 import org.openmrs.Address;
 import org.openmrs.Location;
+import org.openmrs.LocationAttribute;
+import org.openmrs.LocationAttributeType;
 import org.openmrs.LocationTag;
 import org.openmrs.api.APIException;
 import org.openmrs.api.LocationService;
 import org.openmrs.api.context.Context;
 import org.openmrs.api.db.LocationDAO;
+import org.openmrs.customdatatype.CustomDatatypeUtil;
 import org.openmrs.util.OpenmrsConstants;
+import org.openmrs.util.OpenmrsUtil;
 import org.springframework.util.StringUtils;
 
 /**
@@ -70,11 +74,13 @@ public class LocationServiceImpl extends BaseOpenmrsService implements LocationS
 						location.removeTag(tag);
 						location.addTag(existing);
 					} else
-						throw new APIException(
-						        "Cannot add transient tags!  Save all location tags to the database before saving this location");
+						throw new APIException("Cannot add transient tags! "
+						        + "Save all location tags to the database before saving this location");
 				}
 			}
 		}
+		
+		CustomDatatypeUtil.saveAttributesIfNecessary(location);
 		
 		return dao.saveLocation(location);
 	}
@@ -316,7 +322,7 @@ public class LocationServiceImpl extends BaseOpenmrsService implements LocationS
 	 */
 	@Override
 	public Integer getCountOfLocations(String nameFragment, Boolean includeRetired) {
-		return dao.getCountOfLocations(nameFragment, includeRetired);
+		return OpenmrsUtil.convertToInteger(dao.getCountOfLocations(nameFragment, includeRetired));
 	}
 	
 	/**
@@ -324,8 +330,16 @@ public class LocationServiceImpl extends BaseOpenmrsService implements LocationS
 	 */
 	@Override
 	public List<Location> getLocations(String nameFragment, boolean includeRetired, Integer start, Integer length)
-	                                                                                                              throws APIException {
+	        throws APIException {
 		return dao.getLocations(nameFragment, includeRetired, start, length);
+	}
+	
+	/**
+	 * @see LocationService#getRootLocations(boolean)
+	 */
+	@Override
+	public List<Location> getRootLocations(boolean includeRetired) throws APIException {
+		return dao.getRootLocations(includeRetired);
 	}
 	
 	/**
@@ -334,5 +348,91 @@ public class LocationServiceImpl extends BaseOpenmrsService implements LocationS
 	public List<String> getPossibleAddressValues(Address incomplete, String fieldName) throws APIException {
 		// not implemented by default
 		return null;
+	}
+	
+	/**
+	 * @see org.openmrs.api.LocationService#getAllLocationAttributeTypes()
+	 */
+	@Override
+	public List<LocationAttributeType> getAllLocationAttributeTypes() {
+		return dao.getAllLocationAttributeTypes();
+	}
+	
+	/**
+	 * @see org.openmrs.api.LocationService#getLocationAttributeType(java.lang.Integer)
+	 */
+	@Override
+	public LocationAttributeType getLocationAttributeType(Integer id) {
+		return dao.getLocationAttributeType(id);
+	}
+	
+	/**
+	 * @see org.openmrs.api.LocationService#getLocationAttributeTypeByUuid(java.lang.String)
+	 */
+	@Override
+	public LocationAttributeType getLocationAttributeTypeByUuid(String uuid) {
+		return dao.getLocationAttributeTypeByUuid(uuid);
+	}
+	
+	/**
+	 * @see org.openmrs.api.LocationService#saveLocationAttributeType(org.openmrs.LocationAttributeType)
+	 */
+	@Override
+	public LocationAttributeType saveLocationAttributeType(LocationAttributeType locationAttributeType) {
+		return dao.saveLocationAttributeType(locationAttributeType);
+	}
+	
+	/**
+	 * @see org.openmrs.api.LocationService#retireLocationAttributeType(org.openmrs.LocationAttributeType, java.lang.String)
+	 */
+	@Override
+	public LocationAttributeType retireLocationAttributeType(LocationAttributeType locationAttributeType, String reason) {
+		return dao.saveLocationAttributeType(locationAttributeType);
+	}
+	
+	/**
+	 * @see org.openmrs.api.LocationService#unretireLocationAttributeType(org.openmrs.LocationAttributeType)
+	 */
+	@Override
+	public LocationAttributeType unretireLocationAttributeType(LocationAttributeType locationAttributeType) {
+		return dao.saveLocationAttributeType(locationAttributeType);
+	}
+	
+	/**
+	 * @see org.openmrs.api.LocationService#purgeLocationAttributeType(org.openmrs.LocationAttributeType)
+	 */
+	@Override
+	public void purgeLocationAttributeType(LocationAttributeType locationAttributeType) {
+		dao.deleteLocationAttributeType(locationAttributeType);
+	}
+	
+	/**
+	 * @see org.openmrs.api.LocationService#getLocationAttributeByUuid(java.lang.String)
+	 */
+	@Override
+	public LocationAttribute getLocationAttributeByUuid(String uuid) {
+		return dao.getLocationAttributeByUuid(uuid);
+	}
+	
+	/**
+	 * @see org.openmrs.api.LocationService#getAddressTemplate()
+	 */
+	@Override
+	public String getAddressTemplate() throws APIException {
+		String addressTemplate = Context.getAdministrationService().getGlobalProperty(
+		    OpenmrsConstants.GLOBAL_PROPERTY_ADDRESS_TEMPLATE);
+		if (!StringUtils.hasLength(addressTemplate))
+			addressTemplate = OpenmrsConstants.DEFAULT_ADDRESS_TEMPLATE;
+		
+		return addressTemplate;
+	}
+	
+	/**
+	 * @see org.openmrs.api.LocationService#saveAddressTemplate(String)
+	 */
+	@Override
+	public void saveAddressTemplate(String xml) throws APIException {
+		Context.getAdministrationService().setGlobalProperty(OpenmrsConstants.GLOBAL_PROPERTY_ADDRESS_TEMPLATE, xml);
+		
 	}
 }

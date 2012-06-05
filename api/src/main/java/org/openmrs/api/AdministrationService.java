@@ -16,9 +16,11 @@ package org.openmrs.api;
 import java.util.Collection;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 import java.util.SortedMap;
 
+import org.hibernate.FlushMode;
 import org.openmrs.Concept;
 import org.openmrs.ConceptClass;
 import org.openmrs.ConceptDatatype;
@@ -29,6 +31,7 @@ import org.openmrs.GlobalProperty;
 import org.openmrs.ImplementationId;
 import org.openmrs.Location;
 import org.openmrs.MimeType;
+import org.openmrs.OpenmrsObject;
 import org.openmrs.PatientIdentifierType;
 import org.openmrs.Privilege;
 import org.openmrs.Role;
@@ -39,13 +42,19 @@ import org.openmrs.reporting.AbstractReportObject;
 import org.openmrs.reporting.Report;
 import org.openmrs.util.OpenmrsConstants;
 import org.openmrs.util.PrivilegeConstants;
+import org.openmrs.validator.ValidateUtil;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.validation.Errors;
 
 /**
  * Contains methods pertaining to doing some administrative tasks in OpenMRS
  * <p>
  * Use:<br/>
+ * 
  * <pre>
+ * 
+ * 
+ * 
  * List&lt;GlobalProperty&gt; globalProperties = Context.getAdministrationService().getGlobalProperties();
  * </pre>
  * 
@@ -433,6 +442,16 @@ public interface AdministrationService extends OpenmrsService {
 	public SortedMap<String, String> getSystemVariables() throws APIException;
 	
 	/**
+	 * Get a map of all the System Information. Java, user, time, runtime properties, etc
+	 * 
+	 * @return a map from variable name to a map of the information
+	 * @should return all system information
+	 */
+	@Transactional(readOnly = true)
+	@Authorized(PrivilegeConstants.VIEW_ADMIN_FUNCTIONS)
+	public Map<String, Map<String, String>> getSystemInformation() throws APIException;
+	
+	/**
 	 * Gets the global property that has the given <code>propertyName</code>.
 	 * <p>
 	 * If <code>propertyName</code> is not found in the list of Global Properties currently in the
@@ -443,7 +462,7 @@ public interface AdministrationService extends OpenmrsService {
 	 * @see #getGlobalProperty(String, String)
 	 * @should not fail with null propertyName
 	 * @should get property value given valid property name
-	 * @should get property in case sensitive way
+	 * @should get property in case insensitive way
 	 */
 	@Transactional(readOnly = true)
 	public String getGlobalProperty(String propertyName) throws APIException;
@@ -514,15 +533,12 @@ public interface AdministrationService extends OpenmrsService {
 	public List<GlobalProperty> getGlobalProperties();
 	
 	/**
-	 * Save the given list of global properties to the database overwriting all values with the
-	 * given values. If a value exists in the database that does not exist in the given list, that
-	 * property is deleted from the database.
+	 * Save the given list of global properties to the database.
 	 * 
 	 * @param props list of GlobalProperty objects to save
 	 * @return the saved global properties
 	 * @should save all global properties to the database
 	 * @should not fail with empty list
-	 * @should delete property from database if not in list
 	 * @should assign uuid to all new properties
 	 * @should save properties with case difference only
 	 */
@@ -545,6 +561,16 @@ public interface AdministrationService extends OpenmrsService {
 	public void purgeGlobalProperty(GlobalProperty globalProperty) throws APIException;
 	
 	/**
+	 * Completely remove the given global properties from the database
+	 * 
+	 * @param globalProperties the global properties to delete/remove from the database
+	 * @throws APIException
+	 * @should delete global properties from database
+	 */
+	@Authorized(PrivilegeConstants.PURGE_GLOBAL_PROPERTIES)
+	public void purgeGlobalProperties(List<GlobalProperty> globalProperties) throws APIException;
+	
+	/**
 	 * Use
 	 * 
 	 * <pre>
@@ -559,7 +585,7 @@ public interface AdministrationService extends OpenmrsService {
 	 * Use
 	 * 
 	 * <pre>
-	 * purgeGlobalProperty(new GlobalProperty(propertyName, propertyValue));
+	 * saveGlobalProperty(new GlobalProperty(propertyName, propertyValue));
 	 * </pre>
 	 * 
 	 * @deprecated use #saveGlobalProperty(GlobalProperty)
@@ -574,7 +600,8 @@ public interface AdministrationService extends OpenmrsService {
 	 * @throws APIException
 	 * @should create global property in database
 	 * @should overwrite global property if exists
-	 * @should allow different properties to have the same string with different case
+	 * @should not allow different properties to have the same string with different case
+	 * @should save a global property whose typed value is handled by a custom datatype
 	 */
 	@Authorized(PrivilegeConstants.MANAGE_GLOBAL_PROPERTIES)
 	public GlobalProperty saveGlobalProperty(GlobalProperty gp) throws APIException;
@@ -638,7 +665,8 @@ public interface AdministrationService extends OpenmrsService {
 	 * Set the given <code>implementationId</code> as this implementation's unique id
 	 * 
 	 * @param implementationId the ImplementationId to save
-	 * @throws APIException if implementationId is empty or is invalid according to central id server
+	 * @throws APIException if implementationId is empty or is invalid according to central id
+	 *             server
 	 * @should create implementation id in database
 	 * @should overwrite implementation id in database if exists
 	 * @should not fail if given implementationId is null
@@ -682,9 +710,32 @@ public interface AdministrationService extends OpenmrsService {
 	 * @param <T>
 	 * @param propertyName
 	 * @should get property value in the proper type specified
-	 * @should return default value if property name does not exist	 
+	 * @should return default value if property name does not exist
 	 * @return property value in the type of the default value
 	 * @since 1.7
 	 */
 	public <T> T getGlobalPropertyValue(String propertyName, T defaultValue) throws APIException;
+	
+	/**
+	 * @param aClass class of object getting length for
+	 * @param fieldName name of the field to get the length for
+	 * @return the max field length of a property
+	 */
+	@Transactional(readOnly = true)
+	public int getMaximumPropertyLength(Class<? extends OpenmrsObject> aClass, String fieldName);
+	
+	/**
+	 * Performs validation in the manual flush mode to prevent any premature flushes.
+	 * <p>
+	 * Used by {@link ValidateUtil#validate(Object)}.
+	 * 
+	 * @see FlushMode
+	 * @since 1.9
+	 * @param object
+	 * @param errors
+	 * @should pass for a valid object
+	 * @should fail for an invalid object
+	 */
+	@Transactional(readOnly = true)
+	public void validate(Object object, Errors errors) throws APIException;
 }

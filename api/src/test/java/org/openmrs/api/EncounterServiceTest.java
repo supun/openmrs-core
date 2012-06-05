@@ -23,6 +23,8 @@ import static org.junit.Assert.assertTrue;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
@@ -30,21 +32,31 @@ import java.util.Vector;
 
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.openmrs.Cohort;
 import org.openmrs.Concept;
 import org.openmrs.Encounter;
+import org.openmrs.EncounterRole;
 import org.openmrs.EncounterType;
 import org.openmrs.Form;
+import org.openmrs.GlobalProperty;
 import org.openmrs.Location;
 import org.openmrs.Obs;
 import org.openmrs.Order;
 import org.openmrs.Patient;
-import org.openmrs.Person;
+import org.openmrs.Provider;
 import org.openmrs.User;
+import org.openmrs.Visit;
+import org.openmrs.VisitType;
 import org.openmrs.api.context.Context;
+import org.openmrs.api.handler.EncounterVisitHandler;
+import org.openmrs.api.handler.ExistingOrNewVisitAssignmentHandler;
+import org.openmrs.api.handler.ExistingVisitAssignmentHandler;
+import org.openmrs.api.handler.NoVisitAssignmentHandler;
 import org.openmrs.test.BaseContextSensitiveTest;
 import org.openmrs.test.Verifies;
+import org.openmrs.util.OpenmrsConstants;
 
 /**
  * Tests all methods in the {@link EncounterService}
@@ -52,6 +64,8 @@ import org.openmrs.test.Verifies;
 public class EncounterServiceTest extends BaseContextSensitiveTest {
 	
 	protected static final String ENC_INITIAL_DATA_XML = "org/openmrs/api/include/EncounterServiceTest-initialData.xml";
+	
+	protected static final String UNIQUE_ENC_WITH_PAGING_XML = "org/openmrs/api/include/EncounterServiceTest-pagingWithUniqueEncounters.xml";
 	
 	/**
 	 * This method is run before all of the tests in this class because it has the @Before
@@ -72,12 +86,7 @@ public class EncounterServiceTest extends BaseContextSensitiveTest {
 	@Test
 	@Verifies(value = "should save encounter with basic details", method = "saveEncounter(Encounter)")
 	public void saveEncounter_shouldSaveEncounterWithBasicDetails() throws Exception {
-		Encounter encounter = new Encounter();
-		encounter.setLocation(new Location(1));
-		encounter.setEncounterType(new EncounterType(1));
-		encounter.setEncounterDatetime(new Date());
-		encounter.setPatient(new Patient(3));
-		encounter.setProvider(new Person(1));
+		Encounter encounter = buildEncounter();
 		
 		EncounterService es = Context.getEncounterService();
 		es.saveEncounter(encounter);
@@ -145,12 +154,7 @@ public class EncounterServiceTest extends BaseContextSensitiveTest {
 		EncounterService es = Context.getEncounterService();
 		
 		// First, create a new Encounter
-		Encounter enc = new Encounter();
-		enc.setLocation(new Location(1));
-		enc.setEncounterType(new EncounterType(1));
-		enc.setEncounterDatetime(new Date());
-		enc.setPatient(new Patient(3));
-		enc.setProvider(new Person(1));
+		Encounter enc = buildEncounter();
 		es.saveEncounter(enc);
 		
 		// Now add an obs to it
@@ -174,28 +178,34 @@ public class EncounterServiceTest extends BaseContextSensitiveTest {
 	@Verifies(value = "should cascade location change in encounter to contained obs", method = "saveEncounter(Encounter)")
 	public void saveEncounter_shouldCascadeChangeOfLocationInEncounterToContainedObs() throws Exception {
 		EncounterService es = Context.getEncounterService();
+		Encounter enc = buildEncounter();
 		
-		// First, create a new Encounter
-		Encounter enc = new Encounter();
-		enc.setLocation(new Location(1));
-		enc.setEncounterType(new EncounterType(1));
-		enc.setEncounterDatetime(new Date());
-		enc.setPatient(new Patient(3));
-		enc.setProvider(new Person(1));
 		es.saveEncounter(enc);
 		
 		// Now add an obs to it
 		Obs newObs = new Obs();
 		newObs.setConcept(new Concept(1));
 		newObs.setValueNumeric(50d);
-		newObs.setLocation(new Location(1));
+		Location location = new Location(1);
+		newObs.setLocation(location);
 		
 		enc.addObs(newObs);
 		es.saveEncounter(enc);
 		
-		enc.setLocation(new Location(2));
+		enc.setLocation(location);
 		es.saveEncounter(enc);
 		assertEquals(enc.getLocation(), newObs.getLocation());
+	}
+	
+	private Encounter buildEncounter() {
+		// First, create a new Encounter
+		Encounter enc = new Encounter();
+		enc.setLocation(Context.getLocationService().getLocation(1));
+		enc.setEncounterType(Context.getEncounterService().getEncounterType(1));
+		enc.setEncounterDatetime(new Date());
+		enc.setPatient(Context.getPatientService().getPatient(3));
+		enc.addProvider(Context.getEncounterService().getEncounterRole(1), Context.getProviderService().getProvider(1));
+		return enc;
 	}
 	
 	/**
@@ -211,19 +221,11 @@ public class EncounterServiceTest extends BaseContextSensitiveTest {
 		EncounterService es = Context.getEncounterService();
 		
 		// First, create a new Encounter
-		Encounter enc = new Encounter();
-		enc.setLocation(new Location(1));
-		enc.setEncounterType(new EncounterType(1));
-		enc.setEncounterDatetime(new Date());
-		enc.setPatient(new Patient(3));
-		enc.setProvider(new Person(1));
+		Encounter enc = buildEncounter();
 		es.saveEncounter(enc);
 		
 		// Now add an obs to it
-		Obs newObs = new Obs();
-		newObs.setConcept(new Concept(1));
-		newObs.setValueNumeric(50d);
-		newObs.setLocation(new Location(2));
+		Obs newObs = buildObs();
 		
 		enc.addObs(newObs);
 		es.saveEncounter(enc);
@@ -231,6 +233,14 @@ public class EncounterServiceTest extends BaseContextSensitiveTest {
 		enc.setLocation(new Location(2));
 		es.saveEncounter(enc);
 		assertNotSame(enc.getLocation(), newObs.getLocation());
+	}
+	
+	private Obs buildObs() {
+		Obs newObs = new Obs();
+		newObs.setConcept(new Concept(1));
+		newObs.setValueNumeric(50d);
+		newObs.setLocation(new Location(2));
+		return newObs;
 	}
 	
 	/**
@@ -381,11 +391,7 @@ public class EncounterServiceTest extends BaseContextSensitiveTest {
 		EncounterService encounterService = Context.getEncounterService();
 		
 		// the encounter to save with a non null creator
-		Encounter encounter = new Encounter();
-		encounter.setLocation(new Location(1));
-		encounter.setEncounterType(new EncounterType(1));
-		encounter.setEncounterDatetime(new Date());
-		encounter.setPatient(new Patient(2));
+		Encounter encounter = buildEncounter();
 		encounter.setCreator(new User(4));
 		
 		// make sure the logged in user isn't the user we're testing with
@@ -394,13 +400,13 @@ public class EncounterServiceTest extends BaseContextSensitiveTest {
 		encounterService.saveEncounter(encounter);
 		
 		// make sure the encounter creator is user 4 not user 1
-		assertEquals(encounter.getCreator(), new User(4));
+		assertEquals(4, encounter.getCreator().getId().intValue());
 		
 		// make sure we can fetch this new encounter
 		// from the database and its values are the same as the passed in ones
 		Encounter newEncounter = encounterService.getEncounter(encounter.getEncounterId());
 		assertNotNull(newEncounter);
-		assertEquals(encounter.getCreator(), new User(4));
+		assertEquals(4, encounter.getCreator().getId().intValue());
 		assertNotSame(encounter.getCreator(), Context.getAuthenticatedUser());
 	}
 	
@@ -413,11 +419,7 @@ public class EncounterServiceTest extends BaseContextSensitiveTest {
 		EncounterService encounterService = Context.getEncounterService();
 		
 		// the encounter to save without a dateCreated
-		Encounter encounter = new Encounter();
-		encounter.setLocation(new Location(1));
-		encounter.setEncounterType(new EncounterType(1));
-		encounter.setEncounterDatetime(new Date());
-		encounter.setPatient(new Patient(2));
+		Encounter encounter = buildEncounter();
 		encounter.setCreator(new User(4));
 		Date date = new Date(System.currentTimeMillis() - 5000); // make sure we
 		// have a
@@ -429,7 +431,7 @@ public class EncounterServiceTest extends BaseContextSensitiveTest {
 		encounterService.saveEncounter(encounter);
 		
 		// make sure the encounter creator is user 4 not user 1
-		assertEquals(encounter.getCreator(), new User(4));
+		assertEquals(4, encounter.getCreator().getId().intValue());
 		assertNotSame(encounter.getCreator(), Context.getAuthenticatedUser());
 		
 		// make sure the encounter date created wasn't overwritten
@@ -454,11 +456,7 @@ public class EncounterServiceTest extends BaseContextSensitiveTest {
 		EncounterService encounterService = Context.getEncounterService();
 		
 		// the encounter to save without a dateCreated
-		Encounter encounter = new Encounter();
-		encounter.setLocation(new Location(1));
-		encounter.setEncounterType(new EncounterType(1));
-		encounter.setEncounterDatetime(new Date());
-		encounter.setPatient(new Patient(2));
+		Encounter encounter = buildEncounter();
 		Date date = new Date(System.currentTimeMillis() - 5000); // make sure we
 		// have a
 		// date that
@@ -498,44 +496,6 @@ public class EncounterServiceTest extends BaseContextSensitiveTest {
 		Order createdOrder = Context.getOrderService().getOrder(order.getOrderId());
 		assertEquals(date, createdOrder.getDateCreated());
 		assertEquals(creator, createdOrder.getCreator());
-	}
-	
-	/**
-	 * @see {@link EncounterService#saveEncounter(Encounter)}
-	 */
-	@Test
-	@Verifies(value = "should cascade creator and dateCreated to orders", method = "saveEncounter(Encounter)")
-	public void saveEncounter_shouldCascadeCreatorAndDateCreatedToOrders() throws Exception {
-		EncounterService encounterService = Context.getEncounterService();
-		
-		// the encounter to save without a dateCreated
-		Encounter encounter = new Encounter();
-		encounter.setLocation(new Location(1));
-		encounter.setEncounterType(new EncounterType(1));
-		encounter.setEncounterDatetime(new Date());
-		encounter.setPatient(new Patient(2));
-		
-		// create and add an order to this encounter
-		Order order = new Order();
-		order.setConcept(new Concept(1));
-		order.setPatient(new Patient(2));
-		encounter.addOrder(order);
-		
-		// make sure the logged in user isn't the user we're testing with
-		assertNotSame(encounter.getCreator(), Context.getAuthenticatedUser());
-		
-		encounterService.saveEncounter(encounter);
-		
-		// make sure the order date created and creator are the same as what we
-		// set
-		Order createdOrder = Context.getOrderService().getOrder(order.getOrderId());
-		assertNotNull(encounter.getDateCreated());
-		assertNotNull(createdOrder.getDateCreated());
-		assertEquals(encounter.getDateCreated(), createdOrder.getDateCreated());
-		
-		assertNotNull(encounter.getCreator());
-		assertNotNull(createdOrder.getCreator());
-		assertEquals(encounter.getCreator(), createdOrder.getCreator());
 	}
 	
 	/**
@@ -745,7 +705,7 @@ public class EncounterServiceTest extends BaseContextSensitiveTest {
 	public void getEncounters_shouldGetEncountersByLocation() throws Exception {
 		List<Encounter> encounters = Context.getEncounterService().getEncounters(null, new Location(1), null, null, null,
 		    null, null, true);
-		assertEquals(5, encounters.size());
+		assertEquals(6, encounters.size());
 	}
 	
 	/**
@@ -804,7 +764,7 @@ public class EncounterServiceTest extends BaseContextSensitiveTest {
 		forms.add(new Form(1));
 		List<Encounter> encounters = Context.getEncounterService().getEncounters(null, null, null, null, forms, null, null,
 		    true);
-		assertEquals(6, encounters.size());
+		assertEquals(7, encounters.size());
 	}
 	
 	/**
@@ -814,10 +774,10 @@ public class EncounterServiceTest extends BaseContextSensitiveTest {
 	@Verifies(value = "should get encounters by provider", method = "getEncounters(Patient,Location,Date,Date,Collection<QForm;>,Collection<QEncounterType;>,Collection<QUser;>,null)")
 	public void getEncounters_shouldGetEncountersByProvider() throws Exception {
 		List<User> providers = new ArrayList<User>();
-		providers.add(new User(1));
+		providers.add(Context.getUserService().getUser(1));
 		List<Encounter> encounters = Context.getEncounterService().getEncounters(null, null, null, null, null, null,
 		    providers, true);
-		assertEquals(3, encounters.size());
+		assertEquals(2, encounters.size()); // should be encounters 15 and 16
 	}
 	
 	/**
@@ -830,7 +790,7 @@ public class EncounterServiceTest extends BaseContextSensitiveTest {
 		types.add(new EncounterType(1));
 		List<Encounter> encounters = Context.getEncounterService().getEncounters(null, null, null, null, null, types, null,
 		    true);
-		assertEquals(5, encounters.size());
+		assertEquals(6, encounters.size());
 	}
 	
 	/**
@@ -848,7 +808,7 @@ public class EncounterServiceTest extends BaseContextSensitiveTest {
 	@Test
 	@Verifies(value = "should include voided encounters", method = "getEncounters(Patient,Location,Date,Date,Collection<QForm;>,Collection<QEncounterType;>,Collection<QUser;>,null)")
 	public void getEncounters_shouldIncludeVoidedEncounters() throws Exception {
-		assertEquals(6, Context.getEncounterService().getEncounters(null, null, null, null, null, null, null, true).size());
+		assertEquals(7, Context.getEncounterService().getEncounters(null, null, null, null, null, null, null, true).size());
 	}
 	
 	/**
@@ -889,14 +849,14 @@ public class EncounterServiceTest extends BaseContextSensitiveTest {
 		encounterService.saveEncounterType(encounterType);
 		
 		// make sure the encounter type creator is user 4 not user 1
-		assertEquals(encounterType.getCreator(), new User(4));
+		assertEquals(4, encounterType.getCreator().getId().intValue());
 		assertNotSame(encounterType.getCreator(), Context.getAuthenticatedUser());
 		
 		// make sure we can fetch this new encounter type
 		// from the database and its values are the same as the passed in ones
 		EncounterType newEncounterType = encounterService.getEncounterType(encounterType.getEncounterTypeId());
 		assertNotNull(newEncounterType);
-		assertEquals(encounterType.getCreator(), new User(4));
+		assertEquals(4, encounterType.getCreator().getId().intValue());
 		assertNotSame(encounterType.getCreator(), Context.getAuthenticatedUser());
 	}
 	
@@ -924,8 +884,7 @@ public class EncounterServiceTest extends BaseContextSensitiveTest {
 		encounterService.saveEncounterType(encounterType);
 		
 		// make sure the encounter type creator is user 4 not user 1
-		assertEquals(encounterType.getCreator(), new User(4));
-		assertNotSame(encounterType.getCreator(), Context.getAuthenticatedUser());
+		assertNotSame(encounterType.getCreator().getId(), Context.getAuthenticatedUser().getId());
 		
 		// make sure the encounter type date created wasn't overwritten
 		assertEquals(date, encounterType.getDateCreated());
@@ -934,7 +893,7 @@ public class EncounterServiceTest extends BaseContextSensitiveTest {
 		// from the database and its values are the same as the passed in ones
 		EncounterType newEncounterType = encounterService.getEncounterType(encounterType.getEncounterTypeId());
 		assertNotNull(newEncounterType);
-		assertEquals(encounterType.getCreator(), new User(4));
+		assertEquals(4, encounterType.getCreator().getId().intValue());
 		assertNotSame(encounterType.getCreator(), Context.getAuthenticatedUser());
 		assertEquals(date, encounterType.getDateCreated());
 	}
@@ -1271,12 +1230,12 @@ public class EncounterServiceTest extends BaseContextSensitiveTest {
 	public void purgeEncounterType_shouldPurgeType() throws Exception {
 		EncounterService encounterService = Context.getEncounterService();
 		
-		EncounterType encounterTypeToPurge = encounterService.getEncounterType(1);
+		EncounterType encounterTypeToPurge = encounterService.getEncounterType(4);
 		assertNotNull(encounterTypeToPurge);
 		
 		// check deletion
 		encounterService.purgeEncounterType(encounterTypeToPurge);
-		assertNull(encounterService.getEncounterType(1));
+		assertNull(encounterService.getEncounterType(4));
 	}
 	
 	/**
@@ -1309,10 +1268,10 @@ public class EncounterServiceTest extends BaseContextSensitiveTest {
 		// for some reason the xml for the existing encounter has already given
 		// this order a different patient than the encounter that it's contained
 		// in, but let's verify that:
-		Assert.assertNotSame(enc.getPatient(), existing.getPatient());
+		Assert.assertNotSame(enc.getPatient().getId(), existing.getPatient().getId());
 		
 		Context.getEncounterService().saveEncounter(enc);
-		Assert.assertEquals(enc.getPatient(), existing.getPatient());
+		Assert.assertEquals(enc.getPatient().getId(), existing.getPatient().getId());
 	}
 	
 	/**
@@ -1386,11 +1345,11 @@ public class EncounterServiceTest extends BaseContextSensitiveTest {
 	@Test
 	@Verifies(value = "should include voided encounters in the returned list if includedVoided is true", method = "getEncountersByPatient(String,boolean)")
 	public void getEncountersByPatient_shouldIncludeVoidedEncountersInTheReturnedListIfIncludedVoidedIsTrue()
-	                                                                                                         throws Exception {
+	        throws Exception {
 		EncounterService encounterService = Context.getEncounterService();
 		
 		List<Encounter> encounters = encounterService.getEncountersByPatient("12345", true);
-		assertEquals(3, encounters.size());
+		assertEquals(4, encounters.size());
 	}
 	
 	/**
@@ -1417,4 +1376,558 @@ public class EncounterServiceTest extends BaseContextSensitiveTest {
 		Assert.assertEquals(3, allEncounters.get(7).size());
 	}
 	
+	/**
+	 * @see {@link EncounterService#getEncounters(Patient, Location, Date, Date, java.util.Collection, java.util.Collection, java.util.Collection, java.util.Collection, java.util.Collection, boolean)}
+	 */
+	@Test
+	@Verifies(value = "should get encounters by visit", method = "getEncounters(Patient,Location,Date,Date,Collection<QForm;>,Collection<QEncounterType;>,Collection<QVisitType;>,Collection<QVisit;>,Collection<QUser;>,null)")
+	public void getEncounters_shouldGetEncountersByVisit() throws Exception {
+		List<Visit> visits = new ArrayList<Visit>();
+		visits.add(new Visit(1));
+		List<Encounter> encounters = Context.getEncounterService().getEncounters(null, null, null, null, null, null, null,
+		    null, visits, true);
+		assertEquals(2, encounters.size());
+	}
+	
+	/**
+	 * @see {@link EncounterService#getEncounters(Patient, Location, Date, Date, java.util.Collection, java.util.Collection, java.util.Collection, java.util.Collection, java.util.Collection, boolean)}
+	 */
+	@Test
+	@Verifies(value = "should get encounters by visit type", method = "getEncounters(Patient,Location,Date,Date,Collection<QForm;>,Collection<QEncounterType;>,Collection<QVisitType;>,Collection<QVisit;>,Collection<QUser;>,null)")
+	public void getEncounters_shouldGetEncountersByVisitType() throws Exception {
+		List<VisitType> visitTypes = new Vector<VisitType>();
+		visitTypes.add(new VisitType(2));
+		List<Encounter> encounters = Context.getEncounterService().getEncounters(null, null, null, null, null, null, null,
+		    visitTypes, null, true);
+		assertEquals(2, encounters.size());
+	}
+	
+	/**
+	 * @see EncounterService#getEncountersByVisit(Visit, boolean)
+	 * @verifies get active encounters by visit
+	 */
+	@Test
+	public void getEncountersByVisit_shouldGetActiveEncountersByVisit() throws Exception {
+		List<Encounter> encounters = Context.getEncounterService().getEncountersByVisit(new Visit(1), false);
+		assertEquals(1, encounters.size());
+	}
+	
+	/**
+	 * @see EncounterService#getEncountersByVisit(Visit, boolean)
+	 * @verifies include voided encounters when includeVoided is true
+	 */
+	@Test
+	public void getEncountersByVisit_shouldIncludeVoidedEncountersWhenIncludeVoidedIsTrue() throws Exception {
+		List<Encounter> encounters = Context.getEncounterService().getEncountersByVisit(new Visit(1), true);
+		assertEquals(2, encounters.size());
+	}
+	
+	/**
+	 * @see {@link EncounterService#getCountOfEncounters(String,null)}
+	 */
+	@Test
+	@Verifies(value = "should get the correct count of unique encounters", method = "getCountOfEncounters(String,null)")
+	public void getCountOfEncounters_shouldGetTheCorrectCountOfUniqueEncounters() throws Exception {
+		executeDataSet(UNIQUE_ENC_WITH_PAGING_XML);
+		Assert.assertEquals(4, Context.getEncounterService().getCountOfEncounters("qwerty", true).intValue());
+	}
+	
+	/**
+	 * TODO see ticket https://tickets.openmrs.org/browse/TRUNK-1956 to fix this test
+	 * 
+	 * @see {@link EncounterService#getEncounters(String,Integer,Integer,null,null)}
+	 */
+	@Test
+	@Ignore
+	@Verifies(value = "should get all the unique encounters that match the specified parameter values", method = "getEncounters(String,Integer,Integer,null,null)")
+	public void getEncounters_shouldGetAllTheUniqueEncountersThatMatchTheSpecifiedParameterValues() throws Exception {
+		executeDataSet(UNIQUE_ENC_WITH_PAGING_XML);
+		List<Encounter> encs = Context.getEncounterService().getEncounters("qwerty", 0, 4, true);
+		Assert.assertEquals(4, encs.size());
+	}
+	
+	/**
+	 * TODO see ticket https://tickets.openmrs.org/browse/TRUNK-1956 to fix this test
+	 * 
+	 * @see {@link EncounterService#getEncounters(String,Integer,Integer,null,null)}
+	 */
+	@Test
+	@Ignore
+	@Verifies(value = "should not return voided encounters if includeVoided is set to true", method = "getEncounters(String,Integer,Integer,null,null)")
+	public void getEncounters_shouldNotReturnVoidedEncountersIfIncludeVoidedIsSetToTrue() throws Exception {
+		executeDataSet(UNIQUE_ENC_WITH_PAGING_XML);
+		List<Encounter> encs = Context.getEncounterService().getEncounters("qwerty", 0, 3, false);
+		Assert.assertEquals(3, encs.size());
+	}
+	
+	/**
+	 * @see org.openmrs.api.EncounterService#saveEncounterRole(org.openmrs.EncounterRole)
+	 */
+	@Test
+	@Verifies(value = "should save encounter role with basic details", method = "saveEncounterRole(EncounterRole)")
+	public void saveEncounterRole_shouldSaveEncounterRoleWithBasicDetails() throws Exception {
+		EncounterRole encounterRole = new EncounterRole();
+		encounterRole.setName("Attending physician");
+		encounterRole.setDescription("The person in charge");
+		EncounterService encounterService = Context.getEncounterService();
+		encounterService.saveEncounterRole(encounterRole);
+		
+		assertNotNull("The saved encounter role should have an encounter role id now", encounterRole.getEncounterRoleId());
+		EncounterRole newSavedEncounterRole = encounterService.getEncounterRole(encounterRole.getEncounterRoleId());
+		assertNotNull("We should get back an encounter role", newSavedEncounterRole);
+		assertEquals(encounterRole, newSavedEncounterRole);
+		assertTrue("The created encounter role needs to equal the pojo encounter role", encounterRole
+		        .equals(newSavedEncounterRole));
+		
+	}
+	
+	/**
+	 * Make sure that purging an encounter removes the row from the database
+	 * 
+	 * @see {@link EncounterService#purgeEncounterRole(org.openmrs.EncounterRole)}
+	 */
+	@Test
+	@Verifies(value = "should purge Encounter Role", method = "purgeEncounterRole(EncounterRole)")
+	public void purgeEncounterRole_shouldPurgeEncounterRole() throws Exception {
+		EncounterService encounterService = Context.getEncounterService();
+		EncounterRole encounterRole = encounterService.getEncounterRole(1);
+		encounterService.purgeEncounterRole(encounterRole);
+		EncounterRole fetchedEncounterRole = encounterService.getEncounterRole(encounterRole.getEncounterRoleId());
+		assertNull("We shouldn't find the encounter after deletion", fetchedEncounterRole);
+	}
+	
+	/**
+	 * @see {@link EncounterService#getAllEncounterRoles(boolean)}
+	 */
+	@Test
+	@Verifies(value = "get all encounter roles based on include retired flag", method = "getAllEncounterRoles(boolean)")
+	public void getAllEncounterRoles_shouldGetAllEncounterRolesBasedOnIncludeRetiredFlag() throws Exception {
+		EncounterService encounterService = Context.getEncounterService();
+		List<EncounterRole> encounterRoles = encounterService.getAllEncounterRoles(true);
+		assertEquals("get all encounter roles including retired", 3, encounterRoles.size());
+		encounterRoles = encounterService.getAllEncounterRoles(false);
+		assertEquals("get all encounter roles excluding retired", 2, encounterRoles.size());
+	}
+	
+	/**
+	 * @see {@link EncounterService#getEncounterRoleByUuid(String)}
+	 */
+	@Test
+	@Verifies(value = "find encounter role based on uuid", method = "getEncounterRoleByUuid(String)")
+	public void getEncounterRoleByUuid_shouldFindEncounterRoleBasedOnUuid() throws Exception {
+		EncounterService encounterService = Context.getEncounterService();
+		EncounterRole encounterRole = encounterService.getEncounterRoleByUuid("430bbb70-6a9c-4e1e-badb-9d1054b1b5e9");
+		assertNotNull("valid uuid should be returned", encounterRole);
+		encounterRole = encounterService.getEncounterRoleByUuid("invaid uuid");
+		assertNull("returns null for invalid uuid", encounterRole);
+	}
+	
+	/**
+	 * @see {@link EncounterService#retireEncounterRole(org.openmrs.EncounterRole, String)}
+	 */
+	@Test
+	@Verifies(value = "should retire type and set attributes", method = "retireEncounterRole(EncounterRole,String)")
+	public void retireEncounterRole_shouldRetireTypeAndSetAttributes() throws Exception {
+		EncounterService encounterService = Context.getEncounterService();
+		EncounterRole encounterRole = encounterService.getEncounterRole(1);
+		assertFalse(encounterRole.isRetired());
+		assertNull(encounterRole.getRetiredBy());
+		assertNull(encounterRole.getRetireReason());
+		assertNull(encounterRole.getDateRetired());
+		EncounterRole retiredEncounterRole = encounterService.retireEncounterRole(encounterRole, "Just Testing");
+		
+		assertEquals(retiredEncounterRole, encounterRole);
+		assertTrue(retiredEncounterRole.isRetired());
+		assertNotNull(retiredEncounterRole.getDateRetired());
+		assertEquals(Context.getAuthenticatedUser(), retiredEncounterRole.getRetiredBy());
+		assertEquals("Just Testing", retiredEncounterRole.getRetireReason());
+	}
+	
+	/**
+	 * @see {@link EncounterService#retireEncounterRole(org.openmrs.EncounterRole, String)}
+	 */
+	@Test(expected = IllegalArgumentException.class)
+	@Verifies(value = "should throw error if given null reason parameter", method = "retireEncounterRole(EncounterRole,String)")
+	public void retireEncounterRole_shouldThrowErrorIfGivenNullReasonParameter() throws Exception {
+		EncounterService encounterService = Context.getEncounterService();
+		EncounterRole encounterRole = encounterService.getEncounterRole(1);
+		encounterService.retireEncounterRole(encounterRole, null);
+	}
+	
+	/**
+	 * @see {@link EncounterService#unretireEncounterRole(org.openmrs.EncounterRole)}
+	 */
+	@Test
+	@Verifies(value = "should unretire type and unmark attributes", method = "unretireEncounterRole(EncounterRole)")
+	public void unretireEncounterRole_shouldUnretireTypeAndUnmarkAttributes() throws Exception {
+		EncounterService encounterService = Context.getEncounterService();
+		EncounterRole encounterRole = encounterService.getEncounterRole(2);
+		assertTrue(encounterRole.isRetired());
+		assertNotNull(encounterRole.getRetiredBy());
+		assertNotNull(encounterRole.getRetireReason());
+		assertNotNull(encounterRole.getDateRetired());
+		EncounterRole unretiredEncounterRole = encounterService.unretireEncounterRole(encounterRole);
+		
+		assertEquals(unretiredEncounterRole, encounterRole);
+		assertFalse(unretiredEncounterRole.isRetired());
+		assertNull(unretiredEncounterRole.getDateRetired());
+		assertNull(unretiredEncounterRole.getRetiredBy());
+		assertNull(unretiredEncounterRole.getRetireReason());
+	}
+	
+	/**
+	 * @see EncounterService#saveEncounter(Encounter)
+	 * @verifies cascade delete encounter providers
+	 */
+	@Test
+	public void saveEncounter_shouldCascadeDeleteEncounterProviders() throws Exception {
+		//given
+		Encounter encounter = new Encounter();
+		encounter.setLocation(new Location(1));
+		encounter.setEncounterType(new EncounterType(1));
+		encounter.setEncounterDatetime(new Date());
+		encounter.setPatient(new Patient(3));
+		
+		EncounterRole role = new EncounterRole();
+		role.setName("role");
+		role = Context.getEncounterService().saveEncounterRole(role);
+		
+		Provider provider = new Provider();
+		provider.setName("provider");
+		provider.setIdentifier("id1");
+		provider = Context.getProviderService().saveProvider(provider);
+		
+		Provider provider2 = new Provider();
+		provider2.setName("provider2");
+		provider2.setIdentifier("id2");
+		provider2 = Context.getProviderService().saveProvider(provider2);
+		
+		encounter.addProvider(role, provider);
+		encounter.addProvider(role, provider2);
+		
+		EncounterService es = Context.getEncounterService();
+		es.saveEncounter(encounter);
+		Context.flushSession();
+		Context.clearSession();
+		
+		//when
+		encounter = Context.getEncounterService().getEncounter(encounter.getEncounterId());
+		encounter.setProvider(role, provider);
+		es.saveEncounter(encounter);
+		Context.flushSession();
+		Context.clearSession();
+		
+		//then
+		encounter = Context.getEncounterService().getEncounter(encounter.getEncounterId());
+		Assert.assertEquals(1, encounter.getProvidersByRole(role).size());
+		Assert.assertTrue("Role", encounter.getProvidersByRole(role).contains(provider));
+	}
+	
+	/**
+	 * @see EncounterService#saveEncounter(Encounter)
+	 * @verifies cascade save encounter providers
+	 */
+	@Test
+	public void saveEncounter_shouldCascadeSaveEncounterProviders() throws Exception {
+		//given
+		Encounter encounter = new Encounter();
+		encounter.setLocation(new Location(1));
+		encounter.setEncounterType(new EncounterType(1));
+		encounter.setEncounterDatetime(new Date());
+		encounter.setPatient(new Patient(3));
+		
+		EncounterRole role = new EncounterRole();
+		role.setName("role");
+		role = Context.getEncounterService().saveEncounterRole(role);
+		
+		EncounterRole role2 = new EncounterRole();
+		role2.setName("role2");
+		role2 = Context.getEncounterService().saveEncounterRole(role2);
+		
+		Provider provider = new Provider();
+		provider.setName("provider");
+		provider.setIdentifier("id1");
+		provider = Context.getProviderService().saveProvider(provider);
+		
+		Provider provider2 = new Provider();
+		provider2.setName("provider2");
+		provider2.setIdentifier("id2");
+		provider2 = Context.getProviderService().saveProvider(provider2);
+		
+		encounter.addProvider(role, provider);
+		encounter.addProvider(role, provider2);
+		encounter.addProvider(role2, provider2);
+		
+		//when
+		EncounterService es = Context.getEncounterService();
+		es.saveEncounter(encounter);
+		Context.flushSession();
+		Context.clearSession();
+		
+		//then
+		encounter = Context.getEncounterService().getEncounter(encounter.getEncounterId());
+		Assert.assertEquals(2, encounter.getProvidersByRole(role).size());
+		Assert.assertTrue("Role", encounter.getProvidersByRole(role).containsAll(Arrays.asList(provider, provider2)));
+		Assert.assertEquals(1, encounter.getProvidersByRole(role2).size());
+		Assert.assertTrue("Role2", encounter.getProvidersByRole(role2).contains(provider2));
+	}
+	
+	/**
+	 * @see EncounterService#getEncounters(String,Integer,Integer,boolean)
+	 * @verifies return empty list for empty query
+	 */
+	@Test
+	public void getEncounters_shouldReturnEmptyListForEmptyQuery() throws Exception {
+		//given
+		
+		//when
+		List<Encounter> encounters = Context.getEncounterService().getEncounters("", null, null, true);
+		
+		//then
+		Assert.assertTrue(encounters.isEmpty());
+	}
+	
+	/**
+	 * @see EncounterService#getVisitAssignmentHandlers()
+	 * @verifies return the no assignment handler
+	 */
+	@Test
+	public void getVisitAssignmentHandlers_shouldReturnTheNoAssignmentHandler() throws Exception {
+		
+		List<EncounterVisitHandler> handlers = Context.getEncounterService().getEncounterVisitHandlers();
+		
+		boolean found = false;
+		for (EncounterVisitHandler handler : handlers) {
+			if (handler instanceof NoVisitAssignmentHandler)
+				found = true;
+		}
+		
+		Assert.assertTrue("The basic 'no assignment' handler was not found", found);
+	}
+	
+	/**
+	 * @see EncounterService#getVisitAssignmentHandlers()
+	 * @verifies return the existing visit only assignment handler
+	 */
+	@Test
+	public void getVisitAssignmentHandlers_shouldReturnTheExistingVisitOnlyAssignmentHandler() throws Exception {
+		
+		List<EncounterVisitHandler> handlers = Context.getEncounterService().getEncounterVisitHandlers();
+		
+		boolean found = false;
+		for (EncounterVisitHandler handler : handlers) {
+			if (handler instanceof ExistingVisitAssignmentHandler) {
+				found = true;
+				break;
+			}
+		}
+		
+		Assert.assertTrue("The 'existing visit only assignment' handler was not found", found);
+	}
+	
+	/**
+	 * @see EncounterService#getVisitAssignmentHandlers()
+	 * @verifies return the existing or new visit assignment handler
+	 */
+	@Test
+	public void getVisitAssignmentHandlers_shouldReturnTheExistingOrNewVisitAssignmentHandler() throws Exception {
+		
+		List<EncounterVisitHandler> handlers = Context.getEncounterService().getEncounterVisitHandlers();
+		
+		boolean found = false;
+		for (EncounterVisitHandler handler : handlers) {
+			if (handler instanceof ExistingOrNewVisitAssignmentHandler) {
+				found = true;
+				break;
+			}
+		}
+		
+		Assert.assertTrue("The 'existing or new visit only assignment' handler was not found", found);
+	}
+	
+	/**
+	 * @see {@link EncounterService#saveEncounter(Encounter)}
+	 */
+	@Test
+	@Verifies(value = "should not assign encounter to visit if no handler is registered", method = "saveEncounter(Encounter)")
+	public void saveEncounter_shouldNotAssignEncounterToVisitIfNoHandlerIsRegistered() throws Exception {
+		Encounter encounter = buildEncounter();
+		
+		//We should have no visit
+		assertNull(encounter.getVisit());
+		
+		Context.getEncounterService().saveEncounter(encounter);
+		
+		//We should have no visit
+		assertNull(encounter.getVisit());
+	}
+	
+	/**
+	 * @see {@link EncounterService#saveEncounter(Encounter)}
+	 */
+	@Test
+	@Verifies(value = "should not assign encounter to visit if the no assign handler is registered", method = "saveEncounter(Encounter)")
+	public void saveEncounter_shouldNotAssignEncounterToVisitIfTheNoAssignHandlerIsRegistered() throws Exception {
+		Encounter encounter = buildEncounter();
+		
+		//We should have no visit
+		assertNull(encounter.getVisit());
+		
+		GlobalProperty gp = Context.getAdministrationService().getGlobalPropertyObject(
+		    OpenmrsConstants.GP_VISIT_ASSIGNMENT_HANDLER);
+		gp.setPropertyValue("org.openmrs.api.handler.NoVisitAssignmentHandler");
+		Context.getAdministrationService().saveGlobalProperty(gp);
+		
+		Context.getEncounterService().saveEncounter(encounter);
+		
+		//We should have no visit.
+		assertNull(encounter.getVisit());
+	}
+	
+	/**
+	 * @see {@link EncounterService#saveEncounter(Encounter)}
+	 */
+	@Test
+	@Verifies(value = "should assign encounter to visit if the assign to existing handler is registered", method = "saveEncounter(Encounter)")
+	public void saveEncounter_shouldAssignEncounterToVisitIfTheAssignToExistingHandlerIsRegistered() throws Exception {
+		Encounter encounter = buildEncounter();
+		
+		//We should have no visit
+		assertNull(encounter.getVisit());
+		
+		GlobalProperty gp = Context.getAdministrationService().getGlobalPropertyObject(
+		    OpenmrsConstants.GP_VISIT_ASSIGNMENT_HANDLER);
+		gp.setPropertyValue("org.openmrs.api.handler.ExistingVisitAssignmentHandler");
+		Context.getAdministrationService().saveGlobalProperty(gp);
+		
+		Context.getEncounterService().saveEncounter(encounter);
+		
+		//We should have a visit.
+		assertNotNull(encounter.getVisit());
+		assertNotNull(encounter.getVisit().getVisitId());
+	}
+	
+	/**
+	 * @see {@link EncounterService#saveEncounter(Encounter)}
+	 */
+	@Test
+	@Verifies(value = "should assign encounter to visit if the assign to existing or new handler is registered", method = "saveEncounter(Encounter)")
+	public void saveEncounter_shouldAssignEncounterToVisitIfTheAssignToExistingOrNewHandlerIsRegistered() throws Exception {
+		Encounter encounter = new Encounter();
+		encounter.setLocation(new Location(2));
+		encounter.setEncounterType(new EncounterType(1));
+		encounter.setEncounterDatetime(new Date());
+		encounter.setPatient(new Patient(2));
+		encounter.setCreator(new User(4));
+		
+		//We should have no visit
+		assertNull(encounter.getVisit());
+		
+		GlobalProperty gp = Context.getAdministrationService().getGlobalPropertyObject(
+		    OpenmrsConstants.GP_VISIT_ASSIGNMENT_HANDLER);
+		gp.setPropertyValue("org.openmrs.api.handler.ExistingOrNewVisitAssignmentHandler");
+		Context.getAdministrationService().saveGlobalProperty(gp);
+		
+		Calendar calendar = Calendar.getInstance();
+		calendar.setTime(encounter.getEncounterDatetime());
+		calendar.set(Calendar.YEAR, 1900);
+		encounter.setEncounterDatetime(calendar.getTime());
+		
+		Context.getEncounterService().saveEncounter(encounter);
+		
+		//We should have a visit.
+		assertNotNull(encounter.getVisit());
+		
+		//The visit should be persisted.
+		assertNotNull(encounter.getVisit().getVisitId());
+	}
+	
+	/**
+	 * @see {@link EncounterService#getEncountersNotAssignedToAnyVisit(Patient)}
+	 */
+	@Test
+	@Verifies(value = "should return the unvoided encounters not assigned to any visit", method = "getEncountersNotAssignedToAnyVisit(Patient)")
+	public void getEncountersNotAssignedToAnyVisit_shouldReturnTheUnvoidedEncountersNotAssignedToAnyVisit() throws Exception {
+		executeDataSet(UNIQUE_ENC_WITH_PAGING_XML);
+		List<Encounter> encs = Context.getEncounterService().getEncountersNotAssignedToAnyVisit(
+		    Context.getPatientService().getPatient(10));
+		Assert.assertEquals(2, encs.size());
+		Assert.assertEquals(17, encs.get(0).getEncounterId().intValue());
+		Assert.assertEquals(18, encs.get(1).getEncounterId().intValue());
+	}
+	
+	/**
+	 * @see {@link EncounterService#saveEncounter(Encounter)}
+	 */
+	@Test
+	@Ignore("TRUNK-50")
+	@Verifies(value = "should void and create new obs when saving encounter", method = "saveEncounter(Encounter)")
+	public void saveEncounter_shouldVoidAndCreateNewObsWhenSavingEncounter() throws Exception {
+		// create an encounter
+		Encounter encounter = new Encounter();
+		encounter.setLocation(new Location(1));
+		encounter.setEncounterType(new EncounterType(1));
+		encounter.setEncounterDatetime(new Date());
+		encounter.setPatient(new Patient(3));
+		
+		// Now add an obs to it
+		Obs obs = new Obs();
+		obs.setConcept(new Concept(1));
+		obs.setValueNumeric(50d);
+		encounter.addObs(obs);
+		
+		// save the encounter
+		EncounterService es = Context.getEncounterService();
+		es.saveEncounter(encounter);
+		
+		// get the id of this obs
+		int oldObsId = obs.getObsId();
+		
+		// now change the obs value
+		obs.setValueNumeric(100d);
+		
+		// resave the encounters
+		es.saveEncounter(encounter);
+		
+		// get the new obs id
+		int newObsId = encounter.getAllObs().iterator().next().getId();
+		
+		Assert.assertTrue(oldObsId != newObsId);
+		Assert.assertEquals(2, encounter.getAllObs(true).size());
+		Assert.assertEquals(1, encounter.getAllObs().size());
+	}
+	
+	/**
+	 * @see {@link EncounterService#voidEncounter(Encounter, String)}
+	 */
+	@Test
+	@Verifies(value = "should not void providers", method = "voidEncounter(Encounter, String)")
+	public void voidEncounter_shouldNotVoidProviders() throws Exception {
+		EncounterService encounterService = Context.getEncounterService();
+		
+		Encounter encounter = new Encounter();
+		encounter.setLocation(new Location(1));
+		encounter.setEncounterType(new EncounterType(1));
+		encounter.setEncounterDatetime(new Date());
+		encounter.setPatient(new Patient(3));
+		
+		EncounterRole role = new EncounterRole();
+		role.setName("role");
+		role = encounterService.saveEncounterRole(role);
+		
+		Provider provider = new Provider();
+		provider.setName("provider");
+		provider.setIdentifier("id1");
+		provider = Context.getProviderService().saveProvider(provider);
+				
+		encounter.addProvider(role, provider);
+		encounterService.saveEncounter(encounter);
+
+		assertEquals(1, encounter.getProvidersByRoles().size());
+		
+		encounterService.voidEncounter(encounter, "reason");
+		
+		encounter = encounterService.getEncounter(encounter.getEncounterId());
+		assertEquals(1, encounter.getProvidersByRoles().size());
+	}
 }

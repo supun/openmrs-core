@@ -14,10 +14,19 @@
 package org.openmrs;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+
+import org.openmrs.annotation.DisableHandlers;
+import org.openmrs.api.context.Context;
+import org.openmrs.api.handler.VoidHandler;
 
 /**
  * An Encounter represents one visit or interaction of a patient with a healthcare worker. Every
@@ -48,11 +57,14 @@ public class Encounter extends BaseOpenmrsData implements java.io.Serializable {
 	
 	private EncounterType encounterType;
 	
-	private Person provider;
-	
 	private Set<Order> orders;
 	
 	private Set<Obs> obs;
+	
+	private Visit visit;
+	
+	@DisableHandlers(handlerTypes = { VoidHandler.class })
+	private Set<EncounterProvider> encounterProviders = new LinkedHashSet<EncounterProvider>();
 	
 	// Constructors
 	
@@ -66,45 +78,6 @@ public class Encounter extends BaseOpenmrsData implements java.io.Serializable {
 	 */
 	public Encounter(Integer encounterId) {
 		this.encounterId = encounterId;
-	}
-	
-	/**
-	 * Compares two Encounter objects for similarity
-	 * 
-	 * @param obj Encounter object to compare to
-	 * @return boolean true/false whether or not they are the same objects
-	 * @see java.lang.Object#equals(java.lang.Object)
-	 * @should equal encounter with same encounter id
-	 * @should not equal encounter with different encounter id
-	 * @should not equal on null
-	 * @should have equal encounter objects with no encounter ids
-	 * @should not have equal encounter objects when one has null encounter id
-	 */
-	public boolean equals(Object obj) {
-		if (obj instanceof Encounter) {
-			Encounter enc = (Encounter) obj;
-			if (this.getEncounterId() != null && enc.getEncounterId() != null)
-				return (this.getEncounterId().equals(enc.getEncounterId()));
-			/*return (this.getEncounterType().equals(enc.getEncounterType()) &&
-					this.getPatient().equals(enc.getPatient()) &&
-					this.getProvider().equals(enc.getProvider()) &&
-					this.getLocation().equals(enc.getLocation()) &&
-					this.getEncounterDatetime().equals(enc.getEncounterDatetime())); */
-		}
-		return this == obj;
-		
-	}
-	
-	/**
-	 * @see java.lang.Object#hashCode()
-	 * @should have same hashcode when equal
-	 * @should have different hash code when not equal
-	 * @should get hash code with null attributes
-	 */
-	public int hashCode() {
-		if (this.getEncounterId() == null)
-			return super.hashCode();
-		return this.getEncounterId().hashCode();
 	}
 	
 	// Property accessors
@@ -403,14 +376,29 @@ public class Encounter extends BaseOpenmrsData implements java.io.Serializable {
 	/**
 	 * @return Returns the provider.
 	 * @since 1.6 (used to return User)
+	 * @deprecated since 1.9, use {@link #getProvidersByRole(EncounterRole)}
+	 * @should return null if there is no providers
+	 * @should return provider for person
+	 * @should return null if there is no provider for person
+	 * @should return same provider for person if called twice
 	 */
 	public Person getProvider() {
-		return provider;
+		if (encounterProviders == null || encounterProviders.isEmpty()) {
+			return null;
+		} else {
+			for (EncounterProvider encounterProvider : encounterProviders) {
+				//Return the first person in the list
+				if (encounterProvider.getProvider().getPerson() != null) {
+					return encounterProvider.getProvider().getPerson();
+				}
+			}
+		}
+		return null;
 	}
 	
 	/**
 	 * @param provider The provider to set.
-	 * @deprecated use {@link #setProvider(Person)} 
+	 * @deprecated use {@link #setProvider(Person)}
 	 */
 	public void setProvider(User provider) {
 		setProvider(provider.getPerson());
@@ -418,9 +406,21 @@ public class Encounter extends BaseOpenmrsData implements java.io.Serializable {
 	
 	/**
 	 * @param provider The provider to set.
+	 * @deprecated since 1.9, use {@link #setProvider(EncounterRole, Provider)}
+	 * @should set existing provider for unknown role
 	 */
 	public void setProvider(Person provider) {
-		this.provider = provider;
+		EncounterRole unknownRole = Context.getEncounterService().getEncounterRoleByUuid(
+		    EncounterRole.UNKNOWN_ENCOUNTER_ROLE_UUID);
+		if (unknownRole == null) {
+			throw new IllegalStateException("No 'Unknown' encounter role with uuid "
+			        + EncounterRole.UNKNOWN_ENCOUNTER_ROLE_UUID + ".");
+		}
+		Collection<Provider> providers = Context.getProviderService().getProvidersByPerson(provider);
+		if (providers == null || providers.isEmpty()) {
+			throw new IllegalArgumentException("No provider with personId " + provider.getPersonId());
+		}
+		setProvider(unknownRole, providers.iterator().next());
 	}
 	
 	/**
@@ -473,4 +473,182 @@ public class Encounter extends BaseOpenmrsData implements java.io.Serializable {
 		
 	}
 	
+	/**
+	 * Gets the visit.
+	 * 
+	 * @return the visit.
+	 * @since 1.9
+	 */
+	public Visit getVisit() {
+		return visit;
+	}
+	
+	/**
+	 * Sets the visit
+	 * 
+	 * @param visit the visit to set.
+	 * @since 1.9
+	 */
+	public void setVisit(Visit visit) {
+		this.visit = visit;
+	}
+	
+	/**
+	 * Gets all unvoided providers, grouped by role.
+	 * 
+	 * @return map of unvoided providers keyed by roles
+	 * @since 1.9
+	 * @should return empty map if no unvoided providers
+	 * @should return all roles and unvoided providers
+	 */
+	public Map<EncounterRole, Set<Provider>> getProvidersByRoles() {
+		return getProvidersByRoles(false);
+	}
+	
+	/**
+	 * Gets all providers, grouped by role.
+	 * 
+	 * @param includeVoided set to true to include voided providers, else set to false
+	 * @return map of providers keyed by roles
+	 * @since 1.9
+	 * @should return empty map if no providers
+	 * @should return all roles and providers
+	 */
+	public Map<EncounterRole, Set<Provider>> getProvidersByRoles(boolean includeVoided) {
+		
+		Map<EncounterRole, Set<Provider>> providers = new HashMap<EncounterRole, Set<Provider>>();
+		for (EncounterProvider encounterProvider : encounterProviders) {
+			
+			if (!includeVoided && encounterProvider.getVoided()) {
+				continue;
+			}
+			
+			Set<Provider> list = providers.get(encounterProvider.getEncounterRole());
+			if (list == null) {
+				list = new LinkedHashSet<Provider>();
+				providers.put(encounterProvider.getEncounterRole(), list);
+			}
+			
+			list.add(encounterProvider.getProvider());
+		}
+		
+		return providers;
+	}
+	
+	/**
+	 * Gets unvoided providers who had the given role in this encounter.
+	 * 
+	 * @param role
+	 * @return unvoided providers or empty set if none was found
+	 * @since 1.9
+	 * @should return unvoided providers for role
+	 * @should return empty set for no role
+	 * @should return empty set for null role
+	 */
+	public Set<Provider> getProvidersByRole(EncounterRole role) {
+		return getProvidersByRole(role, false);
+	}
+	
+	/**
+	 * Gets providers who had the given role in this encounter.
+	 * 
+	 * @param role
+	 * @param includeVoided set to true to include voided providers, else set to false
+	 * @return providers or empty set if none was found
+	 * @since 1.9
+	 * @should return providers for role
+	 * @should return empty set for no role
+	 * @should return empty set for null role
+	 */
+	public Set<Provider> getProvidersByRole(EncounterRole role, boolean includeVoided) {
+		Set<Provider> providers = new LinkedHashSet<Provider>();
+		
+		for (EncounterProvider encounterProvider : encounterProviders) {
+			if (encounterProvider.getEncounterRole().equals(role)) {
+				if (!includeVoided && encounterProvider.getVoided()) {
+					continue;
+				}
+				
+				providers.add(encounterProvider.getProvider());
+			}
+		}
+		
+		return providers;
+	}
+	
+	/**
+	 * Adds a new provider for the encounter, with the given role.
+	 * 
+	 * @param role
+	 * @param provider
+	 * @since 1.9
+	 * @should add provider for new role
+	 * @should add second provider for role
+	 * @should not add same provider twice for role
+	 */
+	public void addProvider(EncounterRole role, Provider provider) {
+		// first, make sure the provider isn't already there
+		for (EncounterProvider ep : encounterProviders) {
+			if (ep.getEncounterRole().equals(role) && ep.getProvider().equals(provider))
+				return;
+		}
+		EncounterProvider encounterProvider = new EncounterProvider();
+		encounterProvider.setEncounter(this);
+		encounterProvider.setEncounterRole(role);
+		encounterProvider.setProvider(provider);
+		encounterProvider.setDateCreated(new Date());
+		encounterProvider.setCreator(Context.getAuthenticatedUser());
+		encounterProviders.add(encounterProvider);
+	}
+	
+	/**
+	 * Sets the provider for the given role.
+	 * <p>
+	 * If the encounter already had any providers for the given role, those are removed.
+	 * 
+	 * @param role
+	 * @param provider
+	 * @since 1.9
+	 * @should set provider for new role
+	 * @should clear providers and set provider for role
+	 * @should void existing EncounterProvider
+	 */
+	public void setProvider(EncounterRole role, Provider provider) {
+		boolean hasProvider = false;
+		for (Iterator<EncounterProvider> it = encounterProviders.iterator(); it.hasNext();) {
+			EncounterProvider encounterProvider = it.next();
+			if (encounterProvider.getEncounterRole().equals(role)) {
+				if (!encounterProvider.getProvider().equals(provider)) {
+					encounterProvider.setVoided(true);
+					encounterProvider.setDateVoided(new Date());
+					encounterProvider.setVoidedBy(Context.getAuthenticatedUser());
+				} else {
+					hasProvider = true;
+				}
+			}
+		}
+		
+		if (!hasProvider) {
+			addProvider(role, provider);
+		}
+	}
+	
+	/**
+	 * Removes the provider for a given role.
+	 * 
+	 * @param role the role.
+	 * @param provider the provider.
+	 * @since 1.9
+	 * @should void existing EncounterProvider
+	 */
+	public void removeProvider(EncounterRole role, Provider provider) {
+		for (EncounterProvider encounterProvider : encounterProviders) {
+			if (encounterProvider.getEncounterRole().equals(role) && encounterProvider.getProvider().equals(provider)) {
+				encounterProvider.setVoided(true);
+				encounterProvider.setDateVoided(new Date());
+				encounterProvider.setVoidedBy(Context.getAuthenticatedUser());
+				return;
+			}
+		}
+	}
 }

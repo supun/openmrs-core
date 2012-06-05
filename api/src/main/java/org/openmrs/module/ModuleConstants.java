@@ -29,12 +29,12 @@ public class ModuleConstants {
 	public static final Map<String, String> CORE_MODULES = new HashMap<String, String>();
 	
 	static {
-		CORE_MODULES.put("logic", "0.5");
+		CORE_MODULES.put("logic", "0.5.2");
 	}
 	
 	/**
-	 * Used to determine if the {@link #CORE_MODULES} list should be used or not. For unit
-	 * testing this is set to true to allow for faster runs with less dependencies.
+	 * Used to determine if the {@link #CORE_MODULES} list should be used or not. For unit testing
+	 * this is set to true to allow for faster runs with less dependencies.
 	 */
 	public static final String IGNORE_CORE_MODULES_PROPERTY = "module.ignore_core_status";
 	

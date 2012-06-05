@@ -35,12 +35,14 @@ import org.openmrs.FieldAnswer;
 import org.openmrs.FieldType;
 import org.openmrs.Form;
 import org.openmrs.FormField;
+import org.openmrs.FormResource;
 import org.openmrs.api.APIException;
 import org.openmrs.api.db.DAOException;
 import org.openmrs.api.db.FormDAO;
+import org.openmrs.util.OpenmrsUtil;
 
 /**
- * Hibernate specific Form related functions This class should not be used directly. All calls
+ * Hibernate-specific Form-related functions. This class should not be used directly. All calls
  * should go through the {@link org.openmrs.api.FormService} methods.
  * 
  * @see org.openmrs.api.db.FormDAO
@@ -186,7 +188,7 @@ public class HibernateFormDAO implements FormDAO {
 	 */
 	@SuppressWarnings("unchecked")
 	public FormField getFormField(Form form, Concept concept, Collection<FormField> ignoreFormFields, boolean force)
-	                                                                                                                throws DAOException {
+	        throws DAOException {
 		if (form == null) {
 			log.debug("form is null, no fields will be matched");
 			return null;
@@ -302,9 +304,9 @@ public class HibernateFormDAO implements FormDAO {
 	 */
 	@SuppressWarnings("unchecked")
 	public List<Field> getFields(Collection<Form> forms, Collection<FieldType> fieldTypes, Collection<Concept> concepts,
-	                             Collection<String> tableNames, Collection<String> attributeNames, Boolean selectMultiple,
-	                             Collection<FieldAnswer> containsAllAnswers, Collection<FieldAnswer> containsAnyAnswer,
-	                             Boolean retired) throws DAOException {
+	        Collection<String> tableNames, Collection<String> attributeNames, Boolean selectMultiple,
+	        Collection<FieldAnswer> containsAllAnswers, Collection<FieldAnswer> containsAnyAnswer, Boolean retired)
+	        throws DAOException {
 		
 		Criteria crit = sessionFactory.getCurrentSession().createCriteria(Field.class);
 		
@@ -357,8 +359,8 @@ public class HibernateFormDAO implements FormDAO {
 	 */
 	@SuppressWarnings("unchecked")
 	public List<Form> getForms(String partialName, Boolean published, Collection<EncounterType> encounterTypes,
-	                           Boolean retired, Collection<FormField> containingAnyFormField,
-	                           Collection<FormField> containingAllFormFields, Collection<Field> fields) throws DAOException {
+	        Boolean retired, Collection<FormField> containingAnyFormField, Collection<FormField> containingAllFormFields,
+	        Collection<Field> fields) throws DAOException {
 		
 		Criteria crit = getFormCriteria(partialName, published, encounterTypes, retired, containingAnyFormField,
 		    containingAllFormFields, fields);
@@ -372,15 +374,15 @@ public class HibernateFormDAO implements FormDAO {
 	 *      java.util.Collection)
 	 */
 	public Integer getFormCount(String partialName, Boolean published, Collection<EncounterType> encounterTypes,
-	                            Boolean retired, Collection<FormField> containingAnyFormField,
-	                            Collection<FormField> containingAllFormFields, Collection<Field> fields) throws DAOException {
+	        Boolean retired, Collection<FormField> containingAnyFormField, Collection<FormField> containingAllFormFields,
+	        Collection<Field> fields) throws DAOException {
 		
 		Criteria crit = getFormCriteria(partialName, published, encounterTypes, retired, containingAnyFormField,
 		    containingAllFormFields, fields);
 		
 		crit.setProjection(Projections.count("formId"));
 		
-		return (Integer) crit.uniqueResult();
+		return OpenmrsUtil.convertToInteger((Long) crit.uniqueResult());
 	}
 	
 	/**
@@ -398,9 +400,8 @@ public class HibernateFormDAO implements FormDAO {
 	 * @throws DAOException
 	 */
 	private Criteria getFormCriteria(String partialName, Boolean published, Collection<EncounterType> encounterTypes,
-	                                 Boolean retired, Collection<FormField> containingAnyFormField,
-	                                 Collection<FormField> containingAllFormFields, Collection<Field> fields)
-	                                                                                                         throws DAOException {
+	        Boolean retired, Collection<FormField> containingAnyFormField, Collection<FormField> containingAllFormFields,
+	        Collection<Field> fields) throws DAOException {
 		
 		Criteria crit = sessionFactory.getCurrentSession().createCriteria(Form.class, "form");
 		
@@ -511,9 +512,66 @@ public class HibernateFormDAO implements FormDAO {
 	 * @see org.openmrs.api.db.FormDAO#getFormFieldByField(org.openmrs.Field)
 	 */
 	@Override
+	@SuppressWarnings("unchecked")
 	public List<FormField> getFormFieldsByField(Field field) {
 		return sessionFactory.getCurrentSession().createQuery("from FormField f where f.field = :field").setEntity("field",
 		    field).list();
+	}
+	
+	/**
+	 * @see org.openmrs.api.db.FormDAO#getFormResource(java.lang.Integer) 
+	 */
+	@Override
+	public FormResource getFormResource(Integer formResourceId) {
+		return (FormResource) sessionFactory.getCurrentSession().get(FormResource.class, formResourceId);
+	}
+	
+	/**
+	 * @see org.openmrs.api.db.FormDAO#getFormResourceByUuid(java.lang.String) 
+	 */
+	@Override
+	public FormResource getFormResourceByUuid(String uuid) {
+		Criteria crit = sessionFactory.getCurrentSession().createCriteria(FormResource.class).add(
+		    Restrictions.eq("uuid", uuid));
+		return (FormResource) crit.uniqueResult();
+	}
+	
+	/**
+	 * @see org.openmrs.api.db.FormDAO#getFormResource(org.openmrs.Form, java.lang.String) 
+	 */
+	@Override
+	public FormResource getFormResource(Form form, String name) {
+		Criteria crit = sessionFactory.getCurrentSession().createCriteria(FormResource.class).add(
+		    Restrictions.and(Restrictions.eq("form", form), Restrictions.eq("name", name)));
+		
+		return (FormResource) crit.uniqueResult();
+	}
+	
+	/**
+	 * @see org.openmrs.api.db.FormDAO#saveFormResource(org.openmrs.FormResource) 
+	 */
+	@Override
+	public FormResource saveFormResource(FormResource formResource) {
+		sessionFactory.getCurrentSession().saveOrUpdate(formResource);
+		return formResource;
+	}
+	
+	/**
+	 * @see org.openmrs.api.db.FormDAO#deleteFormResource(org.openmrs.FormResource) 
+	 */
+	@Override
+	public void deleteFormResource(FormResource formResource) {
+		sessionFactory.getCurrentSession().delete(formResource);
+	}
+	
+	/**
+	 * @see org.openmrs.api.db.FormDAO#getFormResourcesForForm(org.openmrs.Form) 
+	 */
+	@Override
+	public Collection<FormResource> getFormResourcesForForm(Form form) {
+		Criteria crit = sessionFactory.getCurrentSession().createCriteria(FormResource.class).add(
+		    Restrictions.eq("form", form));
+		return crit.list();
 	}
 	
 }

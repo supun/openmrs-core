@@ -76,7 +76,7 @@ public class PersonAttributeTypeFormController extends SimpleFormController {
 	 *      org.springframework.validation.BindException)
 	 */
 	protected ModelAndView onSubmit(HttpServletRequest request, HttpServletResponse response, Object obj,
-	                                BindException errors) throws Exception {
+	        BindException errors) throws Exception {
 		
 		HttpSession httpSession = request.getSession();
 		
@@ -116,6 +116,18 @@ public class PersonAttributeTypeFormController extends SimpleFormController {
 				catch (DataIntegrityViolationException e) {
 					httpSession.setAttribute(WebConstants.OPENMRS_ERROR_ATTR, "error.object.inuse.cannot.purge");
 					view = "personAttributeType.form?personAttributeTypeId=" + attrType.getPersonAttributeTypeId();
+				}
+				catch (APIException e) {
+					httpSession.setAttribute(WebConstants.OPENMRS_ERROR_ATTR, "error.general: " + e.getLocalizedMessage());
+					view = "personAttributeType.form?personAttributeTypeId=" + attrType.getPersonAttributeTypeId();
+				}
+			}
+
+			else if (request.getParameter("unretire") != null) {
+				try {
+					ps.unretirePersonAttributeType(attrType);
+					httpSession.setAttribute(WebConstants.OPENMRS_MSG_ATTR, "PersonAttributeType.unretiredSuccessfully");
+					view = getSuccessView();
 				}
 				catch (APIException e) {
 					httpSession.setAttribute(WebConstants.OPENMRS_ERROR_ATTR, "error.general: " + e.getLocalizedMessage());
@@ -176,6 +188,10 @@ public class PersonAttributeTypeFormController extends SimpleFormController {
 		
 		// java.util.Date doesn't work as a PersonAttributeType since it gets saved in a user-date-format-specific way
 		formats.remove("java.util.Date");
+		
+		//Removing these two as per ticket: TRUNK-2460
+		formats.remove("org.openmrs.Patient.exitReason");
+		formats.remove("org.openmrs.DrugOrder.discontinuedReason");
 		
 		map.put("privileges", privileges);
 		map.put("formats", formats);

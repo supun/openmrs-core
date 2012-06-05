@@ -60,13 +60,12 @@ public class OpenmrsFilter extends OncePerRequestFilter {
 	 */
 	@Override
 	protected void doFilterInternal(HttpServletRequest httpRequest, HttpServletResponse httpResponse, FilterChain chain)
-	                                                                                                                    throws ServletException,
-	                                                                                                                    IOException {
+	        throws ServletException, IOException {
 		
 		HttpSession httpSession = httpRequest.getSession();
 		
 		// used by htmlInclude tag
-		httpRequest.setAttribute(WebConstants.INIT_REQ_UNIQUE_ID, String.valueOf(new Date().getTime()));
+		httpRequest.setAttribute(WebConstants.INIT_REQ_UNIQUE_ID, String.valueOf(System.currentTimeMillis()));
 		
 		if (log.isDebugEnabled()) {
 			log.debug("requestURI " + httpRequest.getRequestURI());

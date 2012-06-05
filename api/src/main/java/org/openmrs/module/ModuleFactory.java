@@ -38,6 +38,7 @@ import org.apache.commons.logging.LogFactory;
 import org.openmrs.GlobalProperty;
 import org.openmrs.Privilege;
 import org.openmrs.api.AdministrationService;
+import org.openmrs.api.OpenmrsService;
 import org.openmrs.api.context.Context;
 import org.openmrs.api.context.Daemon;
 import org.openmrs.module.Extension.MEDIA_TYPE;
@@ -215,6 +216,7 @@ public class ModuleFactory {
 							catch (Exception e) {
 								log.error("Error while starting module: " + mod.getName(), e);
 								mod.setStartupErrorMessage("Error while starting module", e);
+								notifySuperUsersAboutModuleFailure(mod);
 							}
 						else {
 							// if not all the modules required by this mod are loaded, save it for later
@@ -279,9 +281,34 @@ public class ModuleFactory {
 					        + OpenmrsUtil.join(getMissingRequiredModules(leftoverModule), ", ");
 					log.error(message);
 					leftoverModule.setStartupErrorMessage(message);
+					notifySuperUsersAboutModuleFailure(leftoverModule);
 				}
 		}
 		
+	}
+	
+	/**
+	 * Send an Alert to all super users that the given module did not start successfully.
+	 * 
+	 * @param mod The Module that failed
+	 */
+	private static void notifySuperUsersAboutModuleFailure(Module mod) {
+		try {
+			// Add the privileges necessary for notifySuperUsers
+			Context.addProxyPrivilege(PrivilegeConstants.MANAGE_ALERTS);
+			Context.addProxyPrivilege(PrivilegeConstants.VIEW_USERS);
+			
+			// Send an alert to all administrators
+			Context.getAlertService().notifySuperUsers("Module.startupError.notification.message", null, mod.getName());
+		}
+		catch (Exception e) {
+			log.error("Unable to send an alert to the super users", e);
+		}
+		finally {
+			// Remove added privileges
+			Context.removeProxyPrivilege(PrivilegeConstants.VIEW_USERS);
+			Context.removeProxyPrivilege(PrivilegeConstants.MANAGE_ALERTS);
+		}
 	}
 	
 	/**
@@ -575,6 +602,7 @@ public class ModuleFactory {
 			catch (Exception e) {
 				log.warn("Error while trying to start module: " + moduleId, e);
 				module.setStartupErrorMessage("Error while trying to start module", e);
+				notifySuperUsersAboutModuleFailure(module);
 				
 				// undo all of the actions in startup
 				try {
@@ -788,7 +816,7 @@ public class ModuleFactory {
 	 */
 	@SuppressWarnings("unchecked")
 	public static List<Module> stopModule(Module mod, boolean skipOverStartedProperty, boolean isFailedStartup)
-	                                                                                                           throws ModuleMustStartException {
+	        throws ModuleMustStartException {
 		
 		List<Module> dependentModulesStopped = new Vector<Module>();
 		
@@ -880,6 +908,14 @@ public class ModuleFactory {
 				}
 			}
 			
+			//Run the onShutdown() method for openmrs services in this module.
+			List<OpenmrsService> services = Context.getModuleOpenmrsServices(modulePackage);
+			if (services != null) {
+				for (OpenmrsService service : services) {
+					service.onShutdown();
+				}
+			}
+			
 			try {
 				if (mod.getModuleActivator() != null)//extends BaseModuleActivator
 					mod.getModuleActivator().stopped();
@@ -889,6 +925,21 @@ public class ModuleFactory {
 			catch (Throwable t) {
 				log.warn("Unable to call module's Activator.shutdown() method", t);
 			}
+			
+			//Since extensions are loaded by the module class loader which is about to be disposed,
+			//we need to clear them, else we shall never be able to unload the class loader until
+			//when we unload the module, hence resulting into two problems:
+			// 1) Memory leakage for start/stop module.
+			// 2) Calls to Context.getService(Service.class) which are made within these extensions 
+			//	  will throw APIException("Service not found: ") because their calls to Service.class
+			//    will pass in a Class from the old module class loader (which loaded them) yet the
+			//    ServiceContext will have new services from a new module class loader.
+			//
+			//Same thing applies to activator, moduleActivator and AdvicePoint classInstance.
+			mod.getExtensions().clear();
+			mod.setActivator(null);
+			mod.setModuleActivator(null);
+			mod.disposeAdvicePointsClassInstance();
 			
 			ModuleClassLoader cl = removeClassLoader(mod);
 			if (cl != null) {
@@ -1051,6 +1102,17 @@ public class ModuleFactory {
 	 */
 	public static boolean isModuleStarted(Module mod) {
 		return getStartedModulesMap().containsValue(mod);
+	}
+	
+	/**
+	 * Checks whether the given module, identified by its id, is started.
+	 * 
+	 * @param moduleId module id. e.g formentry, logic
+	 * @since 1.9
+	 * @return true if the module is started, false otherwise
+	 */
+	public static boolean isModuleStarted(String moduleId) {
+		return getStartedModulesMap().containsKey(moduleId);
 	}
 	
 	/**

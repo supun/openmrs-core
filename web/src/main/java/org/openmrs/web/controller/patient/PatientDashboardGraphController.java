@@ -45,7 +45,7 @@ public class PatientDashboardGraphController {
 	@SuppressWarnings("unchecked")
 	@RequestMapping(method = RequestMethod.GET)
 	public String showGraphData(@RequestParam(required = true, value = "patientId") Integer patientId,
-	                            @RequestParam(required = true, value = "conceptId") Integer conceptId, ModelMap map) {
+	        @RequestParam(required = true, value = "conceptId") Integer conceptId, ModelMap map) {
 		Patient patient = Context.getPatientService().getPatient(patientId);
 		ConceptNumeric concept = Context.getConceptService().getConceptNumeric(conceptId);
 		
@@ -58,6 +58,8 @@ public class PatientDashboardGraphController {
 		graph.setAbsoluteLow(concept.getLowAbsolute());
 		graph.setNormalHigh(concept.getHiNormal());
 		graph.setNormalLow(concept.getLowNormal());
+		graph.setUnits(concept.getUnits());
+		graph.setConceptName(concept.getName().getName());
 		
 		for (Obs obs : observations) {
 			graph.addValue(obs.getObsDatetime().getTime(), obs.getValueNumeric());

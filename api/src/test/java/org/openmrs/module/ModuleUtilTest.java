@@ -250,7 +250,7 @@ public class ModuleUtilTest extends BaseContextSensitiveTest {
 	@Test
 	@Verifies(value = "should return false when required version with wild card beyond openmrs version", method = "matchRequiredVersions(String,String)")
 	public void matchRequiredVersions_shouldReturnFalseWhenRequiredVersionWithWildCardBeyondOpenmrsVersion()
-	                                                                                                        throws Exception {
+	        throws Exception {
 		String openmrsVersion = "1.4.3";
 		String requiredOpenmrsVersion = "1.5.* - 1.6.*";
 		Assert.assertFalse(ModuleUtil.matchRequiredVersions(openmrsVersion, requiredOpenmrsVersion));
@@ -262,7 +262,7 @@ public class ModuleUtilTest extends BaseContextSensitiveTest {
 	@Test
 	@Verifies(value = "should return false when required version with wild card on one end beyond openmrs version", method = "matchRequiredVersions(String,String)")
 	public void matchRequiredVersions_shouldReturnFalseWhenRequiredVersionWithWildCardOnOneEndBeyondOpenmrsVersion()
-	                                                                                                                throws Exception {
+	        throws Exception {
 		String openmrsVersion = "1.4.3";
 		String requiredOpenmrsVersion = "1.4.5 - 1.5.*";
 		Assert.assertFalse(ModuleUtil.matchRequiredVersions(openmrsVersion, requiredOpenmrsVersion));
@@ -376,7 +376,7 @@ public class ModuleUtilTest extends BaseContextSensitiveTest {
 	@Test(expected = ModuleException.class)
 	@Verifies(value = "should throw ModuleException if required version with wild card beyond openmrs version", method = "checkRequiredVersion(String, String)")
 	public void checkRequiredVersion_shouldThrowModuleExceptionIfRequiredVersionWithWildCardBeyondOpenmrsVersion()
-	                                                                                                              throws Exception {
+	        throws Exception {
 		String openmrsVersion = "1.4.3";
 		String requiredOpenmrsVersion = "1.5.* - 1.6.*";
 		ModuleUtil.checkRequiredVersion(openmrsVersion, requiredOpenmrsVersion);
@@ -388,7 +388,7 @@ public class ModuleUtilTest extends BaseContextSensitiveTest {
 	@Test(expected = ModuleException.class)
 	@Verifies(value = "should throw ModuleException if required version with wild card on one end beyond openmrs version", method = "checkRequiredVersion(String, String)")
 	public void checkRequiredVersion_shouldThrowModuleExceptionIfRequiredVersionWithWildCardOnOneEndBeyondOpenmrsVersion()
-	                                                                                                                      throws Exception {
+	        throws Exception {
 		String openmrsVersion = "1.4.3";
 		String requiredOpenmrsVersion = "1.4.5 - 1.5.*";
 		ModuleUtil.checkRequiredVersion(openmrsVersion, requiredOpenmrsVersion);
@@ -400,7 +400,7 @@ public class ModuleUtilTest extends BaseContextSensitiveTest {
 	@Test(expected = ModuleException.class)
 	@Verifies(value = "should throw ModuleException if single entry required version beyond openmrs version", method = "checkRequiredVersion(String, String)")
 	public void checkRequiredVersion_shouldThrowModuleExceptionIfSingleEntryRequiredVersionBeyondOpenmrsVersion()
-	                                                                                                             throws Exception {
+	        throws Exception {
 		String openmrsVersion = "1.4.3";
 		String requiredOpenmrsVersion = "1.5.0";
 		ModuleUtil.checkRequiredVersion(openmrsVersion, requiredOpenmrsVersion);
@@ -411,10 +411,22 @@ public class ModuleUtilTest extends BaseContextSensitiveTest {
 	 * 
 	 */
 	@Test
-	@Verifies(value = "should correctly comparing two version number", method = "compareVersion(String,String)")
-	public void compareVersion_shouldCorrectlyComparingTwoVersionNumber() throws Exception {
+	@Verifies(value = "should correctly comparing two version numbers", method = "compareVersion(String,String)")
+	public void compareVersion_shouldCorrectlyComparingTwoVersionNumbers() throws Exception {
 		String olderVersion = "2.1.1";
 		String newerVersion = "2.1.10";
 		ModuleUtil.compareVersion(olderVersion, newerVersion);
+	}
+	
+	/**
+	 * @see {@link ModuleUtil#compareVersion(String,String)}
+	 * 
+	 */
+	@Test
+	@Verifies(value = "treat SNAPSHOT as earliest version", method = "compareVersion(String,String)")
+	public void compareVersion_shouldTreatSNAPSHOTAsEarliestVersion() throws Exception {
+		String olderVersion = "1.8.4-SNAPSHOT";
+		String newerVersion = "1.8.3";
+		Assert.assertTrue(ModuleUtil.compareVersion(olderVersion, newerVersion) > 0);
 	}
 }

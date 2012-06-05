@@ -13,12 +13,17 @@
  */
 package org.openmrs.web.controller.patient;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
 import org.apache.commons.beanutils.BeanUtils;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
 import org.openmrs.GlobalProperty;
 import org.openmrs.Patient;
@@ -35,12 +40,16 @@ import org.openmrs.util.OpenmrsConstants;
 import org.openmrs.util.OpenmrsUtil;
 import org.openmrs.web.WebConstants;
 import org.openmrs.web.test.BaseWebContextSensitiveTest;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.mock.web.MockHttpServletRequest;
+import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.validation.BindException;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.support.SessionStatus;
 import org.springframework.web.context.request.ServletWebRequest;
 import org.springframework.web.context.request.WebRequest;
+import org.springframework.web.servlet.mvc.annotation.AnnotationMethodHandlerAdapter;
+import org.springframework.web.servlet.mvc.annotation.DefaultAnnotationHandlerMapping;
 
 /**
  * Consists of unit tests for the ShortPatientFormController
@@ -48,6 +57,22 @@ import org.springframework.web.context.request.WebRequest;
  * @see ShortPatientFormController
  */
 public class ShortPatientFormControllerTest extends BaseWebContextSensitiveTest {
+	
+	@Autowired
+	private AnnotationMethodHandlerAdapter handlerAdapter;
+	
+	@Autowired
+	private DefaultAnnotationHandlerMapping handlerMapping;
+	
+	private MockHttpServletRequest request;
+	
+	private MockHttpServletResponse response;
+	
+	@Before
+	public void setUp() {
+		request = new MockHttpServletRequest();
+		response = new MockHttpServletResponse();
+	}
 	
 	/**
 	 * @see {@link ShortPatientFormController#saveShortPatient(WebRequest,ShortPatientModel,BindingResult,SessionStatus)}
@@ -88,8 +113,10 @@ public class ShortPatientFormControllerTest extends BaseWebContextSensitiveTest 
 		ShortPatientModel patientModel = new ShortPatientModel(p);
 		patientModel.setPersonName(new PersonName("new", "", "patient"));
 		List<PatientIdentifier> identifiers = new ArrayList<PatientIdentifier>();
-		identifiers.add(new PatientIdentifier("myID", Context.getPatientService().getPatientIdentifierType(2),
-		        LocationUtility.getDefaultLocation()));
+		PatientIdentifier id = new PatientIdentifier("myID", Context.getPatientService().getPatientIdentifierType(2),
+		        LocationUtility.getDefaultLocation());
+		id.setPreferred(true);
+		identifiers.add(id);
 		patientModel.setIdentifiers(identifiers);
 		patientModel.getPatient().setBirthdate(new Date());
 		patientModel.getPatient().setGender("M");
@@ -178,11 +205,14 @@ public class ShortPatientFormControllerTest extends BaseWebContextSensitiveTest 
 	@Test
 	@Verifies(value = "should add a new name if the person had no names", method = "saveShortPatient(WebRequest,ShortPatientModel,BindingResult,SessionStatus)")
 	public void saveShortPatient_shouldAddANewNameIfThePersonHadNoNames() throws Exception {
-		Patient p = Context.getPatientService().getPatient(2);
-		p.getPersonName().setVoided(true);
-		Context.getPatientService().savePatient(p);
-		Assert.assertNull(p.getPersonName());// make sure all names are voided
+		Patient p = Context.getPatientService().getPatient(7);
 		
+		//Commenting this out because person validator requires each person
+		//to have at least one non voided name.
+		/*p.getPersonName().setVoided(true);
+		Context.getPatientService().savePatient(p);
+		Assert.assertNull(p.getPersonName());// make sure all names are voided*/
+
 		// add a name that will used as a duplicate for testing purposes
 		PersonName newName = new PersonName("new", null, "name");
 		newName.setDateCreated(new Date());
@@ -515,5 +545,49 @@ public class ShortPatientFormControllerTest extends BaseWebContextSensitiveTest 
 		Assert.assertNotNull(oldAttribute);
 		Assert.assertEquals(oldValue, oldAttribute.getValue());
 		Assert.assertTrue(oldAttribute.isVoided());
+	}
+	
+	/**
+	 * @see ShortPatientFormController#saveShortPatient(WebRequest,PersonName,PersonAddress,ShortPatientModel,BindingResult)
+	 * @verifies not void address if it was not changed
+	 */
+	@Test
+	public void saveShortPatient_shouldNotVoidAddressIfItWasNotChanged() throws Exception {
+		Patient patient = Context.getPatientService().getPatient(2);
+		PersonAddress personAddress = patient.getPersonAddress();
+		
+		request.setParameter("patientId", patient.getPatientId().toString());
+		request.setParameter("personAddress.address1", personAddress.getAddress1());
+		request.setParameter("personAddress.countyDistrict", "");
+		request.setMethod("POST");
+		request.setRequestURI("/admin/patients/shortPatientForm.form");
+		
+		Object handler = handlerMapping.getHandler(request).getHandler();
+		handlerAdapter.handle(request, response, handler);
+		
+		assertFalse(personAddress.isVoided());
+		assertEquals(personAddress, patient.getPersonAddress());
+	}
+	
+	/**
+	 * @see ShortPatientFormController#saveShortPatient(WebRequest,PersonName,PersonAddress,ShortPatientModel,BindingResult)
+	 * @verifies void address if it was changed
+	 */
+	@Test
+	public void saveShortPatient_shouldVoidAddressIfItWasChanged() throws Exception {
+		Patient patient = Context.getPatientService().getPatient(2);
+		PersonAddress personAddress = patient.getPersonAddress();
+		
+		request.setParameter("patientId", patient.getPatientId().toString());
+		request.setParameter("personAddress.address1", "new");
+		request.setParameter("personAddress.countyDistrict", "");
+		request.setMethod("POST");
+		request.setRequestURI("/admin/patients/shortPatientForm.form");
+		
+		Object handler = handlerMapping.getHandler(request).getHandler();
+		handlerAdapter.handle(request, response, handler);
+		
+		assertTrue(personAddress.isVoided());
+		assertEquals("new", patient.getPersonAddress().getAddress1());
 	}
 }

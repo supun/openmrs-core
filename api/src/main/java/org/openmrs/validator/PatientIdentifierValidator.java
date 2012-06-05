@@ -18,6 +18,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.openmrs.PatientIdentifier;
 import org.openmrs.PatientIdentifierType;
+import org.openmrs.PatientIdentifierType.LocationBehavior;
 import org.openmrs.annotation.Handler;
 import org.openmrs.api.BlankIdentifierException;
 import org.openmrs.api.IdentifierNotUniqueException;
@@ -84,7 +85,9 @@ public class PatientIdentifierValidator implements Validator {
 			// Check that this is a valid identifier
 			validateIdentifier(pi.getIdentifier(), pi.getIdentifierType());
 			
-			if (pi.getLocation() == null) {
+			// Check that location is included if it is required (default behavior is to require it)
+			LocationBehavior lb = pi.getIdentifierType().getLocationBehavior();
+			if (pi.getLocation() == null && (lb == null || lb == LocationBehavior.REQUIRED)) {
 				String identifierString = (pi.getIdentifier() != null) ? pi.getIdentifier() : "";
 				throw new PatientIdentifierException(Context.getMessageSourceService().getMessage(
 				    "PatientIdentifier.location.null", new Object[] { identifierString }, Context.getLocale()));
@@ -93,7 +96,7 @@ public class PatientIdentifierValidator implements Validator {
 			if (Context.getPatientService().isIdentifierInUseByAnotherPatient(pi)) {
 				throw new IdentifierNotUniqueException(Context.getMessageSourceService().getMessage(
 				    "PatientIdentifier.error.notUniqueWithParameter", new Object[] { pi.getIdentifier() },
-				    Context.getLocale()));
+				    Context.getLocale()), pi);
 			}
 		}
 	}
@@ -178,7 +181,7 @@ public class PatientIdentifierValidator implements Validator {
 	 * @should pass validation if validator is null
 	 */
 	public static void checkIdentifierAgainstValidator(String identifier, IdentifierValidator validator)
-	                                                                                                    throws PatientIdentifierException {
+	        throws PatientIdentifierException {
 		
 		log.debug("Checking identifier: " + identifier + " against validator: " + validator);
 		

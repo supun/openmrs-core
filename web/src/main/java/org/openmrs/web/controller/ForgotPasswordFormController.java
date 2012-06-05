@@ -71,7 +71,7 @@ public class ForgotPasswordFormController extends SimpleFormController {
 	 *      org.springframework.validation.BindException)
 	 */
 	protected ModelAndView onSubmit(HttpServletRequest request, HttpServletResponse response, Object obj,
-	                                BindException errors) throws Exception {
+	        BindException errors) throws Exception {
 		
 		HttpSession httpSession = request.getSession();
 		
@@ -88,7 +88,7 @@ public class ForgotPasswordFormController extends SimpleFormController {
 			lockedOut = true;
 			
 			Date lockedOutTime = lockoutDateByIP.get(ipAddress);
-			if (lockedOutTime != null && new Date().getTime() - lockedOutTime.getTime() > 300000) {
+			if (lockedOutTime != null && System.currentTimeMillis() - lockedOutTime.getTime() > 300000) {
 				lockedOut = false;
 				forgotPasswordAttempts = 0;
 				lockoutDateByIP.put(ipAddress, null);

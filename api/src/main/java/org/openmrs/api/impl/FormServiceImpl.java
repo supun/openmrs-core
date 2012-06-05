@@ -35,12 +35,14 @@ import org.openmrs.FieldAnswer;
 import org.openmrs.FieldType;
 import org.openmrs.Form;
 import org.openmrs.FormField;
+import org.openmrs.FormResource;
 import org.openmrs.aop.RequiredDataAdvice;
 import org.openmrs.api.APIException;
 import org.openmrs.api.FormService;
 import org.openmrs.api.context.Context;
 import org.openmrs.api.db.FormDAO;
 import org.openmrs.api.handler.SaveHandler;
+import org.openmrs.customdatatype.CustomDatatypeUtil;
 import org.openmrs.util.OpenmrsUtil;
 import org.openmrs.validator.FormValidator;
 import org.springframework.validation.BindException;
@@ -148,6 +150,9 @@ public class FormServiceImpl extends BaseOpenmrsService implements FormService {
 		//TreeMap<Integer, FormField> formFieldMap = new TreeMap<Integer, FormField>();
 		//formFieldMap.put(null, null); //for parentless formFields
 		
+		// get original form id for reference later
+		Integer originalFormId = form.getFormId();
+		
 		for (FormField formField : form.getFormFields()) {
 			//formFieldMap.put(formField.getFormFieldId(), formField);
 			formField.setUuid(null);
@@ -168,6 +173,9 @@ public class FormServiceImpl extends BaseOpenmrsService implements FormService {
 		
 		RequiredDataAdvice.recursivelyHandle(SaveHandler.class, form, null);
 		Form newForm = dao.duplicateForm(form);
+		
+		// duplicate form resources from the old form to the new one
+		duplicateFormResources(Context.getFormService().getForm(originalFormId), newForm);
 		
 		return newForm;
 	}
@@ -343,7 +351,7 @@ public class FormServiceImpl extends BaseOpenmrsService implements FormService {
 	 *      java.util.Collection, boolean)
 	 */
 	public FormField getFormField(Form form, Concept concept, Collection<FormField> ignoreFormFields, boolean force)
-	                                                                                                                throws APIException {
+	        throws APIException {
 		// create an empty ignoreFormFields list if none was passed in
 		if (ignoreFormFields == null)
 			ignoreFormFields = Collections.emptyList();
@@ -463,9 +471,9 @@ public class FormServiceImpl extends BaseOpenmrsService implements FormService {
 	 *      java.util.Collection, java.util.Collection, java.lang.Boolean)
 	 */
 	public List<Field> getFields(Collection<Form> forms, Collection<FieldType> fieldTypes, Collection<Concept> concepts,
-	                             Collection<String> tableNames, Collection<String> attributeNames, Boolean selectMultiple,
-	                             Collection<FieldAnswer> containsAllAnswers, Collection<FieldAnswer> containsAnyAnswer,
-	                             Boolean retired) throws APIException {
+	        Collection<String> tableNames, Collection<String> attributeNames, Boolean selectMultiple,
+	        Collection<FieldAnswer> containsAllAnswers, Collection<FieldAnswer> containsAnyAnswer, Boolean retired)
+	        throws APIException {
 		
 		if (forms == null)
 			forms = Collections.emptyList();
@@ -536,8 +544,7 @@ public class FormServiceImpl extends BaseOpenmrsService implements FormService {
 	 */
 	@Deprecated
 	public List<Form> getForms(String partialName, Boolean published, Collection<EncounterType> encounterTypes,
-	                           Boolean retired, Collection<FormField> containingAnyFormField,
-	                           Collection<FormField> containingAllFormFields) {
+	        Boolean retired, Collection<FormField> containingAnyFormField, Collection<FormField> containingAllFormFields) {
 		
 		return getForms(partialName, published, encounterTypes, retired, containingAnyFormField, containingAllFormFields,
 		    null);
@@ -549,8 +556,8 @@ public class FormServiceImpl extends BaseOpenmrsService implements FormService {
 	 *      java.util.Collection)
 	 */
 	public List<Form> getForms(String partialName, Boolean published, Collection<EncounterType> encounterTypes,
-	                           Boolean retired, Collection<FormField> containingAnyFormField,
-	                           Collection<FormField> containingAllFormFields, Collection<Field> fields) {
+	        Boolean retired, Collection<FormField> containingAnyFormField, Collection<FormField> containingAllFormFields,
+	        Collection<Field> fields) {
 		
 		if (encounterTypes == null)
 			encounterTypes = Collections.emptyList();
@@ -574,8 +581,8 @@ public class FormServiceImpl extends BaseOpenmrsService implements FormService {
 	 *      java.util.Collection)
 	 */
 	public Integer getFormCount(String partialName, Boolean published, Collection<EncounterType> encounterTypes,
-	                            Boolean retired, Collection<FormField> containingAnyFormField,
-	                            Collection<FormField> containingAllFormFields, Collection<Field> fields) {
+	        Boolean retired, Collection<FormField> containingAnyFormField, Collection<FormField> containingAllFormFields,
+	        Collection<Field> fields) {
 		
 		if (encounterTypes == null)
 			encounterTypes = Collections.emptyList();
@@ -630,8 +637,12 @@ public class FormServiceImpl extends BaseOpenmrsService implements FormService {
 	public void purgeForm(Form form, boolean cascade) throws APIException {
 		if (cascade == true)
 			throw new APIException("Not Yet Implemented");
-		else
-			dao.deleteForm(form);
+		
+		// remove resources
+		for (FormResource resource : Context.getFormService().getFormResourcesForForm(form))
+			Context.getFormService().purgeFormResource(resource);
+		
+		dao.deleteForm(form);
 	}
 	
 	/**
@@ -805,6 +816,78 @@ public class FormServiceImpl extends BaseOpenmrsService implements FormService {
 		        && OpenmrsUtil.nullSafeEquals(field.getTableName(), fieldToBeReplaced.getTableName())
 		        && OpenmrsUtil.nullSafeEquals(field.getDefaultValue(), fieldToBeReplaced.getDefaultValue())
 		        && field.getRetired() != null && !field.getRetired());
+	}
+	
+	/**
+	 * @see org.openmrs.api.FormService#getFormResource(java.lang.Integer) 
+	 */
+	@Override
+	public FormResource getFormResource(Integer formResourceId) throws APIException {
+		return dao.getFormResource(formResourceId);
+	}
+	
+	/**
+	 * @see org.openmrs.api.FormService#getFormResourceByUuid(java.lang.String) 
+	 */
+	@Override
+	public FormResource getFormResourceByUuid(String uuid) throws APIException {
+		return dao.getFormResourceByUuid(uuid);
+	}
+	
+	/**
+	 * @see org.openmrs.api.FormService#getFormResource(org.openmrs.Form, java.lang.String) 
+	 */
+	@Override
+	public FormResource getFormResource(Form form, String name) throws APIException {
+		return dao.getFormResource(form, name);
+	}
+	
+	/**
+	 * @see org.openmrs.api.FormService#saveFormResource(org.openmrs.FormResource) 
+	 */
+	@Override
+	public FormResource saveFormResource(FormResource formResource) throws APIException {
+		if (formResource == null)
+			return null;
+		
+		// purge the original if it is being overridden (same name)
+		FormResource original = Context.getFormService().getFormResource(formResource.getForm(), formResource.getName());
+		if (original != null)
+			Context.getFormService().purgeFormResource(original);
+		
+		CustomDatatypeUtil.saveIfDirty(formResource);
+		return dao.saveFormResource(formResource);
+	}
+	
+	/**
+	 * @see org.openmrs.api.FormService#purgeFormResource(org.openmrs.FormResource) 
+	 */
+	@Override
+	public void purgeFormResource(FormResource formResource) throws APIException {
+		dao.deleteFormResource(formResource);
+	}
+	
+	/**
+	 * @see org.openmrs.api.FormService#getFormResourcesForForm(org.openmrs.Form) 
+	 */
+	@Override
+	public Collection<FormResource> getFormResourcesForForm(Form form) throws APIException {
+		return dao.getFormResourcesForForm(form);
+	}
+	
+	/**
+	 * duplicates form resources from one form to another
+	 *
+	 * @param source the form to copy resources from
+	 * @param destination the form to copy resources to
+	 */
+	private void duplicateFormResources(Form source, Form destination) {
+		FormService service = Context.getFormService();
+		for (FormResource resource : service.getFormResourcesForForm(source)) {
+			FormResource newResource = new FormResource(resource);
+			newResource.setForm(destination);
+			service.saveFormResource(newResource);
+		}
 	}
 	
 }

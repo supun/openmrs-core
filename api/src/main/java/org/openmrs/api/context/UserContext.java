@@ -32,11 +32,10 @@ import org.openmrs.util.OpenmrsConstants;
 import org.openmrs.util.RoleConstants;
 
 /**
- * Represents an OpenMRS <code>User Context</code> which stores the current user
- * information. Only one <code>User</code> may be authenticated within a
- * UserContext at any given time. The UserContext should not be accessed
- * directly, but rather used through the <code>Context</code>. This class should
- * be kept light-weight. There is one instance of this class per user that is
+ * Represents an OpenMRS <code>User Context</code> which stores the current user information. Only
+ * one <code>User</code> may be authenticated within a UserContext at any given time. The
+ * UserContext should not be accessed directly, but rather used through the <code>Context</code>.
+ * This class should be kept light-weight. There is one instance of this class per user that is
  * logged into the system.
  * 
  * @see org.openmrs.api.context.Context
@@ -88,12 +87,9 @@ public class UserContext {
 	 * Authenticate the user to this UserContext.
 	 * 
 	 * @see org.openmrs.api.context.Context#authenticate(String,String)
-	 * @param username
-	 *            String login name
-	 * @param password
-	 *            String login password
-	 * @param contextDAO
-	 *            ContextDAO implementation to use for authentication
+	 * @param username String login name
+	 * @param password String login password
+	 * @param contextDAO ContextDAO implementation to use for authentication
 	 * @return User that has been authenticated
 	 * @throws ContextAuthenticationException
 	 */
@@ -111,10 +107,9 @@ public class UserContext {
 	}
 	
 	/**
-	 * Refresh the authenticated user object in this UserContext. This should be
-	 * used when updating information in the database about the current user and
-	 * it needs to be reflecting in the (cached) {@link #getAuthenticatedUser()}
-	 * User object.
+	 * Refresh the authenticated user object in this UserContext. This should be used when updating
+	 * information in the database about the current user and it needs to be reflecting in the
+	 * (cached) {@link #getAuthenticatedUser()} User object.
 	 * 
 	 * @since 1.5
 	 */
@@ -130,12 +125,11 @@ public class UserContext {
 	}
 	
 	/**
-	 * Change current authentication to become another user. (You can only do
-	 * this if you're already authenticated as a superuser.)
+	 * Change current authentication to become another user. (You can only do this if you're already
+	 * authenticated as a superuser.)
 	 * 
 	 * @param systemId
-	 * @return The new user that this context has been set to. (null means no
-	 *         change was made)
+	 * @return The new user that this context has been set to. (null means no change was made)
 	 * @throws ContextAuthenticationException
 	 */
 	public User becomeUser(String systemId) throws ContextAuthenticationException {
@@ -169,8 +163,7 @@ public class UserContext {
 	}
 	
 	/**
-	 * @return "active" user who has been authenticated, otherwise
-	 *         <code>null</code>
+	 * @return "active" user who has been authenticated, otherwise <code>null</code>
 	 */
 	public User getAuthenticatedUser() {
 		return user;
@@ -194,8 +187,8 @@ public class UserContext {
 	}
 	
 	/**
-	 * Gives the given privilege to all calls to hasPrivilege. This method was
-	 * visualized as being used as follows (try/finally is important):
+	 * Gives the given privilege to all calls to hasPrivilege. This method was visualized as being
+	 * used as follows (try/finally is important):
 	 * 
 	 * <pre>
 	 * try {
@@ -207,8 +200,7 @@ public class UserContext {
 	 * }
 	 * </pre>
 	 * 
-	 * @param privilege
-	 *            to give to users
+	 * @param privilege to give to users
 	 */
 	public void addProxyPrivilege(String privilege) {
 		if (log.isDebugEnabled())
@@ -218,11 +210,9 @@ public class UserContext {
 	}
 	
 	/**
-	 * Will remove one instance of privilege from the privileges that are
-	 * currently proxied
+	 * Will remove one instance of privilege from the privileges that are currently proxied
 	 * 
-	 * @param privilege
-	 *            Privilege to remove in string form
+	 * @param privilege Privilege to remove in string form
 	 */
 	public void removeProxyPrivilege(String privilege) {
 		if (log.isDebugEnabled())
@@ -233,8 +223,7 @@ public class UserContext {
 	}
 	
 	/**
-	 * @param locale
-	 *            new locale for this context
+	 * @param locale new locale for this context
 	 */
 	public void setLocale(Locale locale) {
 		this.locale = locale;
@@ -245,14 +234,15 @@ public class UserContext {
 	 */
 	public Locale getLocale() {
 		if (locale == null)
-			locale = LocaleUtility.getDefaultLocale();
+			// don't cache default locale - allows recognition of changed default at login page
+			return LocaleUtility.getDefaultLocale();
 		
 		return locale;
 	}
 	
 	/**
-	 * Gets all the roles for the (un)authenticated user. Anonymous and
-	 * Authenticated roles are appended if necessary
+	 * Gets all the roles for the (un)authenticated user. Anonymous and Authenticated roles are
+	 * appended if necessary
 	 * 
 	 * @return all expanded roles for a user
 	 * @throws Exception
@@ -262,8 +252,7 @@ public class UserContext {
 	}
 	
 	/**
-	 * Gets all the roles for a user. Anonymous and Authenticated roles are
-	 * appended if necessary
+	 * Gets all the roles for a user. Anonymous and Authenticated roles are appended if necessary
 	 * 
 	 * @param user
 	 * @return all expanded roles for a user
@@ -288,8 +277,7 @@ public class UserContext {
 	}
 	
 	/**
-	 * Tests whether or not currently authenticated user has a particular
-	 * privilege
+	 * Tests whether or not currently authenticated user has a particular privilege
 	 * 
 	 * @param privilege
 	 * @return true if authenticated user has given privilege
@@ -297,10 +285,8 @@ public class UserContext {
 	 * @should authorize if authenticated role has specified privilege
 	 * @should authorize if proxied user has specified privilege
 	 * @should authorize if anonymous user has specified privilege
-	 * @should not authorize if authenticated user does not have specified
-	 *         privilege
-	 * @should not authorize if authenticated role does not have specified
-	 *         privilege
+	 * @should not authorize if authenticated user does not have specified privilege
+	 * @should not authorize if authenticated role does not have specified privilege
 	 * @should not authorize if proxied user does not have specified privilege
 	 * @should not authorize if anonymous user does not have specified privilege
 	 */
@@ -333,8 +319,7 @@ public class UserContext {
 	}
 	
 	/**
-	 * Convenience method to get the Role in the system designed to be given to
-	 * all users
+	 * Convenience method to get the Role in the system designed to be given to all users
 	 * 
 	 * @return Role
 	 * @should fail if database doesn't contain anonymous role
@@ -352,8 +337,8 @@ public class UserContext {
 	}
 	
 	/**
-	 * Convenience method to get the Role in the system designed to be given to
-	 * all users that have authenticated in some manner
+	 * Convenience method to get the Role in the system designed to be given to all users that have
+	 * authenticated in some manner
 	 * 
 	 * @return Role
 	 * @should fail if database doesn't contain authenticated role
