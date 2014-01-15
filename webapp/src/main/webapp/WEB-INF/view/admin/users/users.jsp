@@ -25,7 +25,7 @@
 		<td><openmrs:message code="Role.role"/></td>
 		<td>
 			<select name="role">
-				<option></option>
+				<!-- <option></option> -->
 				<openmrs:forEachRecord name="role">
 					<c:if test="${record.role != 'Anonymous' && record.role != 'Authenticated'}">
 						<option <c:if test="${param.role == record.role}">selected</c:if>><c:out value="${record.role}"/></option>
